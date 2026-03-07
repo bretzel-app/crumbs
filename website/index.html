@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Crumbs - Your notes. Your server. Your rules.</title>
+	<meta name="description" content="Crumbs is a self-hostable, offline-first note-taking app. A privacy-respecting Google Keep alternative you can run on your own server with a single Docker command.">
+	<meta property="og:title" content="Crumbs by Bretzel">
+	<meta property="og:description" content="Self-hostable, offline-first note-taking. A Google Keep alternative that respects your privacy.">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://crumbs.bretzel.app">
+	<meta property="og:image" content="https://crumbs.bretzel.app/assets/og-image.png">
+	<meta name="twitter:card" content="summary_large_image">
+	<link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
+	<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+	<!-- ── Header ── -->
+	<header class="site-header">
+		<div class="container">
+			<a href="/" class="logo">
+				<img src="assets/favicon-96x96.png" alt="Crumbs logo" width="32" height="32">
+				<span>Crumbs</span>
+			</a>
+			<button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+			</button>
+			<nav>
+				<ul class="nav-links">
+					<li><a href="#features">Features</a></li>
+					<li><a href="#screenshots">Screenshots</a></li>
+					<li><a href="#deploy">Deploy</a></li>
+					<li>
+						<a href="https://github.com/bretzel-app/crumbs" class="github-link" target="_blank" rel="noopener">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+							GitHub
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+
+	<!-- ── Hero ── -->
+	<div class="hero-wrapper">
+		<!-- Decorative floating note cards -->
+		<div class="deco-card deco-card-1">Buy groceries<br>- Milk<br>- Eggs</div>
+		<div class="deco-card deco-card-2">Meeting notes<br>Q3 planning...</div>
+		<div class="deco-card deco-card-3">Project ideas<br>#startup #saas</div>
+		<div class="deco-card deco-card-4">Remember to<br>call the vet</div>
+
+		<section class="hero">
+			<div class="container">
+				<h1 class="animate-in">
+					Your notes. Your server.<br><span>Your rules.</span>
+				</h1>
+				<p class="hero-subtitle animate-in delay-1">
+					A self-hostable, offline-first note-taking app. The Google Keep alternative that respects your privacy.
+				</p>
+				<div class="hero-buttons animate-in delay-2">
+					<a href="#deploy" class="btn btn-primary">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+						Get Started
+					</a>
+					<a href="https://github.com/bretzel-app/crumbs" class="btn btn-secondary" target="_blank" rel="noopener">
+						<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+						View on GitHub
+					</a>
+				</div>
+				<div class="hero-screenshot animate-in delay-3">
+					<div class="screenshot-placeholder"></div>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	<!-- ── Features ── -->
+	<section class="features" id="features">
+		<div class="container">
+			<h2 class="animate-in">Everything you need,<br>nothing you don't</h2>
+			<div class="features-grid">
+				<!-- Rich Markdown Editor -->
+				<div class="feature-card animate-in delay-1">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+					</div>
+					<h3>Rich Editor</h3>
+					<p>Tiptap-powered WYSIWYG with full Markdown support. Bold, lists, code blocks, and more.</p>
+				</div>
+
+				<!-- Offline-first PWA -->
+				<div class="feature-card animate-in delay-2">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+					</div>
+					<h3>Offline-First</h3>
+					<p>Works without internet. PWA with CRDT-based sync means your notes are always available.</p>
+				</div>
+
+				<!-- Self-hostable -->
+				<div class="feature-card animate-in delay-3">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+					</div>
+					<h3>Self-Hostable</h3>
+					<p>One Docker command. Your data stays on your server. No cloud, no tracking, no nonsense.</p>
+				</div>
+
+				<!-- Tags, colors, pins -->
+				<div class="feature-card animate-in delay-4">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+					</div>
+					<h3>Tags & Colors</h3>
+					<p>Organize with tags, 12 note colors, and pinned notes. Your notes, your way.</p>
+				</div>
+
+				<!-- Checklists -->
+				<div class="feature-card animate-in delay-5">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+					</div>
+					<h3>Checklists</h3>
+					<p>Built-in task lists with checkbox support. Track to-dos right inside your notes.</p>
+				</div>
+
+				<!-- Full-text search -->
+				<div class="feature-card animate-in delay-6">
+					<div class="feature-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					</div>
+					<h3>Full-Text Search</h3>
+					<p>Find anything instantly. SQLite-powered search across all your notes and tags.</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Screenshots ── -->
+	<section class="screenshots" id="screenshots">
+		<div class="container">
+			<h2 class="animate-in">See it in action</h2>
+			<div class="screenshots-grid">
+				<div class="screenshot-card animate-in delay-1">
+					<div class="screenshot-placeholder"></div>
+					<div class="screenshot-label">Notes grid view</div>
+				</div>
+				<div class="screenshot-card animate-in delay-2">
+					<div class="screenshot-placeholder"></div>
+					<div class="screenshot-label">Rich text editor</div>
+				</div>
+				<div class="screenshot-card animate-in delay-3">
+					<div class="screenshot-placeholder"></div>
+					<div class="screenshot-label">Mobile view</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Deploy ── -->
+	<section class="deploy" id="deploy">
+		<div class="container">
+			<h2 class="animate-in">Deploy in seconds</h2>
+			<p class="deploy-subtitle animate-in delay-1">One file. One command. Done.</p>
+
+			<div class="code-block animate-in delay-2">
+				<div class="code-header">
+					<span>docker-compose.yml</span>
+					<button class="copy-btn" onclick="copyCode()">copy</button>
+				</div>
+				<pre><code><span class="code-key">services</span>:
+  <span class="code-key">crumbs</span>:
+    <span class="code-key">image</span>: <span class="code-string">ghcr.io/bretzel-app/crumbs:latest</span>
+    <span class="code-key">ports</span>:
+      - <span class="code-string">"3000:3000"</span>
+    <span class="code-key">volumes</span>:
+      - <span class="code-string">crumbs_data:/data</span>
+
+<span class="code-key">volumes</span>:
+  <span class="code-key">crumbs_data</span>:</code></pre>
+			</div>
+
+			<div class="deploy-thats-it animate-in delay-3">
+				<p class="font-pixel">That's it.</p>
+				<p>Open <code>localhost:3000</code>, set a password, and start writing.</p>
+			</div>
+
+			<div class="deploy-cta animate-in delay-4">
+				<a href="https://github.com/bretzel-app/crumbs/blob/main/docs/DEPLOYMENT.md" class="btn btn-secondary" target="_blank" rel="noopener">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+					Full deployment docs
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Footer ── -->
+	<footer class="site-footer">
+		<div class="container">
+			<p class="footer-brand font-pixel">Part of the Bretzel app universe</p>
+			<ul class="footer-links">
+				<li><a href="https://github.com/bretzel-app/crumbs" target="_blank" rel="noopener">GitHub</a></li>
+				<li><a href="https://github.com/bretzel-app/crumbs/blob/main/docs/DEPLOYMENT.md" target="_blank" rel="noopener">Docs</a></li>
+				<li><a href="https://github.com/bretzel-app/crumbs/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+			</ul>
+			<span class="footer-version">v0.3.3</span>
+		</div>
+	</footer>
+
+	<script>
+		// Mobile nav toggle
+		const toggle = document.querySelector('.nav-toggle');
+		const navLinks = document.querySelector('.nav-links');
+		toggle.addEventListener('click', () => {
+			const open = navLinks.classList.toggle('open');
+			toggle.setAttribute('aria-expanded', open);
+		});
+
+		// Close nav on link click (mobile)
+		navLinks.querySelectorAll('a').forEach(link => {
+			link.addEventListener('click', () => {
+				navLinks.classList.remove('open');
+				toggle.setAttribute('aria-expanded', 'false');
+			});
+		});
+
+		// Copy docker-compose snippet
+		function copyCode() {
+			const code = `services:
+  crumbs:
+    image: ghcr.io/bretzel-app/crumbs:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - crumbs_data:/data
+
+volumes:
+  crumbs_data:`;
+			navigator.clipboard.writeText(code).then(() => {
+				const btn = document.querySelector('.copy-btn');
+				btn.textContent = 'copied!';
+				setTimeout(() => { btn.textContent = 'copy'; }, 2000);
+			});
+		}
+
+		// Intersection Observer for scroll animations
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting) {
+					entry.target.classList.add('animate-in');
+					observer.unobserve(entry.target);
+				}
+			});
+		}, { threshold: 0.1 });
+
+		// Only observe elements that aren't in the hero (hero animates on load)
+		document.querySelectorAll('.features .animate-in, .screenshots .animate-in, .deploy .animate-in').forEach(el => {
+			el.style.opacity = '0';
+			el.classList.remove('animate-in');
+			observer.observe(el);
+		});
+	</script>
+</body>
+</html>
