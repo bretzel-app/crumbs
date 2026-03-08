@@ -212,7 +212,9 @@ export async function deleteNote(id: string): Promise<boolean> {
 }
 
 export async function trashNote(id: string): Promise<Note | null> {
-	return updateNote(id, { trashed: true });
+	const result = await updateNote(id, { trashed: true });
+	if (result) notes.update((list) => list.filter((n) => n.id !== id));
+	return result;
 }
 
 export async function restoreNote(id: string): Promise<Note | null> {
@@ -220,7 +222,9 @@ export async function restoreNote(id: string): Promise<Note | null> {
 }
 
 export async function archiveNote(id: string): Promise<Note | null> {
-	return updateNote(id, { archived: true });
+	const result = await updateNote(id, { archived: true });
+	if (result) notes.update((list) => list.filter((n) => n.id !== id));
+	return result;
 }
 
 export async function unarchiveNote(id: string): Promise<Note | null> {

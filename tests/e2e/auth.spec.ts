@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, setupAndLogin } from './helpers/fixtures.js';
 
 test.describe.serial('Authentication', () => {
 	test('Scenario: Unauthenticated user is prompted to set up or log in', async ({ page }) => {
@@ -51,39 +51,14 @@ test.describe.serial('Authentication', () => {
 	});
 
 	test('Scenario: User creates an account and gains access to the application', async ({ page }) => {
-		// Given the user accesses the setup page
-		await page.goto('/setup');
-
-		// When they authenticate with valid credentials
-		await page.getByTestId('email-input').fill('admin@test.com');
-		await page.getByTestId('display-name-input').fill('Admin');
-		await page.getByTestId('password-input').fill('testpassword123');
-		await page.getByTestId('confirm-password-input').fill('testpassword123');
-		await page.getByTestId('setup-btn').click();
-
-		// Then they have access to the main application
-		await page.waitForURL('/');
+		// Use the shared setupAndLogin helper which handles race conditions
+		await setupAndLogin(page);
 		await expect(page.getByTestId('new-note-btn')).toBeVisible();
 	});
 
 	test('Scenario: Logged-out user loses access to the application', async ({ page }) => {
 		// Given the user is authenticated
-		await page.goto('/');
-		const url = page.url();
-
-		if (url.includes('/setup')) {
-			await page.getByTestId('email-input').fill('admin@test.com');
-			await page.getByTestId('display-name-input').fill('Admin');
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('confirm-password-input').fill('testpassword123');
-			await page.getByTestId('setup-btn').click();
-			await page.waitForURL('/');
-		} else if (url.includes('/login')) {
-			await page.getByTestId('email-input').fill('admin@test.com');
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('login-btn').click();
-			await page.waitForURL('/');
-		}
+		await setupAndLogin(page);
 
 		// When they log out
 		await page.evaluate(() => fetch('/api/auth/logout', { method: 'POST' }));
@@ -95,39 +70,19 @@ test.describe.serial('Authentication', () => {
 });
 
 test.describe('Multi-user', () => {
-	test('admin can create a new user via API', async ({ page }) => {
-		// Ensure setup/login
-		await page.goto('/');
-		const url = page.url();
-
-		if (url.includes('/setup')) {
-			await page.getByTestId('email-input').fill('admin@test.com');
-			await page.getByTestId('display-name-input').fill('Admin');
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('confirm-password-input').fill('testpassword123');
-			await page.getByTestId('setup-btn').click();
-			await page.waitForURL('/');
-		} else if (url.includes('/login')) {
-			await page.getByTestId('email-input').fill('admin@test.com');
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('login-btn').click();
-			await page.waitForURL('/');
-		}
+	test('admin can create a new user via API', async ({ authenticatedPage: page }) => {
+		// authenticatedPage fixture already handles setup/login
 
 		// Create a new user via admin API
-		const response = await page.evaluate(() =>
-			fetch('/api/admin/users', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					email: 'user2@test.com',
-					displayName: 'User Two',
-					password: 'userpassword123',
-					role: 'user'
-				})
-			}).then((r) => ({ status: r.status, body: r.json() }))
-		);
+		const response = await page.request.post('/api/admin/users', {
+			data: {
+				email: 'user2@test.com',
+				displayName: 'User Two',
+				password: 'userpassword123',
+				role: 'user'
+			}
+		});
 
-		expect(response.status).toBe(201);
+		expect(response.status()).toBe(201);
 	});
 });

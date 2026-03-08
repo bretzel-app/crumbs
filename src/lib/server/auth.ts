@@ -103,7 +103,7 @@ export async function validateSession(
 
 	if (!result) return { valid: false };
 
-	if (result.expires_at < Date.now()) {
+	if (result.expires_at * 1000 < Date.now()) {
 		db.delete(sessions).where(eq(sessions.id, token)).run();
 		return { valid: false };
 	}
