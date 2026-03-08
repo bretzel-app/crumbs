@@ -7,6 +7,7 @@
 	import { optimizeImage } from '$lib/utils/image-optimize.js';
 	import { browser } from '$app/environment';
 	import { addPendingAttachment, type PendingAttachment } from '$lib/sync/idb.js';
+	import { showToast } from '$lib/stores/toast.js';
 
 	interface Props {
 		noteId: string;
@@ -85,9 +86,13 @@
 				if (res.ok) {
 					const attachment = await res.json();
 					onUpload(attachment);
+				} else {
+					console.error('Upload failed:', res.status, await res.text());
+					showToast('Failed to upload image', 'error');
 				}
 			} catch (err) {
 				console.error('Upload failed:', err);
+				showToast('Failed to upload image', 'error');
 			}
 			uploading = false;
 		}

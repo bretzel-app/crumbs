@@ -85,7 +85,12 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS sync_log_timestamp_idx ON sync_log(timestamp);
 `);
 
-// Idempotent migration: add featured column to attachments
+// Idempotent migrations: add columns that may be missing from older DBs
+try {
+	sqlite.exec(`ALTER TABLE attachments ADD COLUMN thumbnail_path TEXT;`);
+} catch {
+	// Column already exists
+}
 try {
 	sqlite.exec(`ALTER TABLE attachments ADD COLUMN featured INTEGER NOT NULL DEFAULT 0;`);
 } catch {
