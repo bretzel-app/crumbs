@@ -71,6 +71,7 @@ export const attachments = sqliteTable('attachments', {
 	mimeType: text('mime_type').notNull(),
 	size: integer('size').notNull(),
 	path: text('path').notNull(),
+	thumbnailPath: text('thumbnail_path'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 

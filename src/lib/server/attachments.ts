@@ -4,7 +4,8 @@ import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './db/index.js';
 import { attachments } from './db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import type { Attachment } from '$lib/types/index.js';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 const ATTACHMENTS_DIR = join(DATA_DIR, 'attachments');
@@ -16,7 +17,8 @@ if (!existsSync(ATTACHMENTS_DIR)) {
 
 export async function saveAttachment(
 	noteId: string,
-	file: File
+	file: File,
+	thumbnail?: File | Blob | null
 ): Promise<typeof attachments.$inferSelect> {
 	const id = uuidv4();
 	const ext = file.name.split('.').pop() || 'bin';
@@ -25,6 +27,14 @@ export async function saveAttachment(
 
 	const buffer = Buffer.from(await file.arrayBuffer());
 	await writeFile(filePath, buffer);
+
+	let thumbnailPath: string | null = null;
+	if (thumbnail) {
+		const thumbFilename = `${id}_thumb.webp`;
+		thumbnailPath = join(ATTACHMENTS_DIR, thumbFilename);
+		const thumbBuffer = Buffer.from(await thumbnail.arrayBuffer());
+		await writeFile(thumbnailPath, thumbBuffer);
+	}
 
 	const [attachment] = await db
 		.insert(attachments)
@@ -35,11 +45,37 @@ export async function saveAttachment(
 			mimeType: file.type,
 			size: file.size,
 			path: filePath,
+			thumbnailPath,
 			createdAt: new Date()
 		})
 		.returning();
 
 	return attachment;
+}
+
+/**
+ * Batch fetch attachments for multiple notes in a single query.
+ * Returns a Map of noteId → Attachment[].
+ */
+export function fetchAttachmentsForNotes(noteIds: string[]): Map<string, Attachment[]> {
+	if (noteIds.length === 0) return new Map();
+
+	const rows = db
+		.select()
+		.from(attachments)
+		.where(inArray(attachments.noteId, noteIds))
+		.all();
+
+	const map = new Map<string, Attachment[]>();
+	for (const row of rows) {
+		const existing = map.get(row.noteId);
+		if (existing) {
+			existing.push(row as Attachment);
+		} else {
+			map.set(row.noteId, [row as Attachment]);
+		}
+	}
+	return map;
 }
 
 export async function getAttachment(id: string) {
@@ -57,6 +93,13 @@ export async function deleteAttachment(id: string) {
 			await unlink(attachment.path);
 		} catch {
 			// File may already be deleted
+		}
+		if (attachment.thumbnailPath) {
+			try {
+				await unlink(attachment.thumbnailPath);
+			} catch {
+				// Thumbnail may already be deleted
+			}
 		}
 		await db.delete(attachments).where(eq(attachments.id, id));
 	}

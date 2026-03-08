@@ -5,6 +5,7 @@ import { notes } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from '$lib/server/tags.js';
+import { fetchAttachmentsForNotes } from '$lib/server/attachments.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const note = db.select().from(notes).where(eq(notes.id, params.id)).get();
@@ -14,8 +15,13 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	const tagMap = fetchTagsForNotes([note.id]);
+	const attachmentMap = fetchAttachmentsForNotes([note.id]);
 
-	return json({ ...note, tags: tagMap.get(note.id) ?? [] });
+	return json({
+		...note,
+		tags: tagMap.get(note.id) ?? [],
+		attachments: attachmentMap.get(note.id) ?? []
+	});
 };
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
@@ -55,8 +61,13 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	}
 
 	const tagMap = fetchTagsForNotes([params.id]);
+	const attachmentMap = fetchAttachmentsForNotes([params.id]);
 
-	return json({ ...updated, tags: tagMap.get(params.id) ?? [] });
+	return json({
+		...updated,
+		tags: tagMap.get(params.id) ?? [],
+		attachments: attachmentMap.get(params.id) ?? []
+	});
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {

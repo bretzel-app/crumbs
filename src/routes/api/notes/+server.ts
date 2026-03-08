@@ -6,6 +6,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from '$lib/server/tags.js';
+import { fetchAttachmentsForNotes } from '$lib/server/attachments.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const filter = url.searchParams.get('filter') || 'all';
@@ -29,10 +30,13 @@ export const GET: RequestHandler = async ({ url }) => {
 		.orderBy(desc(notes.pinned), desc(notes.updatedAt))
 		.all();
 
-	const tagMap = fetchTagsForNotes(result.map((n) => n.id));
+	const noteIds = result.map((n) => n.id);
+	const tagMap = fetchTagsForNotes(noteIds);
+	const attachmentMap = fetchAttachmentsForNotes(noteIds);
 	const notesWithTags = result.map((note) => ({
 		...note,
-		tags: tagMap.get(note.id) ?? []
+		tags: tagMap.get(note.id) ?? [],
+		attachments: attachmentMap.get(note.id) ?? []
 	}));
 
 	return json(notesWithTags);

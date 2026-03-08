@@ -1,6 +1,7 @@
 <script lang="ts">
 	import XIcon from 'lucide-svelte/icons/x';
 	import type { Attachment } from '$lib/types/index.js';
+	import { optimizeImage } from '$lib/utils/image-optimize.js';
 
 	interface Props {
 		noteId: string;
@@ -12,17 +13,33 @@
 	let { noteId, attachments = [], onUpload, onRemove }: Props = $props();
 
 	let uploading = $state(false);
+	let optimizing = $state(false);
 	let dragOver = $state(false);
 
 	async function handleFiles(files: FileList | null) {
 		if (!files || !noteId) return;
 
-		uploading = true;
 		for (const file of files) {
 			if (!file.type.startsWith('image/')) continue;
 
+			optimizing = true;
+			let optimized: Blob;
+			let thumbnail: Blob;
+			try {
+				const result = await optimizeImage(file);
+				optimized = result.optimized;
+				thumbnail = result.thumbnail;
+			} catch (err) {
+				console.error('Optimization failed, using original:', err);
+				optimized = file;
+				thumbnail = file;
+			}
+			optimizing = false;
+
+			uploading = true;
 			const formData = new FormData();
-			formData.append('file', file);
+			formData.append('file', new File([optimized], file.name, { type: optimized.type || file.type }));
+			formData.append('thumbnail', new File([thumbnail], `${file.name}_thumb.webp`, { type: 'image/webp' }));
 
 			try {
 				const res = await fetch(`/api/notes/${noteId}/attachments`, {
@@ -36,8 +53,8 @@
 			} catch (err) {
 				console.error('Upload failed:', err);
 			}
+			uploading = false;
 		}
-		uploading = false;
 	}
 
 	function handleDrop(e: DragEvent) {
@@ -59,14 +76,14 @@
 			{#each attachments as attachment}
 				<div class="group relative">
 					<img
-						src="/api/notes/{noteId}/attachments/{attachment.id}"
+						src="/api/notes/{noteId}/attachments?attachmentId={attachment.id}"
 						alt={attachment.filename}
 						class="h-20 w-20 rounded-sm object-cover"
 						data-testid="attachment-thumbnail"
 					/>
 					<button
 						onclick={() => onRemove(attachment.id)}
-						class="absolute -right-1 -top-1 hidden rounded-full bg-red-500 p-0.5 text-white group-hover:block"
+						class="absolute -right-1 -top-1 hidden rounded-full bg-[var(--destructive)] p-0.5 text-white group-hover:block"
 						aria-label="Remove attachment"
 						data-testid="remove-attachment"
 					>
@@ -87,7 +104,9 @@
 		tabindex="0"
 		data-testid="upload-dropzone"
 	>
-		{#if uploading}
+		{#if optimizing}
+			<p class="text-sm text-[var(--text-muted)]">Optimizing...</p>
+		{:else if uploading}
 			<p class="text-sm text-[var(--text-muted)]">Uploading...</p>
 		{:else}
 			<label class="cursor-pointer">

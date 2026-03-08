@@ -42,6 +42,7 @@ export interface Attachment {
 	mimeType: string;
 	size: number;
 	path: string;
+	thumbnailPath?: string | null;
 	createdAt: Date;
 }
 

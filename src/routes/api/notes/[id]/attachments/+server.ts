@@ -10,11 +10,16 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		const attachment = await getAttachment(attachmentId);
 		if (!attachment) throw error(404, 'Attachment not found');
 
-		const buffer = await readFile(attachment.path);
+		const wantThumb = url.searchParams.get('thumb') === '1';
+		const filePath = wantThumb && attachment.thumbnailPath ? attachment.thumbnailPath : attachment.path;
+		const mimeType = wantThumb && attachment.thumbnailPath ? 'image/webp' : attachment.mimeType;
+
+		const buffer = await readFile(filePath);
 		return new Response(buffer, {
 			headers: {
-				'Content-Type': attachment.mimeType,
-				'Content-Disposition': `inline; filename="${attachment.filename}"`
+				'Content-Type': mimeType,
+				'Content-Disposition': `inline; filename="${attachment.filename}"`,
+				'Cache-Control': 'public, max-age=31536000, immutable'
 			}
 		});
 	}
@@ -40,7 +45,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		throw error(400, 'File too large (max 10MB)');
 	}
 
-	const attachment = await saveAttachment(params.id, file);
+	const thumbnail = formData.get('thumbnail') as File | null;
+	const attachment = await saveAttachment(params.id, file, thumbnail);
 	return json(attachment, { status: 201 });
 };
 
