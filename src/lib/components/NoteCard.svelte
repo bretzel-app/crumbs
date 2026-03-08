@@ -78,6 +78,28 @@
 	data-testid="note-card"
 	data-note-id={note.id}
 >
+	<!-- Thumbnail strip -->
+	{#if note.attachments && note.attachments.length > 0}
+		<div class="-mx-4 -mt-4 mb-3 flex overflow-hidden rounded-t-sm" data-testid="card-thumbnails">
+			{#each note.attachments.slice(0, 3) as attachment}
+				<div class="relative min-w-0 flex-1">
+					<img
+						src="/api/notes/{note.id}/attachments?attachmentId={attachment.id}&thumb=1"
+						alt={attachment.filename}
+						class="h-24 w-full object-cover"
+						loading="lazy"
+						data-testid="card-thumbnail"
+					/>
+				</div>
+			{/each}
+			{#if note.attachments.length > 3}
+				<div class="absolute right-1 top-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white" data-testid="card-thumbnail-count">
+					+{note.attachments.length - 3}
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	{#if note.pinned}
 		<button
 			onclick={stop(() => togglePin(note.id, note.pinned))}

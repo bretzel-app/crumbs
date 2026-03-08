@@ -3,12 +3,14 @@
 	import Checklist from './Checklist.svelte';
 	import FormattingToolbar from './FormattingToolbar.svelte';
 	import TiptapEditor from './TiptapEditor.svelte';
+	import ImageUpload from './ImageUpload.svelte';
 	import { updateNote, createNote } from '$lib/stores/notes.js';
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import type { Editor } from '@tiptap/core';
-	import type { Note, NoteColor } from '$lib/types/index.js';
+	import type { Note, NoteColor, Attachment } from '$lib/types/index.js';
 	import Palette from 'lucide-svelte/icons/palette';
 	import SquareCheck from 'lucide-svelte/icons/square-check';
+	import ImageIcon from 'lucide-svelte/icons/image';
 	import Type from 'lucide-svelte/icons/type';
 	import FileCode from 'lucide-svelte/icons/file-code';
 	import FileText from 'lucide-svelte/icons/file-text';
@@ -30,10 +32,42 @@
 	// svelte-ignore state_referenced_locally
 	let checklistMode = $state(note?.checklistMode ?? false);
 	let showColorPicker = $state(false);
+	let showImageUpload = $state(false);
 	let rawMarkdownMode = $state(note?.checklistMode ?? false);
 	let textareaEl: HTMLTextAreaElement | undefined = $state();
 	let tiptapEditor: Editor | undefined = $state();
 	let editorTick = $state(0);
+
+	// svelte-ignore state_referenced_locally
+	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
+
+	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB)
+	$effect(() => {
+		if (note && !isNew && (!note.attachments || note.attachments.length === 0)) {
+			fetch(`/api/notes/${note.id}/attachments`)
+				.then((res) => res.ok ? res.json() : [])
+				.then((data: Attachment[]) => {
+					if (data.length > 0) attachmentsList = data;
+				})
+				.catch(() => {});
+		}
+	});
+
+	function handleAttachmentUpload(attachment: Attachment) {
+		attachmentsList = [...attachmentsList, attachment];
+	}
+
+	async function handleAttachmentRemove(attachmentId: string) {
+		if (!note) return;
+		try {
+			await fetch(`/api/notes/${note.id}/attachments?attachmentId=${attachmentId}`, {
+				method: 'DELETE'
+			});
+			attachmentsList = attachmentsList.filter((a) => a.id !== attachmentId);
+		} catch (err) {
+			console.error('Failed to remove attachment:', err);
+		}
+	}
 
 	let bgStyle = $state('');
 	$effect(() => {
@@ -124,6 +158,30 @@
 			{/if}
 		</div>
 
+		<!-- Image attachments -->
+		{#if !isNew && note && showImageUpload}
+			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
+				<ImageUpload
+					noteId={note.id}
+					attachments={attachmentsList}
+					onUpload={handleAttachmentUpload}
+					onRemove={handleAttachmentRemove}
+				/>
+			</div>
+		{:else if !isNew && attachmentsList.length > 0}
+			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
+				<div class="flex flex-wrap gap-2">
+					{#each attachmentsList as attachment}
+						<img
+							src="/api/notes/{note?.id}/attachments?attachmentId={attachment.id}"
+							alt={attachment.filename}
+							class="h-20 w-20 rounded-sm object-cover"
+						/>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		<!-- Formatting toolbar -->
 		{#if !rawMarkdownMode && !checklistMode}
 			<FormattingToolbar editor={tiptapEditor} tick={editorTick} />
@@ -161,6 +219,17 @@
 					{:else}
 						<SquareCheck class="h-5 w-5" />
 					{/if}
+				</button>
+
+				<!-- Image attachment toggle -->
+				<button
+					onclick={() => (showImageUpload = !showImageUpload)}
+					class="rounded-sm p-2 hover:bg-[var(--border)]/10 disabled:opacity-30 disabled:cursor-not-allowed"
+					title="Image attachments"
+					disabled={isNew}
+					data-testid="image-toggle"
+				>
+					<ImageIcon class="h-5 w-5 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
 				</button>
 
 				<!-- Raw markdown mode toggle -->
