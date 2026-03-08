@@ -53,18 +53,15 @@ export async function createOidcAuthUrl(): Promise<{ url: URL; state: string; co
 
 	const state = arctic.generateState();
 	const codeVerifier = arctic.generateCodeVerifier();
+	const scopes = ['openid', 'profile', 'email'];
 
-	const url = new URL(oidcConfig.authorizationEndpoint);
-	url.searchParams.set('response_type', 'code');
-	url.searchParams.set('client_id', getOidcEnv().clientId);
-	url.searchParams.set('redirect_uri', `${getBaseUrl()}/api/auth/oauth/oidc/callback`);
-	url.searchParams.set('state', state);
-	url.searchParams.set('scope', 'openid profile email');
-
-	// PKCE
-	const codeChallenge = await arctic.generateCodeChallenge(codeVerifier);
-	url.searchParams.set('code_challenge', codeChallenge);
-	url.searchParams.set('code_challenge_method', 'S256');
+	const url = client.createAuthorizationURLWithPKCE(
+		oidcConfig.authorizationEndpoint,
+		state,
+		arctic.CodeChallengeMethod.S256,
+		codeVerifier,
+		scopes
+	);
 
 	return { url, state, codeVerifier };
 }
@@ -76,34 +73,16 @@ export async function validateOidcCallback(
 	const client = await ensureOidcClient();
 	if (!client || !oidcConfig) return null;
 
-	const env = getOidcEnv();
-	const redirectURI = `${getBaseUrl()}/api/auth/oauth/oidc/callback`;
-
-	// Exchange code for tokens
-	const body = new URLSearchParams({
-		grant_type: 'authorization_code',
+	const tokens = await client.validateAuthorizationCode(
+		oidcConfig.tokenEndpoint,
 		code,
-		redirect_uri: redirectURI,
-		client_id: env.clientId,
-		client_secret: env.clientSecret,
-		code_verifier: codeVerifier
-	});
-
-	const tokenRes = await fetch(oidcConfig.tokenEndpoint, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-		body: body.toString()
-	});
-	if (!tokenRes.ok) return null;
-
-	const tokenData = (await tokenRes.json()) as {
-		access_token: string;
-		id_token?: string;
-	};
+		codeVerifier
+	);
 
 	// Try to decode ID token first
-	if (tokenData.id_token) {
-		const claims = arctic.decodeIdToken(tokenData.id_token) as {
+	const idToken = tokens.idToken();
+	if (idToken) {
+		const claims = arctic.decodeIdToken(idToken) as {
 			sub: string;
 			email?: string;
 			name?: string;
@@ -118,8 +97,9 @@ export async function validateOidcCallback(
 	}
 
 	// Fallback to userinfo endpoint
+	const accessToken = tokens.accessToken();
 	const userRes = await fetch(oidcConfig.userinfoEndpoint, {
-		headers: { Authorization: `Bearer ${tokenData.access_token}` }
+		headers: { Authorization: `Bearer ${accessToken}` }
 	});
 	if (!userRes.ok) return null;
 

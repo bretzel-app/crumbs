@@ -37,7 +37,7 @@ export async function validateGithubCallback(
 		if (emailsRes.ok) {
 			const emails = (await emailsRes.json()) as { email: string; primary: boolean; verified: boolean }[];
 			const primary = emails.find((e) => e.primary && e.verified);
-			email = primary?.email || emails.find((e) => e.verified)?.email || null;
+			email = primary?.email || emails.find((e) => e.verified)?.email || undefined;
 		}
 	}
 
