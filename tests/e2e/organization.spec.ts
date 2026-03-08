@@ -10,7 +10,7 @@ test.describe('Organization Features', () => {
 		// When the user pins the note
 		const pinCard = noteCard(page, 'Pin Me');
 		await pinCard.hover();
-		await pinCard.getByTestId('pin-btn').click({ force: true });
+		await pinCard.getByTestId('pin-btn').first().click({ force: true });
 
 		// Then the "Pinned" section is visible
 		await expect(page.getByText('Pinned')).toBeVisible();
@@ -64,7 +64,7 @@ test.describe('Organization Features', () => {
 			await tagChip.click();
 
 			// Then only the tagged note is visible
-			await expect(page.getByText('Tagged Note')).toBeVisible();
+			await expect(page.getByText('Tagged Note').first()).toBeVisible();
 		}
 	});
 });
