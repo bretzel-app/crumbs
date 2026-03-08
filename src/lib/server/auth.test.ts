@@ -41,18 +41,25 @@ describe('Auth - User Setup', () => {
 		const hash = await argon2.hash(password);
 
 		await db.insert(users).values({
+			email: 'admin@test.com',
+			displayName: 'Admin',
+			role: 'admin',
 			passwordHash: hash,
 			createdAt: new Date()
 		});
 
 		const user = await db.select().from(users).get();
 		expect(user).toBeDefined();
+		expect(user!.email).toBe('admin@test.com');
+		expect(user!.role).toBe('admin');
 		expect(user!.passwordHash).not.toBe(password);
-		expect(await argon2.verify(user!.passwordHash, password)).toBe(true);
+		expect(await argon2.verify(user!.passwordHash!, password)).toBe(true);
 	});
 
-	it('should only allow one user', async () => {
+	it('should only allow one admin setup', async () => {
 		await db.insert(users).values({
+			email: 'admin@test.com',
+			role: 'admin',
 			passwordHash: 'hash1',
 			createdAt: new Date()
 		});
@@ -66,7 +73,7 @@ describe('Auth - Sessions', () => {
 	it('should create and validate a session', async () => {
 		const [user] = await db
 			.insert(users)
-			.values({ passwordHash: 'hash', createdAt: new Date() })
+			.values({ email: 'test@test.com', passwordHash: 'hash', createdAt: new Date() })
 			.returning();
 
 		const token = randomBytes(32).toString('hex');
@@ -85,7 +92,7 @@ describe('Auth - Sessions', () => {
 	it('should detect expired sessions', async () => {
 		const [user] = await db
 			.insert(users)
-			.values({ passwordHash: 'hash', createdAt: new Date() })
+			.values({ email: 'test@test.com', passwordHash: 'hash', createdAt: new Date() })
 			.returning();
 
 		const token = randomBytes(32).toString('hex');
@@ -103,7 +110,7 @@ describe('Auth - Sessions', () => {
 	it('should delete a session', async () => {
 		const [user] = await db
 			.insert(users)
-			.values({ passwordHash: 'hash', createdAt: new Date() })
+			.values({ email: 'test@test.com', passwordHash: 'hash', createdAt: new Date() })
 			.returning();
 
 		const token = randomBytes(32).toString('hex');

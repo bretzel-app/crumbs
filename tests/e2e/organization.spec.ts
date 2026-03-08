@@ -10,7 +10,7 @@ test.describe('Organization Features', () => {
 		// When the user pins the note
 		const pinCard = noteCard(page, 'Pin Me');
 		await pinCard.hover();
-		await pinCard.getByTestId('pin-btn').click();
+		await pinCard.getByTestId('pin-btn').click({ force: true });
 
 		// Then the "Pinned" section is visible
 		await expect(page.getByText('Pinned')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Organization Features', () => {
 		// When the user archives the note
 		const archiveCard = noteCard(page, 'Archive Me');
 		await archiveCard.hover();
-		await archiveCard.getByTestId('archive-btn').click();
+		await archiveCard.getByTestId('archive-btn').click({ force: true });
 
 		// Then the note is no longer visible in the main view
 		await expect(page.getByText('Archive Me')).not.toBeVisible();

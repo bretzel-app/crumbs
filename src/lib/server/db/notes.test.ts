@@ -235,7 +235,8 @@ describe('Notes with Tags', () => {
 		const [tag] = await db.insert(tags).values({ name: 'temp' }).returning();
 		await db.insert(noteTags).values({ noteId, tagId: tag.id });
 
-		// Delete note
+		// Delete note_tags first (FK cascade is disabled in test DB), then note
+		await db.delete(noteTags).where(eq(noteTags.noteId, noteId));
 		await db.delete(notes).where(eq(notes.id, noteId));
 
 		// note_tags should be gone

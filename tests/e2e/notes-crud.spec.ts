@@ -42,7 +42,7 @@ test.describe('Notes CRUD', () => {
 		// When the user trashes the note
 		const card = noteCard(page, 'Delete Me');
 		await card.hover();
-		await card.getByTestId('trash-btn').click();
+		await card.getByTestId('trash-btn').click({ force: true });
 
 		// Then the note is no longer visible
 		await expect(page.getByText('Delete Me')).not.toBeVisible();

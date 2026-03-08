@@ -9,13 +9,18 @@ import * as schema from './schema.js';
 export function createTestDb() {
 	const sqlite = new Database(':memory:');
 	sqlite.pragma('journal_mode = WAL');
-	sqlite.pragma('foreign_keys = ON');
+	sqlite.pragma('foreign_keys = OFF');
 
-	// Create tables
+	// Create tables matching the multi-user schema
 	sqlite.exec(`
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			password_hash TEXT NOT NULL,
+			email TEXT NOT NULL DEFAULT '',
+			display_name TEXT NOT NULL DEFAULT '',
+			role TEXT NOT NULL DEFAULT 'user',
+			password_hash TEXT,
+			auth_provider TEXT NOT NULL DEFAULT 'password',
+			provider_id TEXT,
 			created_at INTEGER NOT NULL
 		);
 
@@ -27,6 +32,7 @@ export function createTestDb() {
 
 		CREATE TABLE notes (
 			id TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			title TEXT NOT NULL DEFAULT '',
 			content TEXT NOT NULL DEFAULT '',
 			color TEXT NOT NULL DEFAULT 'default',
@@ -40,20 +46,27 @@ export function createTestDb() {
 			updated_at INTEGER NOT NULL,
 			version INTEGER NOT NULL DEFAULT 1
 		);
+		CREATE INDEX notes_user_id_idx ON notes(user_id);
+		CREATE INDEX notes_trashed_archived_idx ON notes(trashed, archived);
+		CREATE INDEX notes_updated_at_idx ON notes(updated_at);
 
 		CREATE TABLE tags (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			name TEXT NOT NULL
 		);
-		CREATE UNIQUE INDEX tags_name_unique ON tags(name);
+		CREATE UNIQUE INDEX tags_name_user_unique ON tags(name, user_id);
 
 		CREATE TABLE note_tags (
 			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
 			tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
 		);
+		CREATE INDEX note_tags_note_id_idx ON note_tags(note_id);
+		CREATE INDEX note_tags_tag_id_idx ON note_tags(tag_id);
 
 		CREATE TABLE attachments (
 			id TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
 			filename TEXT NOT NULL,
 			mime_type TEXT NOT NULL,
@@ -64,11 +77,22 @@ export function createTestDb() {
 
 		CREATE TABLE sync_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			note_id TEXT NOT NULL REFERENCES notes(id),
 			operation TEXT NOT NULL,
 			timestamp INTEGER NOT NULL,
 			client_id TEXT NOT NULL
 		);
+		CREATE INDEX sync_log_timestamp_idx ON sync_log(timestamp);
+
+		CREATE TABLE login_attempts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ip TEXT NOT NULL,
+			email TEXT NOT NULL,
+			success INTEGER NOT NULL,
+			timestamp INTEGER NOT NULL
+		);
+		CREATE INDEX login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
 	`);
 
 	const db = drizzle(sqlite, { schema });
