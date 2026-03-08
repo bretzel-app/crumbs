@@ -266,6 +266,36 @@ export function updateUserRole(userId: number, role: 'admin' | 'user'): void {
 	db.update(users).set({ role }).where(eq(users.id, userId)).run();
 }
 
+/**
+ * Find a user by OAuth provider, or by email. Invite-only: rejects if no matching user.
+ */
+export function findOrLinkOAuthUser(
+	provider: string,
+	providerId: string,
+	email: string,
+	name: string
+): User | null {
+	// First try exact provider+providerId match
+	const byProvider = db
+		.select()
+		.from(users)
+		.where(and(eq(users.authProvider, provider), eq(users.providerId, providerId)))
+		.get();
+	if (byProvider) return toUser(byProvider);
+
+	// Try matching by email (invite-only: user must already exist)
+	const byEmail = db.select().from(users).where(eq(users.email, email)).get();
+	if (!byEmail) return null; // No matching user — not invited
+
+	// Link this OAuth provider to the existing user
+	db.update(users)
+		.set({ authProvider: provider, providerId, displayName: byEmail.displayName || name })
+		.where(eq(users.id, byEmail.id))
+		.run();
+
+	return toUser({ ...byEmail, authProvider: provider, providerId });
+}
+
 export function updateUserProfile(
 	userId: number,
 	data: { displayName?: string; email?: string }
