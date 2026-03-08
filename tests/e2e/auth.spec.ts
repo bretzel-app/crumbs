@@ -15,7 +15,8 @@ test.describe.serial('Authentication', () => {
 		// When the user visits the setup page
 		await page.goto('/setup');
 
-		// Then the password and confirmation fields and setup action are available
+		// Then the email, password, and confirmation fields and setup action are available
+		await expect(page.getByTestId('email-input')).toBeVisible();
 		await expect(page.getByTestId('password-input')).toBeVisible();
 		await expect(page.getByTestId('confirm-password-input')).toBeVisible();
 		await expect(page.getByTestId('setup-btn')).toBeVisible();
@@ -26,6 +27,7 @@ test.describe.serial('Authentication', () => {
 		await page.goto('/setup');
 
 		// When they submit a password shorter than 8 characters
+		await page.getByTestId('email-input').fill('test@test.com');
 		await page.getByTestId('password-input').fill('short');
 		await page.getByTestId('confirm-password-input').fill('short');
 		await page.getByTestId('setup-btn').click();
@@ -39,6 +41,7 @@ test.describe.serial('Authentication', () => {
 		await page.goto('/setup');
 
 		// When they submit two different passwords
+		await page.getByTestId('email-input').fill('test@test.com');
 		await page.getByTestId('password-input').fill('longpassword1');
 		await page.getByTestId('confirm-password-input').fill('longpassword2');
 		await page.getByTestId('setup-btn').click();
@@ -48,19 +51,15 @@ test.describe.serial('Authentication', () => {
 	});
 
 	test('Scenario: User creates an account and gains access to the application', async ({ page }) => {
-		// Given the user accesses the application
-		await page.goto('/');
-		const url = page.url();
+		// Given the user accesses the setup page
+		await page.goto('/setup');
 
 		// When they authenticate with valid credentials
-		if (url.includes('/setup')) {
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('confirm-password-input').fill('testpassword123');
-			await page.getByTestId('setup-btn').click();
-		} else if (url.includes('/login')) {
-			await page.getByTestId('password-input').fill('testpassword123');
-			await page.getByTestId('login-btn').click();
-		}
+		await page.getByTestId('email-input').fill('admin@test.com');
+		await page.getByTestId('display-name-input').fill('Admin');
+		await page.getByTestId('password-input').fill('testpassword123');
+		await page.getByTestId('confirm-password-input').fill('testpassword123');
+		await page.getByTestId('setup-btn').click();
 
 		// Then they have access to the main application
 		await page.waitForURL('/');
@@ -71,12 +70,16 @@ test.describe.serial('Authentication', () => {
 		// Given the user is authenticated
 		await page.goto('/');
 		const url = page.url();
+
 		if (url.includes('/setup')) {
+			await page.getByTestId('email-input').fill('admin@test.com');
+			await page.getByTestId('display-name-input').fill('Admin');
 			await page.getByTestId('password-input').fill('testpassword123');
 			await page.getByTestId('confirm-password-input').fill('testpassword123');
 			await page.getByTestId('setup-btn').click();
 			await page.waitForURL('/');
 		} else if (url.includes('/login')) {
+			await page.getByTestId('email-input').fill('admin@test.com');
 			await page.getByTestId('password-input').fill('testpassword123');
 			await page.getByTestId('login-btn').click();
 			await page.waitForURL('/');
@@ -88,5 +91,43 @@ test.describe.serial('Authentication', () => {
 		// Then they are redirected to the login page
 		await page.goto('/');
 		await expect(page).toHaveURL(/\/login/);
+	});
+});
+
+test.describe('Multi-user', () => {
+	test('admin can create a new user via API', async ({ page }) => {
+		// Ensure setup/login
+		await page.goto('/');
+		const url = page.url();
+
+		if (url.includes('/setup')) {
+			await page.getByTestId('email-input').fill('admin@test.com');
+			await page.getByTestId('display-name-input').fill('Admin');
+			await page.getByTestId('password-input').fill('testpassword123');
+			await page.getByTestId('confirm-password-input').fill('testpassword123');
+			await page.getByTestId('setup-btn').click();
+			await page.waitForURL('/');
+		} else if (url.includes('/login')) {
+			await page.getByTestId('email-input').fill('admin@test.com');
+			await page.getByTestId('password-input').fill('testpassword123');
+			await page.getByTestId('login-btn').click();
+			await page.waitForURL('/');
+		}
+
+		// Create a new user via admin API
+		const response = await page.evaluate(() =>
+			fetch('/api/admin/users', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					email: 'user2@test.com',
+					displayName: 'User Two',
+					password: 'userpassword123',
+					role: 'user'
+				})
+			}).then((r) => ({ status: r.status, body: r.json() }))
+		);
+
+		expect(response.status).toBe(201);
 	});
 });

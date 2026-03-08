@@ -1,6 +1,8 @@
 import { test as base, expect, type Page, type Locator } from '@playwright/test';
 
+const TEST_EMAIL = 'admin@test.com';
 const TEST_PASSWORD = 'testpassword123';
+const TEST_DISPLAY_NAME = 'Test Admin';
 
 /** Find a specific note card by its title text */
 export function noteCard(page: Page, title: string): Locator {
@@ -23,7 +25,9 @@ export async function setupAndLogin(page: Page) {
 
 	const url = page.url();
 	if (url.includes('/setup')) {
-		// First-time setup - may race with other workers
+		// First-time setup with email
+		await page.getByTestId('email-input').fill(TEST_EMAIL);
+		await page.getByTestId('display-name-input').fill(TEST_DISPLAY_NAME);
 		await page.getByTestId('password-input').fill(TEST_PASSWORD);
 		await page.getByTestId('confirm-password-input').fill(TEST_PASSWORD);
 		await page.getByTestId('setup-btn').click();
@@ -34,12 +38,14 @@ export async function setupAndLogin(page: Page) {
 		} catch {
 			// Setup was completed by another worker - go to login instead
 			await page.goto('/login');
+			await page.getByTestId('email-input').fill(TEST_EMAIL);
 			await page.getByTestId('password-input').fill(TEST_PASSWORD);
 			await page.getByTestId('login-btn').click();
 			await page.waitForURL('/');
 		}
 	} else if (url.includes('/login')) {
-		// Login
+		// Login with email
+		await page.getByTestId('email-input').fill(TEST_EMAIL);
 		await page.getByTestId('password-input').fill(TEST_PASSWORD);
 		await page.getByTestId('login-btn').click();
 		await page.waitForURL('/');
@@ -51,4 +57,4 @@ export async function setupAndLogin(page: Page) {
 	await page.waitForLoadState('networkidle');
 }
 
-export { expect };
+export { expect, TEST_EMAIL, TEST_PASSWORD };
