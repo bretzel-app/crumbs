@@ -1,6 +1,7 @@
 <script lang="ts">
 	import XIcon from 'lucide-svelte/icons/x';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import ImageLightbox from './ImageLightbox.svelte';
 	import type { Attachment } from '$lib/types/index.js';
 	import { optimizeImage } from '$lib/utils/image-optimize.js';
 	import { browser } from '$app/environment';
@@ -18,6 +19,8 @@
 	let uploading = $state(false);
 	let optimizing = $state(false);
 	let dragOver = $state(false);
+	let lightboxSrc = $state<string | null>(null);
+	let lightboxAlt = $state('');
 
 	async function handleFiles(files: FileList | null) {
 		if (!files || !noteId) return;
@@ -108,10 +111,12 @@
 				{@const isPending = 'pending' in attachment && attachment.pending}
 				{@const imgSrc = isPending ? attachment.path : `/api/notes/${noteId}/attachments?attachmentId=${attachment.id}`}
 				<div class="group relative">
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
 					<img
 						src={imgSrc}
 						alt={attachment.filename}
-						class="h-20 w-20 rounded-sm object-cover {isPending ? 'opacity-70' : ''}"
+						class="h-20 w-20 cursor-pointer rounded-sm object-cover {isPending ? 'opacity-70' : ''}"
+						onclick={() => { lightboxSrc = imgSrc; lightboxAlt = attachment.filename; }}
 						data-testid="attachment-thumbnail"
 					/>
 					{#if isPending}
@@ -161,3 +166,7 @@
 		{/if}
 	</div>
 </div>
+
+{#if lightboxSrc}
+	<ImageLightbox src={lightboxSrc} alt={lightboxAlt} onClose={() => lightboxSrc = null} />
+{/if}

@@ -3,6 +3,7 @@
 	import { renderMarkdown } from '$lib/utils/markdown.js';
 	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, updateNote, currentFilter } from '$lib/stores/notes.js';
 	import TagChip from './TagChip.svelte';
+	import ImageLightbox from './ImageLightbox.svelte';
 	import type { Note } from '$lib/types/index.js';
 	import Undo2 from 'lucide-svelte/icons/undo-2';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
@@ -29,6 +30,8 @@
 	});
 
 	let cardStyle = $state('');
+	let lightboxSrc = $state<string | null>(null);
+	let lightboxAlt = $state('');
 
 	const renderedContent = $derived(renderMarkdown(note.content));
 
@@ -83,11 +86,13 @@
 		<div class="-mx-4 -mt-4 mb-3 flex overflow-hidden rounded-t-sm" data-testid="card-thumbnails">
 			{#each note.attachments.slice(0, 3) as attachment}
 				<div class="relative min-w-0 flex-1">
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
 					<img
 						src="/api/notes/{note.id}/attachments?attachmentId={attachment.id}&thumb=1"
 						alt={attachment.filename}
-						class="h-24 w-full object-cover"
+						class="h-24 w-full cursor-pointer object-cover"
 						loading="lazy"
+						onclick={(e) => { e.stopPropagation(); lightboxSrc = `/api/notes/${note.id}/attachments?attachmentId=${attachment.id}`; lightboxAlt = attachment.filename; }}
 						data-testid="card-thumbnail"
 					/>
 				</div>
@@ -207,6 +212,9 @@
 		{/if}
 	</div>
 
+	{#if lightboxSrc}
+		<ImageLightbox src={lightboxSrc} alt={lightboxAlt} onClose={() => lightboxSrc = null} />
+	{/if}
 </article>
 
 <style>

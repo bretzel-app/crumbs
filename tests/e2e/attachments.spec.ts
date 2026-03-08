@@ -84,6 +84,28 @@ test.describe('Image Attachments', () => {
 		await expect(card.getByTestId('card-thumbnail')).not.toBeVisible();
 	});
 
+	test('Scenario: Clicking an image thumbnail opens a full-size lightbox', async ({ authenticatedPage: page }) => {
+		// Given a note with an uploaded image exists
+		await createAndReopenNote(page, 'Lightbox Test');
+		await page.getByTestId('image-toggle').click();
+		await page.getByTestId('file-input').setInputFiles(TEST_IMAGE_PATH);
+		await expect(page.getByTestId('attachment-thumbnail').first()).toBeVisible();
+
+		// When the user clicks the thumbnail
+		await page.getByTestId('attachment-thumbnail').first().click();
+
+		// Then a full-size lightbox overlay is displayed
+		await expect(page.getByTestId('image-lightbox')).toBeVisible();
+		await expect(page.getByTestId('lightbox-image')).toBeVisible();
+
+		// When the user presses Escape
+		await page.keyboard.press('Escape');
+
+		// Then the lightbox closes but the editor remains open
+		await expect(page.getByTestId('image-lightbox')).not.toBeVisible();
+		await expect(page.getByTestId('note-editor')).toBeVisible();
+	});
+
 	test('Scenario: Image toggle on new note auto-saves and opens upload panel', async ({ authenticatedPage: page }) => {
 		// When the user opens a new note and clicks the image toggle
 		await page.getByTestId('new-note-btn').click();

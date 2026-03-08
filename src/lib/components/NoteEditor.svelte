@@ -4,6 +4,7 @@
 	import FormattingToolbar from './FormattingToolbar.svelte';
 	import TiptapEditor from './TiptapEditor.svelte';
 	import ImageUpload from './ImageUpload.svelte';
+	import ImageLightbox from './ImageLightbox.svelte';
 	import { updateNote, createNote } from '$lib/stores/notes.js';
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import type { Editor } from '@tiptap/core';
@@ -37,6 +38,8 @@
 	let textareaEl: HTMLTextAreaElement | undefined = $state();
 	let tiptapEditor: Editor | undefined = $state();
 	let editorTick = $state(0);
+	let lightboxSrc = $state<string | null>(null);
+	let lightboxAlt = $state('');
 
 	// Mutable note identity — allows transitioning from new → saved without closing
 	// svelte-ignore state_referenced_locally
@@ -203,14 +206,21 @@
 			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
 				<div class="flex flex-wrap gap-2">
 					{#each attachmentsList as attachment}
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
 						<img
 							src="/api/notes/{noteId}/attachments?attachmentId={attachment.id}"
 							alt={attachment.filename}
-							class="h-20 w-20 rounded-sm object-cover"
+							class="h-20 w-20 cursor-pointer rounded-sm object-cover"
+							onclick={() => { lightboxSrc = `/api/notes/${noteId}/attachments?attachmentId=${attachment.id}`; lightboxAlt = attachment.filename; }}
+							data-testid="attachment-thumbnail"
 						/>
 					{/each}
 				</div>
 			</div>
+		{/if}
+
+		{#if lightboxSrc}
+			<ImageLightbox src={lightboxSrc} alt={lightboxAlt} onClose={() => lightboxSrc = null} />
 		{/if}
 
 		<!-- Formatting toolbar -->
