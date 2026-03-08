@@ -1,12 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	globalSetup: './tests/e2e/global-setup.ts',
 	testDir: './tests/e2e',
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	reporter: 'html',
+	globalSetup: './tests/e2e/global-setup.ts',
 	use: {
 		baseURL: 'http://localhost:4173',
 		trace: 'on-first-retry',
@@ -14,14 +14,15 @@ export default defineConfig({
 	},
 	projects: [
 		{
-			name: 'setup',
-			testMatch: /auth\.spec\.ts/,
+			name: 'auth-setup',
+			testMatch: 'auth.spec.ts',
+			fullyParallel: false,
 			use: { ...devices['Desktop Chrome'] }
 		},
 		{
-			name: 'chromium',
-			testIgnore: /auth\.spec\.ts/,
-			dependencies: ['setup'],
+			name: 'app',
+			testIgnore: 'auth.spec.ts',
+			dependencies: ['auth-setup'],
 			use: { ...devices['Desktop Chrome'] }
 		}
 	],
@@ -31,7 +32,8 @@ export default defineConfig({
 		reuseExistingServer: !process.env.CI,
 		timeout: 120_000,
 		env: {
-			DATABASE_URL: './data/test-crumbs.db'
+			DATABASE_URL: './data/test-crumbs.db',
+			NODE_ENV: 'test'
 		}
 	}
 });

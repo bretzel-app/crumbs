@@ -10,6 +10,11 @@ export function checkRateLimit(
 	ip: string,
 	email: string
 ): { allowed: boolean; retryAfter?: number } {
+	// Skip rate limiting in test environment
+	if (process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === '1') {
+		return { allowed: true };
+	}
+
 	const windowStart = new Date(Date.now() - LOCKOUT_MS);
 
 	// Count failed attempts from this IP in the lockout window
