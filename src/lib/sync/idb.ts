@@ -1,7 +1,7 @@
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB, deleteDB, type IDBPDatabase } from 'idb';
 import type { Note } from '$lib/types/index.js';
 
-const DB_NAME = 'crumbs';
+const DB_PREFIX = 'crumbs';
 const DB_VERSION = 2;
 
 export interface PendingAttachment {
@@ -51,10 +51,23 @@ export interface SyncQueueItem {
 }
 
 let dbPromise: Promise<IDBPDatabase<CrumbsDB>> | null = null;
+let currentUserId: number | null = null;
+
+/**
+ * Initialize the IDB for a specific user. Must be called before any
+ * other IDB operation (typically after login when userId is known).
+ */
+export function initDb(userId: number): void {
+	if (currentUserId !== userId) {
+		dbPromise = null;
+		currentUserId = userId;
+	}
+}
 
 export function getDb(): Promise<IDBPDatabase<CrumbsDB>> {
 	if (!dbPromise) {
-		dbPromise = openDB<CrumbsDB>(DB_NAME, DB_VERSION, {
+		const dbName = currentUserId ? `${DB_PREFIX}-${currentUserId}` : DB_PREFIX;
+		dbPromise = openDB<CrumbsDB>(dbName, DB_VERSION, {
 			upgrade(db) {
 				// Notes store
 				if (!db.objectStoreNames.contains('notes')) {
@@ -85,6 +98,21 @@ export function getDb(): Promise<IDBPDatabase<CrumbsDB>> {
 		});
 	}
 	return dbPromise;
+}
+
+/**
+ * Delete the current user's IDB (call on logout).
+ */
+export async function destroyDb(): Promise<void> {
+	if (dbPromise) {
+		const db = await dbPromise;
+		db.close();
+		dbPromise = null;
+	}
+	if (currentUserId) {
+		await deleteDB(`${DB_PREFIX}-${currentUserId}`);
+		currentUserId = null;
+	}
 }
 
 // Notes operations

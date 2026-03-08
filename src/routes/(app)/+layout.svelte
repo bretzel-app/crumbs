@@ -4,6 +4,7 @@
 	import Toast from '$lib/components/Layout/Toast.svelte';
 	import { loadNotes } from '$lib/stores/notes.js';
 	import { startSync, stopSync } from '$lib/sync/client.js';
+	import { initDb } from '$lib/sync/idb.js';
 	import { onMount, onDestroy } from 'svelte';
 
 	let { data, children } = $props();
@@ -11,6 +12,9 @@
 
 	onMount(() => {
 		sidebarOpen = window.matchMedia('(min-width: 1024px)').matches;
+		if (data.user) {
+			initDb(data.user.id);
+		}
 		loadNotes();
 		startSync();
 	});
