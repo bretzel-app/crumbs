@@ -16,9 +16,11 @@ const sqlite = new Database(DATABASE_URL);
 
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = ON');
 
-// Auto-create tables on first run
+// Disable foreign keys during schema setup to avoid constraint issues during migration
+sqlite.pragma('foreign_keys = OFF');
+
+// Auto-create tables on first run (new installs get full schema)
 sqlite.exec(`
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +41,7 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS notes (
 		id TEXT PRIMARY KEY,
-		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
+		user_id INTEGER NOT NULL DEFAULT 0,
 		title TEXT NOT NULL DEFAULT '',
 		content TEXT NOT NULL DEFAULT '',
 		color TEXT NOT NULL DEFAULT 'default',
@@ -56,7 +58,7 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
+		user_id INTEGER NOT NULL DEFAULT 0,
 		name TEXT NOT NULL
 	);
 
@@ -67,7 +69,7 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS attachments (
 		id TEXT PRIMARY KEY,
-		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
+		user_id INTEGER NOT NULL DEFAULT 0,
 		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
 		filename TEXT NOT NULL,
 		mime_type TEXT NOT NULL,
@@ -80,8 +82,8 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS sync_log (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
-		note_id TEXT NOT NULL REFERENCES notes(id),
+		user_id INTEGER NOT NULL DEFAULT 0,
+		note_id TEXT NOT NULL,
 		operation TEXT NOT NULL,
 		timestamp INTEGER NOT NULL,
 		client_id TEXT NOT NULL
@@ -94,7 +96,53 @@ sqlite.exec(`
 		success INTEGER NOT NULL,
 		timestamp INTEGER NOT NULL
 	);
+`);
 
+// Migration: detect old schema (no email column on users) and add columns
+const userColumns = sqlite
+	.prepare("PRAGMA table_info('users')")
+	.all() as { name: string }[];
+const hasEmail = userColumns.some((col) => col.name === 'email');
+
+if (!hasEmail) {
+	sqlite.exec(`
+		ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
+		ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+		ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'password';
+		ALTER TABLE users ADD COLUMN provider_id TEXT;
+	`);
+}
+
+// Ensure user_id column exists on data tables (migration from old schema)
+const notesColumns = sqlite
+	.prepare("PRAGMA table_info('notes')")
+	.all() as { name: string }[];
+if (!notesColumns.some((col) => col.name === 'user_id')) {
+	sqlite.exec(`
+		ALTER TABLE notes ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0;
+		ALTER TABLE tags ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0;
+		ALTER TABLE attachments ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0;
+		ALTER TABLE sync_log ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0;
+	`);
+}
+
+// Backfill: promote existing user to admin and assign all data to them
+if (!hasEmail) {
+	const existingUser = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as
+		| { id: number }
+		| undefined;
+	if (existingUser) {
+		const uid = existingUser.id;
+		sqlite.prepare('UPDATE users SET role = ? WHERE id = ?').run('admin', uid);
+		for (const table of ['notes', 'tags', 'attachments', 'sync_log']) {
+			sqlite.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = 0`).run(uid);
+		}
+	}
+}
+
+// Create indexes AFTER migration ensures columns exist
+sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS notes_user_id_idx ON notes(user_id);
 	CREATE INDEX IF NOT EXISTS notes_trashed_archived_idx ON notes(trashed, archived);
 	CREATE INDEX IF NOT EXISTS notes_updated_at_idx ON notes(updated_at);
@@ -104,11 +152,11 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
 `);
 
-// Drop the old unique index on tags(name) if it exists, replace with compound index
+// Replace old tags unique index with compound index including user_id
 try {
 	sqlite.exec(`DROP INDEX IF EXISTS tags_name_unique`);
 } catch {
-	// Index may not exist
+	// ignore
 }
 sqlite.exec(
 	`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_user_unique ON tags(name, user_id)`
@@ -126,51 +174,8 @@ try {
 	// Column already exists
 }
 
-// Migration: detect old schema (no email column on users) and migrate
-const userColumns = sqlite
-	.prepare("PRAGMA table_info('users')")
-	.all() as { name: string }[];
-const hasEmail = userColumns.some((col) => col.name === 'email');
-
-if (!hasEmail) {
-	// Old single-user schema — add new columns
-	sqlite.exec(`
-		ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
-		ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
-		ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
-		ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'password';
-		ALTER TABLE users ADD COLUMN provider_id TEXT;
-	`);
-
-	// Check if notes table has user_id column
-	const notesColumns = sqlite
-		.prepare("PRAGMA table_info('notes')")
-		.all() as { name: string }[];
-	const notesHasUserId = notesColumns.some((col) => col.name === 'user_id');
-
-	if (!notesHasUserId) {
-		sqlite.exec(`
-			ALTER TABLE notes ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
-			ALTER TABLE tags ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
-			ALTER TABLE attachments ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
-			ALTER TABLE sync_log ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
-		`);
-	}
-
-	// Backfill: promote existing user to admin and assign all data to them
-	const existingUser = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as
-		| { id: number }
-		| undefined;
-	if (existingUser) {
-		const uid = existingUser.id;
-		const backfill = sqlite.prepare('UPDATE users SET role = ? WHERE id = ?');
-		backfill.run('admin', uid);
-
-		for (const table of ['notes', 'tags', 'attachments', 'sync_log']) {
-			sqlite.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = 0`).run(uid);
-		}
-	}
-}
+// Re-enable foreign keys
+sqlite.pragma('foreign_keys = ON');
 
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
