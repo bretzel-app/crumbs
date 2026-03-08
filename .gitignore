@@ -37,3 +37,4 @@ vite.config.ts.timestamp-*
 
 # Local notes
 todo.md
+.worktrees/
