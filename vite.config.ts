@@ -28,6 +28,14 @@ export default defineConfig({
 				navigateFallback: '/',
 				runtimeCaching: [
 					{
+						urlPattern: /\/api\/notes\/.*\/attachments\?attachmentId=/,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'attachment-cache',
+							expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 }
+						}
+					},
+					{
 						urlPattern: /^https?:\/\/.*\/api\//,
 						handler: 'NetworkFirst',
 						options: {
