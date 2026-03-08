@@ -3,18 +3,18 @@ import type { RequestHandler } from './$types.js';
 import { verifyPassword, createSession } from '$lib/server/auth.js';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
-	const { password } = await request.json();
+	const { email, password } = await request.json();
 
-	if (!password) {
-		throw error(400, 'Password is required');
+	if (!email || !password) {
+		throw error(400, 'Email and password are required');
 	}
 
-	const valid = await verifyPassword(password);
-	if (!valid) {
-		throw error(401, 'Invalid password');
+	const user = await verifyPassword(email, password);
+	if (!user) {
+		throw error(401, 'Invalid email or password');
 	}
 
-	const token = await createSession();
+	const token = await createSession(user.id);
 	cookies.set('session', token, {
 		path: '/',
 		httpOnly: true,

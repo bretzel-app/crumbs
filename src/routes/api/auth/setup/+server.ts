@@ -8,18 +8,22 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		throw error(400, 'Setup already completed');
 	}
 
-	const { password } = await request.json();
+	const { email, displayName, password } = await request.json();
+
+	if (!email) {
+		throw error(400, 'Email is required');
+	}
 
 	if (!password || password.length < 8) {
 		throw error(400, 'Password must be at least 8 characters');
 	}
 
-	const success = await setupUser(password);
-	if (!success) {
+	const user = await setupUser(email, password, displayName);
+	if (!user) {
 		throw error(500, 'Failed to create user');
 	}
 
-	const token = await createSession();
+	const token = await createSession(user.id);
 	cookies.set('session', token, {
 		path: '/',
 		httpOnly: true,

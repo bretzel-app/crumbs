@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
+	let email = $state('');
+	let displayName = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
 	let errorMsg = $state('');
@@ -7,6 +11,11 @@
 	async function handleSetup(e: Event) {
 		e.preventDefault();
 		errorMsg = '';
+
+		if (!email) {
+			errorMsg = 'Email is required';
+			return;
+		}
 
 		if (password.length < 8) {
 			errorMsg = 'Password must be at least 8 characters';
@@ -24,11 +33,11 @@
 			const res = await fetch('/api/auth/setup', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ password })
+				body: JSON.stringify({ email, displayName, password })
 			});
 
 			if (res.ok) {
-				window.location.href = '/';
+				goto('/');
 			} else {
 				const data = await res.json();
 				errorMsg = data.message || 'Setup failed';
@@ -49,7 +58,7 @@
 	<div class="mb-6 text-center">
 		<img src="/favicon.svg" alt="Crumbs" class="mx-auto h-12 w-12" />
 		<h1 class="font-['Press_Start_2P'] text-xl text-[var(--primary)]">Welcome to Crumbs</h1>
-		<p class="mt-2 text-sm text-[var(--text-muted)]">Set up your password to get started</p>
+		<p class="mt-2 text-sm text-[var(--text-muted)]">Create your admin account to get started</p>
 	</div>
 
 	<form onsubmit={handleSetup}>
@@ -60,12 +69,30 @@
 		{/if}
 
 		<input
+			type="email"
+			bind:value={email}
+			placeholder="Email"
+			class="mb-3 w-full rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-3 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--primary)]"
+			data-testid="email-input"
+			required
+		/>
+
+		<input
+			type="text"
+			bind:value={displayName}
+			placeholder="Display name (optional)"
+			class="mb-3 w-full rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-3 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--primary)]"
+			data-testid="display-name-input"
+		/>
+
+		<input
 			type="password"
 			bind:value={password}
 			placeholder="Password (min 8 characters)"
 			class="mb-3 w-full rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-3 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--primary)]"
 			data-testid="password-input"
 			required
+			minlength="8"
 		/>
 
 		<input
@@ -75,6 +102,7 @@
 			class="mb-4 w-full rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-3 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--primary)]"
 			data-testid="confirm-password-input"
 			required
+			minlength="8"
 		/>
 
 		<button
@@ -83,7 +111,7 @@
 			class="w-full rounded-sm bg-[var(--primary)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
 			data-testid="setup-btn"
 		>
-			{loading ? 'Setting up...' : 'Set password & start'}
+			{loading ? 'Setting up...' : 'Create account & start'}
 		</button>
 	</form>
 </div>
