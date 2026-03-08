@@ -124,6 +124,12 @@ A `Makefile` wraps all common tasks for tool-agnostic usage. Run `make help` to 
 | `make release-minor` | — | Bump minor version, tag, and push |
 | `make release-major` | — | Bump major version, tag, and push |
 
+## Git conventions
+
+- **Conventional commits**: Use `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:` prefixes
+- **Commit regularly**: Bundle related changes into logical commits after each step or feature slice — don't accumulate a large diff
+- **Feature branches**: Use `feat/<name>` branches with worktrees for isolation
+
 ## CI/CD
 
 GitHub Actions with two workflows:
