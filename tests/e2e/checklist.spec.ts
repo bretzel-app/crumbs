@@ -50,9 +50,8 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-toggle-done')).toContainText('1 done');
 		await page.getByTestId('close-editor-btn').click();
 
-		// And reopening the note shows the item in the done section
+		// And reopening the note shows the item in the done section (expanded by default)
 		await noteCard(page, 'Tasks').click();
-		await page.getByTestId('checklist-toggle-done').click();
 		await expect(page.getByTestId('checklist-done-checkbox').first()).toBeChecked();
 	});
 
@@ -102,10 +101,7 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-toggle-done')).toBeVisible();
 		await expect(page.getByTestId('checklist-toggle-done')).toContainText('1 done');
 
-		// When the user expands the done section
-		await page.getByTestId('checklist-toggle-done').click();
-
-		// Then the completed items are shown in the done section
+		// Then the completed items are shown in the done section (expanded by default)
 		await expect(page.getByTestId('checklist-done-section')).toBeVisible();
 		await expect(page.getByTestId('checklist-done-section')).toContainText('Done task');
 	});
