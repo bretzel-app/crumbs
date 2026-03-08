@@ -47,7 +47,8 @@
     "markdown-it": "^14.1.1",
     "svelte-dnd-action": "^0.9.69",
     "tiptap-markdown": "^0.9.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -58,6 +59,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/markdown-it": "^14.1.2",
     "@types/uuid": "^10.0.0",
+    "@types/zxcvbn": "^4.4.5",
     "@vite-pwa/sveltekit": "^1.1.0",
     "drizzle-kit": "^0.31.9",
     "svelte": "^5.53.7",

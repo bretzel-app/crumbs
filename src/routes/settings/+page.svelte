@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import PasswordStrengthMeter from '$lib/components/PasswordStrengthMeter.svelte';
 
 	let { data } = $props();
 
@@ -140,6 +141,7 @@
 				placeholder="New password (min 8 characters)"
 				class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
 			/>
+			<PasswordStrengthMeter password={newPassword} />
 			<input
 				type="password"
 				bind:value={confirmNewPassword}
