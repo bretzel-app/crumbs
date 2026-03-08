@@ -2,6 +2,16 @@
 	import { goto } from '$app/navigation';
 	import PasswordStrengthMeter from '$lib/components/PasswordStrengthMeter.svelte';
 
+	type SessionInfo = {
+		id: string;
+		createdAt: string | null;
+		userAgent: string | null;
+		ip: string | null;
+		lastUsedAt: string | null;
+		expiresAt: string;
+		isCurrent: boolean;
+	};
+
 	let { data } = $props();
 
 	let displayName = $state(data.user?.displayName || '');
@@ -14,6 +24,63 @@
 	let confirmNewPassword = $state('');
 	let passwordMsg = $state('');
 	let passwordError = $state(false);
+
+	let activeSessions = $state<SessionInfo[]>([]);
+	let sessionsLoaded = $state(false);
+
+	async function loadSessions() {
+		try {
+			const res = await fetch('/api/auth/sessions');
+			if (res.ok) activeSessions = await res.json();
+			sessionsLoaded = true;
+		} catch {
+			// ignore
+		}
+	}
+
+	async function revokeSession(sessionId: string) {
+		try {
+			await fetch('/api/auth/sessions', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessionId })
+			});
+			activeSessions = activeSessions.filter((s) => s.id !== sessionId);
+		} catch {
+			// ignore
+		}
+	}
+
+	async function revokeAllOtherSessions() {
+		try {
+			await fetch('/api/auth/sessions', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ all: true })
+			});
+			activeSessions = activeSessions.filter((s) => s.isCurrent);
+		} catch {
+			// ignore
+		}
+	}
+
+	function formatAgent(ua: string | null): string {
+		if (!ua) return 'Unknown';
+		if (ua.includes('Firefox')) return 'Firefox';
+		if (ua.includes('Edg/')) return 'Edge';
+		if (ua.includes('Chrome')) return 'Chrome';
+		if (ua.includes('Safari')) return 'Safari';
+		return ua.slice(0, 40);
+	}
+
+	function formatDate(d: string | null): string {
+		if (!d) return 'Unknown';
+		return new Date(d).toLocaleString();
+	}
+
+	$effect(() => {
+		loadSessions();
+	});
 
 	async function saveProfile() {
 		profileMsg = '';
@@ -155,6 +222,53 @@
 				Change password
 			</button>
 		</div>
+	</section>
+
+	<!-- Active Sessions -->
+	<section class="mb-8 rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Active Sessions</h2>
+			{#if activeSessions.length > 1}
+				<button
+					onclick={revokeAllOtherSessions}
+					class="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+				>
+					Log out everywhere else
+				</button>
+			{/if}
+		</div>
+
+		{#if !sessionsLoaded}
+			<p class="text-sm text-gray-500">Loading sessions...</p>
+		{:else if activeSessions.length === 0}
+			<p class="text-sm text-gray-500">No active sessions</p>
+		{:else}
+			<div class="space-y-3">
+				{#each activeSessions as session (session.id)}
+					<div class="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-700">
+						<div>
+							<p class="text-sm font-medium text-gray-800 dark:text-gray-100">
+								{formatAgent(session.userAgent)}
+								{#if session.isCurrent}
+									<span class="ml-2 rounded bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/30 dark:text-green-200">current</span>
+								{/if}
+							</p>
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								{session.ip || 'Unknown IP'} · Last active {formatDate(session.lastUsedAt)}
+							</p>
+						</div>
+						{#if !session.isCurrent}
+							<button
+								onclick={() => revokeSession(session.id)}
+								class="rounded px-3 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+							>
+								Revoke
+							</button>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</section>
 
 	<!-- Admin: User Management Link -->

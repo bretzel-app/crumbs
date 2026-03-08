@@ -27,7 +27,8 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
 	recordLoginAttempt(ip, email, true);
 
-	const token = await createSession(user.id);
+	const userAgent = request.headers.get('user-agent') || undefined;
+	const token = await createSession(user.id, { userAgent, ip });
 	cookies.set('session', token, {
 		path: '/',
 		httpOnly: true,

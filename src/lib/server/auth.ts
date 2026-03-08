@@ -65,13 +65,21 @@ export async function verifyPassword(
 	return valid ? toUser(user) : null;
 }
 
-export async function createSession(userId: number): Promise<string> {
+export async function createSession(
+	userId: number,
+	meta?: { userAgent?: string; ip?: string }
+): Promise<string> {
 	const token = randomBytes(32).toString('hex');
+	const now = new Date();
 	db.insert(sessions)
 		.values({
 			id: token,
 			userId,
-			expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
+			expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+			createdAt: now,
+			userAgent: meta?.userAgent || null,
+			ip: meta?.ip || null,
+			lastUsedAt: now
 		})
 		.run();
 	return token;
@@ -108,6 +116,12 @@ export async function validateSession(
 		return { valid: false };
 	}
 
+	// Update lastUsedAt
+	db.update(sessions)
+		.set({ lastUsedAt: new Date() })
+		.where(eq(sessions.id, token))
+		.run();
+
 	return {
 		valid: true,
 		user: {
@@ -125,6 +139,54 @@ export async function deleteSession(token: string): Promise<void> {
 
 export async function cleanExpiredSessions(): Promise<void> {
 	db.delete(sessions).where(lt(sessions.expiresAt, new Date())).run();
+}
+
+export type SessionInfo = {
+	id: string;
+	createdAt: Date | null;
+	userAgent: string | null;
+	ip: string | null;
+	lastUsedAt: Date | null;
+	expiresAt: Date;
+	isCurrent: boolean;
+};
+
+export function listUserSessions(userId: number, currentToken: string): SessionInfo[] {
+	return db
+		.select()
+		.from(sessions)
+		.where(eq(sessions.userId, userId))
+		.all()
+		.map((s) => ({
+			id: s.id,
+			createdAt: s.createdAt,
+			userAgent: s.userAgent,
+			ip: s.ip,
+			lastUsedAt: s.lastUsedAt,
+			expiresAt: s.expiresAt,
+			isCurrent: s.id === currentToken
+		}));
+}
+
+export function revokeSession(userId: number, sessionId: string): boolean {
+	const session = db
+		.select()
+		.from(sessions)
+		.where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+		.get();
+	if (!session) return false;
+	db.delete(sessions).where(eq(sessions.id, sessionId)).run();
+	return true;
+}
+
+export function revokeAllSessions(userId: number, exceptToken?: string): void {
+	if (exceptToken) {
+		sqlite
+			.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?')
+			.run(userId, exceptToken);
+	} else {
+		db.delete(sessions).where(eq(sessions.userId, userId)).run();
+	}
 }
 
 // --- User CRUD (admin operations) ---

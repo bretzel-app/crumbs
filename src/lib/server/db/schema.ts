@@ -16,7 +16,11 @@ export const sessions = sqliteTable('sessions', {
 	userId: integer('user_id')
 		.references(() => users.id)
 		.notNull(),
-	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull()
+	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' }),
+	userAgent: text('user_agent'),
+	ip: text('ip'),
+	lastUsedAt: integer('last_used_at', { mode: 'timestamp' })
 });
 
 export const notes = sqliteTable(

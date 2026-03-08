@@ -36,7 +36,11 @@ sqlite.exec(`
 	CREATE TABLE IF NOT EXISTS sessions (
 		id TEXT PRIMARY KEY,
 		user_id INTEGER NOT NULL REFERENCES users(id),
-		expires_at INTEGER NOT NULL
+		expires_at INTEGER NOT NULL,
+		created_at INTEGER,
+		user_agent TEXT,
+		ip TEXT,
+		last_used_at INTEGER
 	);
 
 	CREATE TABLE IF NOT EXISTS notes (
@@ -139,6 +143,19 @@ if (!hasEmail) {
 			sqlite.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = 0`).run(uid);
 		}
 	}
+}
+
+// Migration: add session tracking columns
+const sessionColumns = sqlite
+	.prepare("PRAGMA table_info('sessions')")
+	.all() as { name: string }[];
+if (!sessionColumns.some((col) => col.name === 'created_at')) {
+	sqlite.exec(`
+		ALTER TABLE sessions ADD COLUMN created_at INTEGER;
+		ALTER TABLE sessions ADD COLUMN user_agent TEXT;
+		ALTER TABLE sessions ADD COLUMN ip TEXT;
+		ALTER TABLE sessions ADD COLUMN last_used_at INTEGER;
+	`);
 }
 
 // Create indexes AFTER migration ensures columns exist

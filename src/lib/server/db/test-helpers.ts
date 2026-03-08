@@ -27,7 +27,11 @@ export function createTestDb() {
 		CREATE TABLE sessions (
 			id TEXT PRIMARY KEY,
 			user_id INTEGER NOT NULL REFERENCES users(id),
-			expires_at INTEGER NOT NULL
+			expires_at INTEGER NOT NULL,
+			created_at INTEGER,
+			user_agent TEXT,
+			ip TEXT,
+			last_used_at INTEGER
 		);
 
 		CREATE TABLE notes (
