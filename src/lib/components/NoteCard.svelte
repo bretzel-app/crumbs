@@ -126,7 +126,7 @@
 	{/if}
 
 	<!-- Action buttons - show on hover -->
-	<div class="absolute bottom-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+	<div class="absolute bottom-1 right-1 flex gap-1 max-md:opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100">
 		{#if $currentFilter === 'trashed'}
 			<button
 				onclick={stop(() => restoreNote(note.id))}
