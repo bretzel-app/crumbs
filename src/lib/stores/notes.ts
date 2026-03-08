@@ -63,9 +63,13 @@ function isNetworkError(err: unknown): boolean {
 
 export async function loadNotes(filter: NoteFilter = 'all') {
 	// Load from IDB first for instant display
-	const cached = await getAllNotes();
-	if (cached.length > 0) {
-		notes.set(cached);
+	try {
+		const cached = await getAllNotes();
+		if (cached.length > 0) {
+			notes.set(cached);
+		}
+	} catch {
+		// IDB unavailable — continue with server fetch
 	}
 	currentFilter.set(filter);
 	notesLoaded.set(true);
@@ -79,8 +83,16 @@ export async function loadNotes(filter: NoteFilter = 'all') {
 			currentFilter.set(filter);
 
 			// Update IDB with server state
-			await clearIdbNotes();
-			await Promise.all(data.map((n) => putNote(n)));
+			try {
+				await clearIdbNotes();
+				await Promise.all(data.map((n) => putNote(n)));
+			} catch {
+				// IDB write failed — server data is still in the store
+			}
+		} else if (res.status === 401) {
+			window.location.href = '/login';
+		} else {
+			showToast('Failed to load notes', 'error');
 		}
 	} catch {
 		// Offline — IDB data already loaded above
@@ -99,6 +111,11 @@ export async function createNote(note: NoteCreate): Promise<Note | null> {
 			notes.update((list) => [created, ...list]);
 			await putNote(created);
 			return created;
+		}
+		if (res.status === 401) {
+			window.location.href = '/login';
+		} else {
+			showToast('Failed to save note', 'error');
 		}
 		return null;
 	} catch (err) {

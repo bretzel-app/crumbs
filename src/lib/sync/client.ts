@@ -29,7 +29,12 @@ export function getSyncStatus(): SyncStatus {
  * Push local changes to server.
  */
 async function pushChanges(): Promise<boolean> {
-	const queue = await getSyncQueue();
+	let queue;
+	try {
+		queue = await getSyncQueue();
+	} catch {
+		return true; // IDB unavailable — nothing to push
+	}
 	if (queue.length === 0) return true;
 
 	try {
@@ -78,27 +83,37 @@ async function pushPendingAttachments(): Promise<void> {
  * Pull remote changes and merge with local state.
  */
 async function pullChanges(): Promise<Note[]> {
-	const lastSync = (await getMeta('lastSyncTimestamp')) || '0';
+	let lastSync = '0';
+	try {
+		lastSync = (await getMeta('lastSyncTimestamp')) || '0';
+	} catch {
+		// IDB unavailable — pull everything
+	}
 
 	try {
 		const res = await fetch(`/api/sync?since=${lastSync}`);
 		if (!res.ok) return [];
 
 		const remoteNotes: Note[] = await res.json();
-		const localNotes = await getAllNotes();
-		const localMap = new Map(localNotes.map((n) => [n.id, n]));
 
-		for (const remote of remoteNotes) {
-			const local = localMap.get(remote.id);
-			if (local) {
-				const merged = mergeNotes(local, remote);
-				await putNote(merged);
-			} else {
-				await putNote(remote);
+		try {
+			const localNotes = await getAllNotes();
+			const localMap = new Map(localNotes.map((n) => [n.id, n]));
+
+			for (const remote of remoteNotes) {
+				const local = localMap.get(remote.id);
+				if (local) {
+					const merged = mergeNotes(local, remote);
+					await putNote(merged);
+				} else {
+					await putNote(remote);
+				}
 			}
-		}
 
-		await setMeta('lastSyncTimestamp', String(Date.now()));
+			await setMeta('lastSyncTimestamp', String(Date.now()));
+		} catch {
+			// IDB write failed — server data still returned for store use
+		}
 		return remoteNotes;
 	} catch {
 		return [];
