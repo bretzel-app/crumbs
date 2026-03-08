@@ -86,6 +86,15 @@ export async function getAttachmentsByNote(noteId: string) {
 	return db.select().from(attachments).where(eq(attachments.noteId, noteId));
 }
 
+export async function updateAttachment(id: string, data: { featured: boolean }) {
+	const [updated] = await db
+		.update(attachments)
+		.set({ featured: data.featured })
+		.where(eq(attachments.id, id))
+		.returning();
+	return updated ?? null;
+}
+
 export async function deleteAttachment(id: string) {
 	const attachment = await getAttachment(id);
 	if (attachment) {

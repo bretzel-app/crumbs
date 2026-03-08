@@ -66,6 +66,24 @@
 		attachmentsList = [...attachmentsList, attachment];
 	}
 
+	async function handleToggleFeatured(attachmentId: string, featured: boolean) {
+		if (!noteId) return;
+		try {
+			const res = await fetch(`/api/notes/${noteId}/attachments?attachmentId=${attachmentId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ featured })
+			});
+			if (res.ok) {
+				attachmentsList = attachmentsList.map((a) =>
+					a.id === attachmentId ? { ...a, featured } : a
+				);
+			}
+		} catch (err) {
+			console.error('Failed to toggle featured:', err);
+		}
+	}
+
 	async function handleAttachmentRemove(attachmentId: string) {
 		if (!noteId) return;
 		try {
@@ -200,6 +218,7 @@
 					attachments={attachmentsList}
 					onUpload={handleAttachmentUpload}
 					onRemove={handleAttachmentRemove}
+					onToggleFeatured={handleToggleFeatured}
 				/>
 			</div>
 		{:else if noteId && attachmentsList.length > 0}

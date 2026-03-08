@@ -48,6 +48,8 @@
 	const doneChecklistItems = $derived(checklistItems.filter(i => i.checked));
 	const sortedChecklistItems = $derived([...activeChecklistItems, ...doneChecklistItems]);
 
+	const featuredAttachments = $derived((note.attachments ?? []).filter(a => a.featured));
+
 	function stop(fn: () => void) {
 		return (e: Event) => {
 			e.stopPropagation();
@@ -81,10 +83,10 @@
 	data-testid="note-card"
 	data-note-id={note.id}
 >
-	<!-- Thumbnail strip -->
-	{#if note.attachments && note.attachments.length > 0}
+	<!-- Thumbnail strip (featured images only) -->
+	{#if featuredAttachments.length > 0}
 		<div class="-mx-4 -mt-4 mb-3 flex overflow-hidden rounded-t-sm" data-testid="card-thumbnails">
-			{#each note.attachments.slice(0, 3) as attachment}
+			{#each featuredAttachments.slice(0, 3) as attachment}
 				<div class="relative min-w-0 flex-1">
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
 					<img
@@ -97,9 +99,9 @@
 					/>
 				</div>
 			{/each}
-			{#if note.attachments.length > 3}
+			{#if featuredAttachments.length > 3}
 				<div class="absolute right-1 top-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white" data-testid="card-thumbnail-count">
-					+{note.attachments.length - 3}
+					+{featuredAttachments.length - 3}
 				</div>
 			{/if}
 		</div>

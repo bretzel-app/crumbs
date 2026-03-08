@@ -43,6 +43,7 @@ export interface Attachment {
 	size: number;
 	path: string;
 	thumbnailPath?: string | null;
+	featured: boolean;
 	createdAt: Date;
 }
 

@@ -85,5 +85,12 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS sync_log_timestamp_idx ON sync_log(timestamp);
 `);
 
+// Idempotent migration: add featured column to attachments
+try {
+	sqlite.exec(`ALTER TABLE attachments ADD COLUMN featured INTEGER NOT NULL DEFAULT 0;`);
+} catch {
+	// Column already exists
+}
+
 export const db = drizzle(sqlite, { schema });
 export { sqlite };

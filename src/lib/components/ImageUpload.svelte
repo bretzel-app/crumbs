@@ -1,5 +1,6 @@
 <script lang="ts">
 	import XIcon from 'lucide-svelte/icons/x';
+	import Star from 'lucide-svelte/icons/star';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import ImageLightbox from './ImageLightbox.svelte';
 	import type { Attachment } from '$lib/types/index.js';
@@ -12,9 +13,10 @@
 		attachments: Attachment[];
 		onUpload: (attachment: Attachment) => void;
 		onRemove: (attachmentId: string) => void;
+		onToggleFeatured?: (attachmentId: string, featured: boolean) => void;
 	}
 
-	let { noteId, attachments = [], onUpload, onRemove }: Props = $props();
+	let { noteId, attachments = [], onUpload, onRemove, onToggleFeatured }: Props = $props();
 
 	let uploading = $state(false);
 	let optimizing = $state(false);
@@ -123,6 +125,15 @@
 						<div class="absolute bottom-0.5 left-0.5 rounded-sm bg-black/50 p-0.5" title="Pending sync">
 							<RefreshCw class="h-3 w-3 text-white" />
 						</div>
+					{:else if onToggleFeatured}
+						<button
+							onclick={() => onToggleFeatured(attachment.id, !attachment.featured)}
+							class="absolute bottom-0.5 right-0.5 rounded-full bg-black/50 p-0.5 {attachment.featured ? 'block' : 'hidden group-hover:block'}"
+							aria-label={attachment.featured ? 'Unfeature image' : 'Feature image'}
+							data-testid="toggle-featured"
+						>
+							<Star class="h-3 w-3 {attachment.featured ? 'fill-[var(--primary)] text-[var(--primary)]' : 'text-white'}" />
+						</button>
 					{/if}
 					<button
 						onclick={() => onRemove(attachment.id)}

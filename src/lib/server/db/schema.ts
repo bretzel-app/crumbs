@@ -72,6 +72,7 @@ export const attachments = sqliteTable('attachments', {
 	size: integer('size').notNull(),
 	path: text('path').notNull(),
 	thumbnailPath: text('thumbnail_path'),
+	featured: integer('featured', { mode: 'boolean' }).default(false).notNull(),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 

@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { saveAttachment, getAttachmentsByNote, getAttachment, deleteAttachment } from '$lib/server/attachments.js';
+import { saveAttachment, getAttachmentsByNote, getAttachment, deleteAttachment, updateAttachment } from '$lib/server/attachments.js';
 import { readFile } from 'fs/promises';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -48,6 +48,19 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	const thumbnail = formData.get('thumbnail') as File | null;
 	const attachment = await saveAttachment(params.id, file, thumbnail);
 	return json(attachment, { status: 201 });
+};
+
+export const PATCH: RequestHandler = async ({ url, request }) => {
+	const attachmentId = url.searchParams.get('attachmentId');
+	if (!attachmentId) throw error(400, 'attachmentId required');
+
+	const body = await request.json();
+	if (typeof body.featured !== 'boolean') throw error(400, 'featured (boolean) required');
+
+	const updated = await updateAttachment(attachmentId, { featured: body.featured });
+	if (!updated) throw error(404, 'Attachment not found');
+
+	return json(updated);
 };
 
 export const DELETE: RequestHandler = async ({ url }) => {

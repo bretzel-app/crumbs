@@ -49,19 +49,67 @@ test.describe('Image Attachments', () => {
 		await expect(page.getByTestId('note-editor').locator('img')).toBeVisible();
 	});
 
-	test('Scenario: Image thumbnail appears on the note card', async ({ authenticatedPage: page }) => {
+	test('Scenario: Uploaded images are hidden from card header by default', async ({ authenticatedPage: page }) => {
 		// Given a note with an uploaded image exists
-		await createAndReopenNote(page, 'Card Thumb Test');
+		await createAndReopenNote(page, 'Hidden Default Test');
 		await page.getByTestId('image-toggle').click();
 		await page.getByTestId('file-input').setInputFiles(TEST_IMAGE_PATH);
 		await expect(page.getByTestId('attachment-thumbnail')).toBeVisible();
 
-		// When the user closes the editor
+		// When the user closes the editor without featuring the image
 		await page.getByTestId('close-editor-btn').click();
 
-		// Then a thumbnail strip appears on the note card
-		const card = noteCard(page, 'Card Thumb Test');
+		// Then the card does NOT show a thumbnail strip
+		const card = noteCard(page, 'Hidden Default Test');
+		await expect(card).toBeVisible();
+		await expect(card.getByTestId('card-thumbnails')).not.toBeVisible();
+	});
+
+	test('Scenario: Featuring an image makes it appear on the card header', async ({ authenticatedPage: page }) => {
+		// Given a note with an uploaded image exists
+		await createAndReopenNote(page, 'Feature Test');
+		await page.getByTestId('image-toggle').click();
+		await page.getByTestId('file-input').setInputFiles(TEST_IMAGE_PATH);
+		await expect(page.getByTestId('attachment-thumbnail')).toBeVisible();
+
+		// When the user features the image by clicking the star
+		await page.getByTestId('attachment-thumbnail').hover();
+		await page.getByTestId('toggle-featured').click();
+
+		// And closes the editor
+		await page.getByTestId('close-editor-btn').click();
+
+		// Then the card shows the featured image in its header
+		const card = noteCard(page, 'Feature Test');
+		await expect(card.getByTestId('card-thumbnails')).toBeVisible();
 		await expect(card.getByTestId('card-thumbnail')).toBeVisible();
+	});
+
+	test('Scenario: Unfeaturing an image removes it from the card header', async ({ authenticatedPage: page }) => {
+		// Given a note with a featured image exists
+		await createAndReopenNote(page, 'Unfeature Test');
+		await page.getByTestId('image-toggle').click();
+		await page.getByTestId('file-input').setInputFiles(TEST_IMAGE_PATH);
+		await expect(page.getByTestId('attachment-thumbnail')).toBeVisible();
+
+		// Feature the image
+		await page.getByTestId('attachment-thumbnail').hover();
+		await page.getByTestId('toggle-featured').click();
+		await page.getByTestId('close-editor-btn').click();
+
+		const card = noteCard(page, 'Unfeature Test');
+		await expect(card.getByTestId('card-thumbnails')).toBeVisible();
+
+		// When the user unfeatures the image
+		await card.getByText('Unfeature Test').click();
+		await expect(page.getByTestId('note-editor')).toBeVisible();
+		await page.getByTestId('image-toggle').click();
+		await page.getByTestId('attachment-thumbnail').hover();
+		await page.getByTestId('toggle-featured').click();
+		await page.getByTestId('close-editor-btn').click();
+
+		// Then the card no longer shows the thumbnail strip
+		await expect(card.getByTestId('card-thumbnails')).not.toBeVisible();
 	});
 
 	test('Scenario: Removed image disappears from editor and card', async ({ authenticatedPage: page }) => {
