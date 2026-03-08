@@ -49,6 +49,14 @@ For a single-user app with multiple devices:
 - If timestamps match: higher version wins
 - If both match: local version is preferred
 
+### Attachment Data Flow
+1. User drops/picks image in NoteEditor
+2. Client optimizes: resize ≤1920px, compress to WebP, generate 200px thumbnail
+3. **Online**: POST optimized + thumbnail to `/api/notes/{id}/attachments` → server saves to `data/attachments/` + DB
+4. **Offline**: store blobs in IDB `pendingAttachments` store → display via `URL.createObjectURL()` → on reconnect, sync pushes to server
+5. **Display**: NoteCard uses `&thumb=1` URL (200px WebP), editor shows full-size
+6. **SW Caching**: `CacheFirst` rule caches attachment URLs — previously-viewed images available offline
+
 ## Tech Stack Rationale
 
 ### SvelteKit
@@ -89,7 +97,7 @@ Key tables:
 - `notes` - Core note data with version tracking
 - `tags` - Unique tag names
 - `note_tags` - Many-to-many note ↔ tag
-- `attachments` - Image file metadata
+- `attachments` - Image file metadata (path + thumbnailPath)
 - `sync_log` - Sync operation history
 
 ## File Organization

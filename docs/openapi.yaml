@@ -185,6 +185,12 @@ paths:
           in: query
           schema:
             type: string
+        - name: thumb
+          in: query
+          description: Set to "1" to return the thumbnail instead of the full image (requires attachmentId)
+          schema:
+            type: string
+            enum: ['1']
       responses:
         '200':
           description: Attachment list (without attachmentId) or file content (with attachmentId)
@@ -209,6 +215,10 @@ paths:
                   type: string
                   format: binary
                   description: Image file (max 10MB)
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Pre-generated thumbnail (WebP, ~200px)
       responses:
         '201':
           description: Attachment metadata
@@ -368,6 +378,10 @@ components:
           type: array
           items:
             type: string
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
 
     NoteInput:
       type: object
@@ -415,6 +429,10 @@ components:
           type: string
         size:
           type: integer
+        thumbnailPath:
+          type: string
+          nullable: true
+          description: Server path to thumbnail file (null if no thumbnail)
         createdAt:
           type: string
           format: date-time

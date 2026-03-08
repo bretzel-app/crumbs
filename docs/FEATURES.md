@@ -42,7 +42,13 @@
 - Upload images via file picker or drag-and-drop
 - Supports JPEG, PNG, GIF, WebP, SVG
 - Max file size: 10MB
-- Thumbnail previews in note cards
+- **Client-side optimization**: images resized to fit 1920×1920, compressed to WebP (~80% quality), transparent PNGs preserved
+- **Auto-generated thumbnails**: 200×200 WebP at 60% quality for fast card previews
+- Thumbnail strip on note cards (up to 3 images, "+N" badge for more)
+- Full-size images in editor, thumbnails on cards (`&thumb=1`)
+- **Offline support**: optimized blobs stored in IndexedDB, displayed via blob URLs, auto-synced on reconnect
+- Pending upload indicator on offline-queued images
+- Service worker CacheFirst caching for previously-viewed images
 - Remove attachments from editor
 
 ### Tag Organization
@@ -90,9 +96,9 @@
 ### PWA / Offline-First
 - Installable as standalone app
 - Web app manifest with icons
-- Service worker for asset caching
-- IndexedDB for local data storage
-- Background sync every 30 seconds
+- Service worker for asset caching (CacheFirst for attachments, NetworkFirst for API)
+- IndexedDB for local data storage (notes + pending attachments)
+- Background sync every 30 seconds (notes + offline attachments)
 - LWW conflict resolution for multi-device use
 - Sync status indicator (synced/syncing/offline/error)
 
