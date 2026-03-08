@@ -1,26 +1,9 @@
 import { test, expect, noteCard } from './helpers/fixtures.js';
-import path from 'path';
-import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-// Create a minimal test PNG (1x1 red pixel) for upload tests
-const TEST_IMAGE_PATH = path.join(process.cwd(), 'tests', 'e2e', 'helpers', 'test-image.png');
-
-test.beforeAll(() => {
-	// Minimal 1x1 PNG (red pixel)
-	const png = Buffer.from(
-		'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-		'base64'
-	);
-	fs.writeFileSync(TEST_IMAGE_PATH, png);
-});
-
-test.afterAll(() => {
-	try {
-		fs.unlinkSync(TEST_IMAGE_PATH);
-	} catch {
-		// Cleanup is best-effort
-	}
-});
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_IMAGE_PATH = join(__dirname, 'helpers', 'test-image.png');
 
 /** Helper: create a note, close editor, reopen it */
 async function createAndReopenNote(page: import('@playwright/test').Page, title: string) {
@@ -62,8 +45,7 @@ test.describe('Image Attachments', () => {
 		await page.getByTestId('close-editor-btn').click();
 		await noteCard(page, 'Persist Test').click();
 
-		// Then the image thumbnail is still visible in the editor
-		// (attachments show even without toggling image panel when they exist)
+		// Then the image is still visible in the editor
 		await expect(page.getByTestId('note-editor').locator('img')).toBeVisible();
 	});
 
@@ -90,6 +72,7 @@ test.describe('Image Attachments', () => {
 		await expect(page.getByTestId('attachment-thumbnail')).toBeVisible();
 
 		// When the user removes the image
+		await page.getByTestId('attachment-thumbnail').hover();
 		await page.getByTestId('remove-attachment').click();
 
 		// Then the thumbnail is gone from the editor

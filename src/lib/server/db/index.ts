@@ -66,6 +66,7 @@ sqlite.exec(`
 		mime_type TEXT NOT NULL,
 		size INTEGER NOT NULL,
 		path TEXT NOT NULL,
+		thumbnail_path TEXT,
 		created_at INTEGER NOT NULL
 	);
 
