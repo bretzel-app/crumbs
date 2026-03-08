@@ -7,20 +7,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from '$lib/server/tags.js';
 import { fetchAttachmentsForNotes } from '$lib/server/attachments.js';
+import { getUserId } from '$lib/server/api-utils.js';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, ...event }) => {
+	const userId = getUserId(event);
 	const filter = url.searchParams.get('filter') || 'all';
 
 	let conditions;
 	switch (filter) {
 		case 'archived':
-			conditions = and(eq(notes.archived, true), eq(notes.trashed, false));
+			conditions = and(eq(notes.userId, userId), eq(notes.archived, true), eq(notes.trashed, false));
 			break;
 		case 'trashed':
-			conditions = eq(notes.trashed, true);
+			conditions = and(eq(notes.userId, userId), eq(notes.trashed, true));
 			break;
 		default:
-			conditions = and(eq(notes.archived, false), eq(notes.trashed, false));
+			conditions = and(eq(notes.userId, userId), eq(notes.archived, false), eq(notes.trashed, false));
 	}
 
 	const result = db
@@ -42,13 +44,15 @@ export const GET: RequestHandler = async ({ url }) => {
 	return json(notesWithTags);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, ...event }) => {
+	const userId = getUserId(event);
 	const body = await request.json();
 	const now = new Date();
 	const id = body.id || uuidv4();
 
 	const newNote = {
 		id,
+		userId,
 		title: body.title || '',
 		content: body.content || '',
 		color: body.color || 'default',

@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
 import { notes, syncLog } from '$lib/server/db/schema.js';
-import { eq, gt } from 'drizzle-orm';
+import { eq, gt, and } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
 import type { SyncQueueItem } from './idb.js';
@@ -8,7 +8,7 @@ import type { SyncQueueItem } from './idb.js';
 /**
  * Process incoming sync changes from client.
  */
-export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
+export async function processSyncPush(changes: SyncQueueItem[], userId: number): Promise<void> {
 	const noteIdsToSyncTags: string[] = [];
 
 	db.transaction((tx) => {
@@ -20,7 +20,7 @@ export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
 					const existing = tx
 						.select()
 						.from(notes)
-						.where(eq(notes.id, change.noteId))
+						.where(and(eq(notes.id, change.noteId), eq(notes.userId, userId)))
 						.get();
 
 					if (existing) {
@@ -31,13 +31,14 @@ export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
 									updatedAt: new Date(change.timestamp),
 									version: existing.version + 1
 								})
-								.where(eq(notes.id, change.noteId))
+								.where(and(eq(notes.id, change.noteId), eq(notes.userId, userId)))
 								.run();
 						}
 					} else if (change.operation === 'create' && change.data) {
 						tx.insert(notes)
 							.values({
 								id: change.noteId,
+								userId,
 								title: change.data.title || '',
 								content: change.data.content || '',
 								color: change.data.color || 'default',
@@ -59,13 +60,14 @@ export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
 					break;
 				}
 				case 'delete': {
-					tx.delete(notes).where(eq(notes.id, change.noteId)).run();
+					tx.delete(notes).where(and(eq(notes.id, change.noteId), eq(notes.userId, userId))).run();
 					break;
 				}
 			}
 
 			tx.insert(syncLog)
 				.values({
+					userId,
 					noteId: change.noteId,
 					operation: change.operation,
 					timestamp: new Date(change.timestamp),
@@ -76,7 +78,7 @@ export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
 	});
 
 	for (const noteId of noteIdsToSyncTags) {
-		const note = db.select().from(notes).where(eq(notes.id, noteId)).get();
+		const note = db.select().from(notes).where(and(eq(notes.id, noteId), eq(notes.userId, userId))).get();
 		if (note) {
 			const content = `${note.title} ${note.content}`;
 			syncNoteTags(noteId, extractTags(content));
@@ -85,12 +87,12 @@ export async function processSyncPush(changes: SyncQueueItem[]): Promise<void> {
 }
 
 /**
- * Get all notes updated since a given timestamp.
+ * Get all notes updated since a given timestamp for a specific user.
  */
-export async function getChangesSince(sinceTimestamp: number) {
+export async function getChangesSince(sinceTimestamp: number, userId: number) {
 	return db
 		.select()
 		.from(notes)
-		.where(gt(notes.updatedAt, new Date(sinceTimestamp)))
+		.where(and(eq(notes.userId, userId), gt(notes.updatedAt, new Date(sinceTimestamp))))
 		.all();
 }

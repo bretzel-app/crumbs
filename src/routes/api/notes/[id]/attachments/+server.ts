@@ -2,8 +2,26 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { saveAttachment, getAttachmentsByNote, getAttachment, deleteAttachment, updateAttachment } from '$lib/server/attachments.js';
 import { readFile } from 'fs/promises';
+import { db } from '$lib/server/db/index.js';
+import { notes } from '$lib/server/db/schema.js';
+import { eq, and } from 'drizzle-orm';
+import { getUserId } from '$lib/server/api-utils.js';
 
-export const GET: RequestHandler = async ({ params, url }) => {
+/** Verify the note belongs to the authenticated user */
+async function verifyNoteOwnership(noteId: string, userId: number) {
+	const note = await db
+		.select()
+		.from(notes)
+		.where(and(eq(notes.id, noteId), eq(notes.userId, userId)))
+		.get();
+	if (!note) throw error(404, 'Note not found');
+	return note;
+}
+
+export const GET: RequestHandler = async ({ params, url, ...event }) => {
+	const userId = getUserId(event);
+	await verifyNoteOwnership(params.id, userId);
+
 	const attachmentId = url.searchParams.get('attachmentId');
 
 	if (attachmentId) {
@@ -28,7 +46,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	return json(list);
 };
 
-export const POST: RequestHandler = async ({ params, request }) => {
+export const POST: RequestHandler = async ({ params, request, ...event }) => {
+	const userId = getUserId(event);
+	await verifyNoteOwnership(params.id, userId);
+
 	const formData = await request.formData();
 	const file = formData.get('file') as File;
 
@@ -46,11 +67,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	}
 
 	const thumbnail = formData.get('thumbnail') as File | null;
-	const attachment = await saveAttachment(params.id, file, thumbnail);
+	const attachment = await saveAttachment(params.id, file, userId, thumbnail);
 	return json(attachment, { status: 201 });
 };
 
-export const PATCH: RequestHandler = async ({ url, request }) => {
+export const PATCH: RequestHandler = async ({ params, url, request, ...event }) => {
+	const userId = getUserId(event);
+	await verifyNoteOwnership(params.id, userId);
+
 	const attachmentId = url.searchParams.get('attachmentId');
 	if (!attachmentId) throw error(400, 'attachmentId required');
 
@@ -63,7 +87,10 @@ export const PATCH: RequestHandler = async ({ url, request }) => {
 	return json(updated);
 };
 
-export const DELETE: RequestHandler = async ({ url }) => {
+export const DELETE: RequestHandler = async ({ params, url, ...event }) => {
+	const userId = getUserId(event);
+	await verifyNoteOwnership(params.id, userId);
+
 	const attachmentId = url.searchParams.get('attachmentId');
 	if (!attachmentId) throw error(400, 'attachmentId required');
 

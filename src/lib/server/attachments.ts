@@ -18,6 +18,7 @@ if (!existsSync(ATTACHMENTS_DIR)) {
 export async function saveAttachment(
 	noteId: string,
 	file: File,
+	userId: number,
 	thumbnail?: File | Blob | null
 ): Promise<typeof attachments.$inferSelect> {
 	const id = uuidv4();
@@ -40,6 +41,7 @@ export async function saveAttachment(
 		.insert(attachments)
 		.values({
 			id,
+			userId,
 			noteId,
 			filename: file.name,
 			mimeType: file.type,

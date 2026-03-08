@@ -4,8 +4,10 @@ import { db } from '$lib/server/db/index.js';
 import { notes, noteTags, tags } from '$lib/server/db/schema.js';
 import { and, eq, like, or, inArray } from 'drizzle-orm';
 import { fetchTagsForNotes } from '$lib/server/tags.js';
+import { getUserId } from '$lib/server/api-utils.js';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, ...event }) => {
+	const userId = getUserId(event);
 	const query = url.searchParams.get('q')?.trim();
 
 	if (!query) {
@@ -19,6 +21,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		.from(notes)
 		.where(
 			and(
+				eq(notes.userId, userId),
 				eq(notes.trashed, false),
 				or(like(notes.title, pattern), like(notes.content, pattern))
 			)
@@ -30,7 +33,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		.select({ noteId: noteTags.noteId })
 		.from(noteTags)
 		.innerJoin(tags, eq(noteTags.tagId, tags.id))
-		.where(like(tags.name, pattern))
+		.where(and(like(tags.name, pattern), eq(tags.userId, userId)))
 		.all();
 
 	const resultIds = new Set(results.map((n) => n.id));
@@ -43,7 +46,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		extraNotes = db
 			.select()
 			.from(notes)
-			.where(and(inArray(notes.id, extraNoteIds), eq(notes.trashed, false)))
+			.where(and(eq(notes.userId, userId), inArray(notes.id, extraNoteIds), eq(notes.trashed, false)))
 			.all();
 	}
 
