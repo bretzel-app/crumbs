@@ -1,18 +1,31 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { verifyPassword, createSession } from '$lib/server/auth.js';
+import { checkRateLimit, recordLoginAttempt } from '$lib/server/rate-limit.js';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
+	const ip = getClientAddress();
 	const { email, password } = await request.json();
 
 	if (!email || !password) {
 		throw error(400, 'Email and password are required');
 	}
 
+	const rateCheck = checkRateLimit(ip, email);
+	if (!rateCheck.allowed) {
+		return json(
+			{ error: 'Too many login attempts. Please try again later.', retryAfter: rateCheck.retryAfter },
+			{ status: 429, headers: { 'Retry-After': String(rateCheck.retryAfter) } }
+		);
+	}
+
 	const user = await verifyPassword(email, password);
 	if (!user) {
+		recordLoginAttempt(ip, email, false);
 		throw error(401, 'Invalid email or password');
 	}
+
+	recordLoginAttempt(ip, email, true);
 
 	const token = await createSession(user.id);
 	cookies.set('session', token, {
