@@ -22,7 +22,12 @@ sqlite.pragma('foreign_keys = ON');
 sqlite.exec(`
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		password_hash TEXT NOT NULL,
+		email TEXT NOT NULL DEFAULT '',
+		display_name TEXT NOT NULL DEFAULT '',
+		role TEXT NOT NULL DEFAULT 'user',
+		password_hash TEXT,
+		auth_provider TEXT NOT NULL DEFAULT 'password',
+		provider_id TEXT,
 		created_at INTEGER NOT NULL
 	);
 
@@ -34,6 +39,7 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS notes (
 		id TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 		title TEXT NOT NULL DEFAULT '',
 		content TEXT NOT NULL DEFAULT '',
 		color TEXT NOT NULL DEFAULT 'default',
@@ -50,9 +56,9 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 		name TEXT NOT NULL
 	);
-	CREATE UNIQUE INDEX IF NOT EXISTS tags_name_unique ON tags(name);
 
 	CREATE TABLE IF NOT EXISTS note_tags (
 		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
@@ -61,29 +67,52 @@ sqlite.exec(`
 
 	CREATE TABLE IF NOT EXISTS attachments (
 		id TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
 		filename TEXT NOT NULL,
 		mime_type TEXT NOT NULL,
 		size INTEGER NOT NULL,
 		path TEXT NOT NULL,
 		thumbnail_path TEXT,
+		featured INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS sync_log (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 		note_id TEXT NOT NULL REFERENCES notes(id),
 		operation TEXT NOT NULL,
 		timestamp INTEGER NOT NULL,
 		client_id TEXT NOT NULL
 	);
 
+	CREATE TABLE IF NOT EXISTS login_attempts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		ip TEXT NOT NULL,
+		email TEXT NOT NULL,
+		success INTEGER NOT NULL,
+		timestamp INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS notes_user_id_idx ON notes(user_id);
 	CREATE INDEX IF NOT EXISTS notes_trashed_archived_idx ON notes(trashed, archived);
 	CREATE INDEX IF NOT EXISTS notes_updated_at_idx ON notes(updated_at);
 	CREATE INDEX IF NOT EXISTS note_tags_note_id_idx ON note_tags(note_id);
 	CREATE INDEX IF NOT EXISTS note_tags_tag_id_idx ON note_tags(tag_id);
 	CREATE INDEX IF NOT EXISTS sync_log_timestamp_idx ON sync_log(timestamp);
+	CREATE INDEX IF NOT EXISTS login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
 `);
+
+// Drop the old unique index on tags(name) if it exists, replace with compound index
+try {
+	sqlite.exec(`DROP INDEX IF EXISTS tags_name_unique`);
+} catch {
+	// Index may not exist
+}
+sqlite.exec(
+	`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_user_unique ON tags(name, user_id)`
+);
 
 // Idempotent migrations: add columns that may be missing from older DBs
 try {
@@ -95,6 +124,52 @@ try {
 	sqlite.exec(`ALTER TABLE attachments ADD COLUMN featured INTEGER NOT NULL DEFAULT 0;`);
 } catch {
 	// Column already exists
+}
+
+// Migration: detect old schema (no email column on users) and migrate
+const userColumns = sqlite
+	.prepare("PRAGMA table_info('users')")
+	.all() as { name: string }[];
+const hasEmail = userColumns.some((col) => col.name === 'email');
+
+if (!hasEmail) {
+	// Old single-user schema — add new columns
+	sqlite.exec(`
+		ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
+		ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+		ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'password';
+		ALTER TABLE users ADD COLUMN provider_id TEXT;
+	`);
+
+	// Check if notes table has user_id column
+	const notesColumns = sqlite
+		.prepare("PRAGMA table_info('notes')")
+		.all() as { name: string }[];
+	const notesHasUserId = notesColumns.some((col) => col.name === 'user_id');
+
+	if (!notesHasUserId) {
+		sqlite.exec(`
+			ALTER TABLE notes ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
+			ALTER TABLE tags ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
+			ALTER TABLE attachments ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
+			ALTER TABLE sync_log ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id);
+		`);
+	}
+
+	// Backfill: promote existing user to admin and assign all data to them
+	const existingUser = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as
+		| { id: number }
+		| undefined;
+	if (existingUser) {
+		const uid = existingUser.id;
+		const backfill = sqlite.prepare('UPDATE users SET role = ? WHERE id = ?');
+		backfill.run('admin', uid);
+
+		for (const table of ['notes', 'tags', 'attachments', 'sync_log']) {
+			sqlite.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = 0`).run(uid);
+		}
+	}
 }
 
 export const db = drizzle(sqlite, { schema });

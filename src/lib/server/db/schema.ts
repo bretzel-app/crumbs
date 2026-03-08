@@ -2,7 +2,12 @@ import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqli
 
 export const users = sqliteTable('users', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
-	passwordHash: text('password_hash').notNull(),
+	email: text('email').notNull().default(''),
+	displayName: text('display_name').notNull().default(''),
+	role: text('role', { enum: ['admin', 'user'] }).notNull().default('user'),
+	passwordHash: text('password_hash'),
+	authProvider: text('auth_provider').notNull().default('password'),
+	providerId: text('provider_id'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 
@@ -18,6 +23,10 @@ export const notes = sqliteTable(
 	'notes',
 	{
 		id: text('id').primaryKey(),
+		userId: integer('user_id')
+			.references(() => users.id)
+			.notNull()
+			.default(0),
 		title: text('title').default('').notNull(),
 		content: text('content').default('').notNull(),
 		color: text('color').default('default').notNull(),
@@ -32,6 +41,7 @@ export const notes = sqliteTable(
 		version: integer('version').default(1).notNull()
 	},
 	(table) => [
+		index('notes_user_id_idx').on(table.userId),
 		index('notes_trashed_archived_idx').on(table.trashed, table.archived),
 		index('notes_updated_at_idx').on(table.updatedAt)
 	]
@@ -41,9 +51,13 @@ export const tags = sqliteTable(
 	'tags',
 	{
 		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: integer('user_id')
+			.references(() => users.id)
+			.notNull()
+			.default(0),
 		name: text('name').notNull()
 	},
-	(table) => [uniqueIndex('tags_name_unique').on(table.name)]
+	(table) => [uniqueIndex('tags_name_user_unique').on(table.name, table.userId)]
 );
 
 export const noteTags = sqliteTable(
@@ -64,6 +78,10 @@ export const noteTags = sqliteTable(
 
 export const attachments = sqliteTable('attachments', {
 	id: text('id').primaryKey(),
+	userId: integer('user_id')
+		.references(() => users.id)
+		.notNull()
+		.default(0),
 	noteId: text('note_id')
 		.references(() => notes.id, { onDelete: 'cascade' })
 		.notNull(),
@@ -80,6 +98,10 @@ export const syncLog = sqliteTable(
 	'sync_log',
 	{
 		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: integer('user_id')
+			.references(() => users.id)
+			.notNull()
+			.default(0),
 		noteId: text('note_id')
 			.references(() => notes.id)
 			.notNull(),
@@ -88,4 +110,16 @@ export const syncLog = sqliteTable(
 		clientId: text('client_id').notNull()
 	},
 	(table) => [index('sync_log_timestamp_idx').on(table.timestamp)]
+);
+
+export const loginAttempts = sqliteTable(
+	'login_attempts',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		ip: text('ip').notNull(),
+		email: text('email').notNull(),
+		success: integer('success', { mode: 'boolean' }).notNull(),
+		timestamp: integer('timestamp', { mode: 'timestamp' }).notNull()
+	},
+	(table) => [index('login_attempts_ip_timestamp_idx').on(table.ip, table.timestamp)]
 );
