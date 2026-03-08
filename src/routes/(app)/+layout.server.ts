@@ -1,5 +1,9 @@
 import { version } from '../../../package.json';
+import type { LayoutServerLoad } from './$types';
 
-export function load() {
-	return { appVersion: version };
-}
+export const load: LayoutServerLoad = (event) => {
+	return {
+		appVersion: version,
+		user: event.locals.user
+	};
+};

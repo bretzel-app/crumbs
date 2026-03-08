@@ -21,7 +21,7 @@
 </script>
 
 <div class="flex min-h-screen flex-col bg-[var(--bg-base)] text-[var(--text)]">
-	<Header onMenuToggle={() => (sidebarOpen = !sidebarOpen)} />
+	<Header onMenuToggle={() => (sidebarOpen = !sidebarOpen)} user={data.user} />
 	<Sidebar open={sidebarOpen} onClose={() => (sidebarOpen = false)} appVersion={data.appVersion} />
 
 	<main class="flex-1 pt-4 transition-all {sidebarOpen ? 'lg:ml-64' : ''}">
