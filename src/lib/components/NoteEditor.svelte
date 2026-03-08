@@ -38,13 +38,19 @@
 	let tiptapEditor: Editor | undefined = $state();
 	let editorTick = $state(0);
 
+	// Mutable note identity — allows transitioning from new → saved without closing
+	// svelte-ignore state_referenced_locally
+	let noteId = $state<string | null>(note?.id ?? null);
+	// svelte-ignore state_referenced_locally
+	let currentlyNew = $state(isNew);
+
 	// svelte-ignore state_referenced_locally
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
 
 	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB)
 	$effect(() => {
-		if (note && !isNew && (!note.attachments || note.attachments.length === 0)) {
-			fetch(`/api/notes/${note.id}/attachments`)
+		if (noteId && !currentlyNew && (!note?.attachments || note.attachments.length === 0)) {
+			fetch(`/api/notes/${noteId}/attachments`)
 				.then((res) => res.ok ? res.json() : [])
 				.then((data: Attachment[]) => {
 					if (data.length > 0) attachmentsList = data;
@@ -58,9 +64,9 @@
 	}
 
 	async function handleAttachmentRemove(attachmentId: string) {
-		if (!note) return;
+		if (!noteId) return;
 		try {
-			await fetch(`/api/notes/${note.id}/attachments?attachmentId=${attachmentId}`, {
+			await fetch(`/api/notes/${noteId}/attachments?attachmentId=${attachmentId}`, {
 				method: 'DELETE'
 			});
 			attachmentsList = attachmentsList.filter((a) => a.id !== attachmentId);
@@ -75,23 +81,48 @@
 		bgStyle = `background-color: ${colors.bg}`;
 	});
 
-	async function save() {
+	async function saveAndClose() {
 		if (!title.trim() && !content.trim()) {
 			onClose();
 			return;
 		}
 
-		if (isNew) {
+		if (currentlyNew) {
 			await createNote({ title, content, color, checklistMode });
-		} else if (note) {
-			await updateNote(note.id, { title, content, color, checklistMode });
+		} else if (noteId) {
+			await updateNote(noteId, { title, content, color, checklistMode });
 		}
 		onClose();
 	}
 
+	/** Auto-save a new note without closing, returns the new note ID */
+	async function autoSave(): Promise<string | null> {
+		if (!currentlyNew) return noteId;
+		const created = await createNote({
+			title: title || 'Untitled',
+			content,
+			color,
+			checklistMode
+		});
+		if (created) {
+			noteId = created.id;
+			currentlyNew = false;
+			return created.id;
+		}
+		return null;
+	}
+
+	async function toggleImageUpload() {
+		if (currentlyNew) {
+			const id = await autoSave();
+			if (!id) return;
+		}
+		showImageUpload = !showImageUpload;
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
-			save();
+			saveAndClose();
 		}
 	}
 
@@ -111,7 +142,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 pt-20 pb-10 animate-[fade-in_150ms_ease-out]"
-	onclick={save}
+	onclick={saveAndClose}
 	onkeydown={handleKeydown}
 	data-testid="note-editor-overlay"
 >
@@ -159,21 +190,21 @@
 		</div>
 
 		<!-- Image attachments -->
-		{#if !isNew && note && showImageUpload}
+		{#if noteId && showImageUpload}
 			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
 				<ImageUpload
-					noteId={note.id}
+					noteId={noteId}
 					attachments={attachmentsList}
 					onUpload={handleAttachmentUpload}
 					onRemove={handleAttachmentRemove}
 				/>
 			</div>
-		{:else if !isNew && attachmentsList.length > 0}
+		{:else if noteId && attachmentsList.length > 0}
 			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
 				<div class="flex flex-wrap gap-2">
 					{#each attachmentsList as attachment}
 						<img
-							src="/api/notes/{note?.id}/attachments?attachmentId={attachment.id}"
+							src="/api/notes/{noteId}/attachments?attachmentId={attachment.id}"
 							alt={attachment.filename}
 							class="h-20 w-20 rounded-sm object-cover"
 						/>
@@ -223,10 +254,9 @@
 
 				<!-- Image attachment toggle -->
 				<button
-					onclick={() => (showImageUpload = !showImageUpload)}
-					class="rounded-sm p-2 hover:bg-[var(--border)]/10 disabled:opacity-30 disabled:cursor-not-allowed"
+					onclick={toggleImageUpload}
+					class="rounded-sm p-2 hover:bg-[var(--border)]/10"
 					title="Image attachments"
-					disabled={isNew}
 					data-testid="image-toggle"
 				>
 					<ImageIcon class="h-5 w-5 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
@@ -249,7 +279,7 @@
 			</div>
 
 			<button
-				onclick={save}
+				onclick={saveAndClose}
 				class="rounded-sm px-4 py-1 text-sm font-medium text-[var(--text)] hover:bg-[var(--border)]/10"
 				data-testid="close-editor-btn"
 			>

@@ -84,14 +84,19 @@ test.describe('Image Attachments', () => {
 		await expect(card.getByTestId('card-thumbnail')).not.toBeVisible();
 	});
 
-	test('Scenario: Image toggle is disabled for new unsaved notes', async ({ authenticatedPage: page }) => {
-		// When the user opens a new note editor
+	test('Scenario: Image toggle on new note auto-saves and opens upload panel', async ({ authenticatedPage: page }) => {
+		// When the user opens a new note and clicks the image toggle
 		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('note-title-input').fill('Auto-Save Test');
+		await page.getByTestId('image-toggle').click();
 
-		// Then the image toggle button is disabled
-		await expect(page.getByTestId('image-toggle')).toBeDisabled();
+		// Then the upload panel is visible (note was auto-saved)
+		await expect(page.getByTestId('image-upload')).toBeVisible();
 
 		// Cleanup
 		await page.getByTestId('close-editor-btn').click();
+
+		// And the note exists in the list
+		await expect(noteCard(page, 'Auto-Save Test')).toBeVisible();
 	});
 });
