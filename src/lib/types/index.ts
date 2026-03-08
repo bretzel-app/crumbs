@@ -52,6 +52,16 @@ export interface Tag {
 	name: string;
 }
 
+export interface User {
+	id: number;
+	email: string;
+	displayName: string;
+	role: 'admin' | 'user';
+	authProvider: string;
+	providerId: string | null;
+	createdAt: Date;
+}
+
 export interface SyncChange {
 	noteId: string;
 	operation: 'create' | 'update' | 'delete';
