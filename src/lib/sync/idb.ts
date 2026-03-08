@@ -2,7 +2,17 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note } from '$lib/types/index.js';
 
 const DB_NAME = 'crumbs';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+
+export interface PendingAttachment {
+	id: string;
+	noteId: string;
+	optimized: Blob;
+	thumbnail: Blob;
+	filename: string;
+	mimeType: string;
+	timestamp: number;
+}
 
 interface CrumbsDB {
 	notes: {
@@ -22,6 +32,13 @@ interface CrumbsDB {
 	meta: {
 		key: string;
 		value: { key: string; value: string };
+	};
+	pendingAttachments: {
+		key: string;
+		value: PendingAttachment;
+		indexes: {
+			'by-noteId': string;
+		};
 	};
 }
 
@@ -57,6 +74,12 @@ export function getDb(): Promise<IDBPDatabase<CrumbsDB>> {
 				// Metadata (e.g., last sync timestamp, client ID)
 				if (!db.objectStoreNames.contains('meta')) {
 					db.createObjectStore('meta', { keyPath: 'key' });
+				}
+
+				// Pending attachments (offline uploads)
+				if (!db.objectStoreNames.contains('pendingAttachments')) {
+					const pendingStore = db.createObjectStore('pendingAttachments', { keyPath: 'id' });
+					pendingStore.createIndex('by-noteId', 'noteId');
 				}
 			}
 		});
@@ -121,4 +144,23 @@ export async function getMeta(key: string): Promise<string | undefined> {
 export async function setMeta(key: string, value: string): Promise<void> {
 	const db = await getDb();
 	await db.put('meta', { key, value });
+}
+
+// Pending attachment operations
+export async function addPendingAttachment(item: PendingAttachment): Promise<void> {
+	const db = await getDb();
+	await db.put('pendingAttachments', item);
+}
+
+export async function getPendingAttachments(noteId?: string): Promise<PendingAttachment[]> {
+	const db = await getDb();
+	if (noteId) {
+		return db.getAllFromIndex('pendingAttachments', 'by-noteId', noteId);
+	}
+	return db.getAll('pendingAttachments');
+}
+
+export async function removePendingAttachment(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete('pendingAttachments', id);
 }

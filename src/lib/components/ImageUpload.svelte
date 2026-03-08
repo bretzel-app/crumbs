@@ -1,7 +1,10 @@
 <script lang="ts">
 	import XIcon from 'lucide-svelte/icons/x';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import type { Attachment } from '$lib/types/index.js';
 	import { optimizeImage } from '$lib/utils/image-optimize.js';
+	import { browser } from '$app/environment';
+	import { addPendingAttachment, type PendingAttachment } from '$lib/sync/idb.js';
 
 	interface Props {
 		noteId: string;
@@ -35,6 +38,34 @@
 				thumbnail = file;
 			}
 			optimizing = false;
+
+			// Offline: store in IDB and display via blob URL
+			if (browser && !navigator.onLine) {
+				const tempId = crypto.randomUUID();
+				const pending: PendingAttachment = {
+					id: tempId,
+					noteId,
+					optimized,
+					thumbnail,
+					filename: file.name,
+					mimeType: optimized.type || file.type,
+					timestamp: Date.now()
+				};
+				await addPendingAttachment(pending);
+
+				const blobUrl = URL.createObjectURL(optimized);
+				onUpload({
+					id: tempId,
+					noteId,
+					filename: file.name,
+					mimeType: optimized.type || file.type,
+					size: optimized.size,
+					path: blobUrl,
+					pending: true,
+					createdAt: new Date()
+				} as Attachment & { pending: boolean });
+				continue;
+			}
 
 			uploading = true;
 			const formData = new FormData();
@@ -74,13 +105,20 @@
 	{#if attachments.length > 0}
 		<div class="mb-2 flex flex-wrap gap-2">
 			{#each attachments as attachment}
+				{@const isPending = 'pending' in attachment && attachment.pending}
+				{@const imgSrc = isPending ? attachment.path : `/api/notes/${noteId}/attachments?attachmentId=${attachment.id}`}
 				<div class="group relative">
 					<img
-						src="/api/notes/{noteId}/attachments?attachmentId={attachment.id}"
+						src={imgSrc}
 						alt={attachment.filename}
-						class="h-20 w-20 rounded-sm object-cover"
+						class="h-20 w-20 rounded-sm object-cover {isPending ? 'opacity-70' : ''}"
 						data-testid="attachment-thumbnail"
 					/>
+					{#if isPending}
+						<div class="absolute bottom-0.5 left-0.5 rounded-sm bg-black/50 p-0.5" title="Pending sync">
+							<RefreshCw class="h-3 w-3 text-white" />
+						</div>
+					{/if}
 					<button
 						onclick={() => onRemove(attachment.id)}
 						class="absolute -right-1 -top-1 hidden rounded-full bg-[var(--destructive)] p-0.5 text-white group-hover:block"

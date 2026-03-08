@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import type { Note } from '$lib/types/index.js';
-import { putNote, getAllNotes, addToSyncQueue, getSyncQueue, clearSyncQueue, deleteNoteFromIdb, getMeta, setMeta } from './idb.js';
+import { putNote, getAllNotes, addToSyncQueue, getSyncQueue, clearSyncQueue, deleteNoteFromIdb, getMeta, setMeta, getPendingAttachments, removePendingAttachment } from './idb.js';
 import { mergeNotes } from './crdt.js';
 import { loadNotes, currentFilter } from '$lib/stores/notes.js';
 import { get } from 'svelte/store';
@@ -46,6 +46,31 @@ async function pushChanges(): Promise<boolean> {
 		return false;
 	} catch {
 		return false;
+	}
+}
+
+/**
+ * Push pending offline attachments to server.
+ */
+async function pushPendingAttachments(): Promise<void> {
+	const pending = await getPendingAttachments();
+	for (const item of pending) {
+		try {
+			const formData = new FormData();
+			formData.append('file', new File([item.optimized], item.filename, { type: item.mimeType }));
+			formData.append('thumbnail', new File([item.thumbnail], `${item.filename}_thumb.webp`, { type: 'image/webp' }));
+
+			const res = await fetch(`/api/notes/${item.noteId}/attachments`, {
+				method: 'POST',
+				body: formData
+			});
+
+			if (res.ok) {
+				await removePendingAttachment(item.id);
+			}
+		} catch {
+			// Will retry on next sync cycle
+		}
 	}
 }
 
@@ -98,6 +123,7 @@ export async function sync(): Promise<void> {
 			return;
 		}
 
+		await pushPendingAttachments();
 		await pullChanges();
 		setStatus('synced');
 
