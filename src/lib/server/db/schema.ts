@@ -128,6 +128,42 @@ export const syncLog = sqliteTable(
 	(table) => [index('sync_log_timestamp_idx').on(table.timestamp)]
 );
 
+export const noteCollaborators = sqliteTable(
+	'note_collaborators',
+	{
+		noteId: text('note_id')
+			.references(() => notes.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: integer('user_id')
+			.references(() => users.id)
+			.notNull(),
+		addedBy: integer('added_by')
+			.references(() => users.id)
+			.notNull(),
+		addedAt: integer('added_at', { mode: 'timestamp' }).notNull()
+	},
+	(table) => [
+		uniqueIndex('note_collaborators_unique').on(table.noteId, table.userId),
+		index('note_collaborators_user_id_idx').on(table.userId)
+	]
+);
+
+export const noteUserState = sqliteTable(
+	'note_user_state',
+	{
+		noteId: text('note_id')
+			.references(() => notes.id, { onDelete: 'cascade' })
+			.notNull(),
+		userId: integer('user_id')
+			.references(() => users.id)
+			.notNull(),
+		pinned: integer('pinned', { mode: 'boolean' }).default(false).notNull(),
+		archived: integer('archived', { mode: 'boolean' }).default(false).notNull(),
+		sortOrder: integer('sort_order').default(0).notNull()
+	},
+	(table) => [uniqueIndex('note_user_state_unique').on(table.noteId, table.userId)]
+);
+
 export const loginAttempts = sqliteTable(
 	'login_attempts',
 	{

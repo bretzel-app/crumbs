@@ -68,6 +68,24 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 		CREATE INDEX note_tags_note_id_idx ON note_tags(note_id);
 		CREATE INDEX note_tags_tag_id_idx ON note_tags(tag_id);
 
+		CREATE TABLE note_collaborators (
+			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id),
+			added_by INTEGER NOT NULL REFERENCES users(id),
+			added_at INTEGER NOT NULL
+		);
+		CREATE UNIQUE INDEX note_collaborators_unique ON note_collaborators(note_id, user_id);
+		CREATE INDEX note_collaborators_user_id_idx ON note_collaborators(user_id);
+
+		CREATE TABLE note_user_state (
+			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id),
+			pinned INTEGER NOT NULL DEFAULT 0,
+			archived INTEGER NOT NULL DEFAULT 0,
+			sort_order INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE UNIQUE INDEX note_user_state_unique ON note_user_state(note_id, user_id);
+
 		CREATE TABLE attachments (
 			id TEXT PRIMARY KEY,
 			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),

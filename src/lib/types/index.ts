@@ -14,6 +14,16 @@ export interface Note {
 	version: number;
 	tags?: string[];
 	attachments?: Attachment[];
+	collaborators?: Collaborator[];
+	isOwner?: boolean;
+	isShared?: boolean;
+}
+
+export interface Collaborator {
+	userId: number;
+	displayName: string;
+	email: string;
+	addedAt: Date;
 }
 
 export interface NoteCreate {

@@ -93,6 +93,21 @@ sqlite.exec(`
 		client_id TEXT NOT NULL
 	);
 
+	CREATE TABLE IF NOT EXISTS note_collaborators (
+		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+		user_id INTEGER NOT NULL REFERENCES users(id),
+		added_by INTEGER NOT NULL REFERENCES users(id),
+		added_at INTEGER NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS note_user_state (
+		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+		user_id INTEGER NOT NULL REFERENCES users(id),
+		pinned INTEGER NOT NULL DEFAULT 0,
+		archived INTEGER NOT NULL DEFAULT 0,
+		sort_order INTEGER NOT NULL DEFAULT 0
+	);
+
 	CREATE TABLE IF NOT EXISTS login_attempts (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		ip TEXT NOT NULL,
@@ -167,6 +182,10 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS note_tags_tag_id_idx ON note_tags(tag_id);
 	CREATE INDEX IF NOT EXISTS sync_log_timestamp_idx ON sync_log(timestamp);
 	CREATE INDEX IF NOT EXISTS login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
+
+	CREATE UNIQUE INDEX IF NOT EXISTS note_collaborators_unique ON note_collaborators(note_id, user_id);
+	CREATE INDEX IF NOT EXISTS note_collaborators_user_id_idx ON note_collaborators(user_id);
+	CREATE UNIQUE INDEX IF NOT EXISTS note_user_state_unique ON note_user_state(note_id, user_id);
 
 	CREATE TABLE IF NOT EXISTS api_keys (
 		id TEXT PRIMARY KEY,
