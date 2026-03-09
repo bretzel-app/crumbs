@@ -98,7 +98,20 @@ Key tables:
 - `note_tags` - Many-to-many note ↔ tag
 - `attachments` - Image file metadata (path + thumbnailPath)
 - `api_keys` - MCP API keys (SHA-256 hashed, prefix for display)
+- `note_collaborators` - Sharing relationships (noteId + userId + addedBy)
+- `note_user_state` - Per-user pin/archive/sortOrder for shared notes
 - `sync_log` - Sync operation history
+
+### Collaboration Access Control
+
+Notes support sharing with other users on the same instance:
+
+- **Owner**: Full control (edit, trash, delete, share/unshare)
+- **Collaborator**: Can edit content, color, checklist mode; has independent pin/archive/sortOrder state via `note_user_state`
+- Access checks use `canAccessNote()` / `requireNoteAccess()` / `requireNoteOwnership()` helpers
+- `note_user_state` stores per-user view state (pinned, archived, sortOrder) — collaborators see their own organization
+- When owner trashes a note, it vanishes for all collaborators
+- Collaborators can leave (remove themselves) from shared notes
 
 ## MCP Server
 

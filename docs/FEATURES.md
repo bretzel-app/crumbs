@@ -80,6 +80,18 @@
 - Restore notes from trash
 - Permanently delete from trash
 
+### Note Sharing / Collaboration
+- Share notes with other users on the same instance
+- User search autocomplete for adding collaborators
+- Full collaboration: both owner and collaborators can edit content, color, and checklist mode
+- Per-user state: pin, archive, and sort order are independent per user
+- Owner-only actions: trash, delete, share/unshare
+- Collaborator indicator (Users icon) on shared note cards
+- Hover popover showing collaborator names
+- Share dialog accessible from editor toolbar
+- Collaborators can leave shared notes
+- Shared notes appear mixed in main list alongside owned notes
+
 ### Full-Text Search
 - Search across note titles, content, and tags
 - Real-time search results as you type

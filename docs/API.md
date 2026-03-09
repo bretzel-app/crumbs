@@ -321,6 +321,123 @@ Permanently delete a note
 
 ---
 
+## Collaboration
+
+### `GET /api/notes/{id}/collaborators`
+
+List collaborators
+
+Returns all collaborators for a note. Requires access (owner or collaborator).
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+
+**Response:** `200`
+
+```json
+[
+  {
+    "userId": 1,
+    "displayName": "displayName",
+    "email": "email",
+    "addedAt": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+### `POST /api/notes/{id}/collaborators`
+
+Add a collaborator
+
+Owner-only. Adds a user as collaborator on the note.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+
+**Request:**
+
+```json
+{
+  "userId": 1
+}
+```
+
+**Response:** `201`
+
+```json
+[
+  {
+    "userId": 1,
+    "displayName": "displayName",
+    "email": "email",
+    "addedAt": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+**Errors:** `400` Invalid request (missing userId, owner as collaborator), `409` User is already a collaborator
+
+---
+
+### `DELETE /api/notes/{id}/collaborators`
+
+Remove a collaborator
+
+Owner can remove anyone. Collaborator can only remove self (leave). Use `userId=self` to leave.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+| `userId` | query |  | yes |  |
+
+**Response:** `200`
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## Users
+
+### `GET /api/users/search`
+
+Search users
+
+Search registered users by email or display name. Excludes the current user. Any authenticated user can access.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `q` | query | string | yes | Search query (matches email or displayName) |
+
+**Response:** `200`
+
+```json
+[
+  {
+    "id": 1,
+    "displayName": "displayName",
+    "email": "email"
+  }
+]
+```
+
+---
+
 ## Attachments
 
 ### `GET /api/notes/{id}/attachments`

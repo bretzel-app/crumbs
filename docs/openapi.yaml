@@ -168,6 +168,104 @@ paths:
         '404':
           description: Note not found
 
+  /api/notes/{id}/collaborators:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List collaborators
+      description: Returns all collaborators for a note. Requires access (owner or collaborator).
+      tags: [Collaboration]
+      responses:
+        '200':
+          description: Collaborator list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collaborator'
+    post:
+      summary: Add a collaborator
+      description: Owner-only. Adds a user as collaborator on the note.
+      tags: [Collaboration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: integer
+      responses:
+        '201':
+          description: Collaborator added, returns updated list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collaborator'
+        '400':
+          description: Invalid request (missing userId, owner as collaborator)
+        '409':
+          description: User is already a collaborator
+    delete:
+      summary: Remove a collaborator
+      description: Owner can remove anyone. Collaborator can only remove self (leave). Use `userId=self` to leave.
+      tags: [Collaboration]
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            oneOf:
+              - type: integer
+              - type: string
+                enum: [self]
+      responses:
+        '200':
+          description: Collaborator removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /api/users/search:
+    get:
+      summary: Search users
+      description: Search registered users by email or display name. Excludes the current user. Any authenticated user can access.
+      tags: [Users]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (matches email or displayName)
+      responses:
+        '200':
+          description: Matching users (max 10)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    displayName:
+                      type: string
+                    email:
+                      type: string
+
   /api/notes/{id}/attachments:
     parameters:
       - name: id
@@ -541,6 +639,19 @@ components:
           description: Unix timestamp in milliseconds
         data:
           $ref: '#/components/schemas/NoteInput'
+
+    Collaborator:
+      type: object
+      properties:
+        userId:
+          type: integer
+        displayName:
+          type: string
+        email:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
 
     ApiKey:
       type: object
