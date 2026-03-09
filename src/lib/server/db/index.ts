@@ -167,6 +167,16 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS note_tags_tag_id_idx ON note_tags(tag_id);
 	CREATE INDEX IF NOT EXISTS sync_log_timestamp_idx ON sync_log(timestamp);
 	CREATE INDEX IF NOT EXISTS login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
+
+	CREATE TABLE IF NOT EXISTS api_keys (
+		id TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL REFERENCES users(id),
+		name TEXT NOT NULL,
+		key_hash TEXT NOT NULL,
+		key_prefix TEXT NOT NULL,
+		created_at INTEGER NOT NULL,
+		last_used_at INTEGER
+	);
 `);
 
 // Replace old tags unique index with compound index including user_id

@@ -1,7 +1,7 @@
 {
   "name": "crumbs",
   "private": true,
-  "version": "0.8.1",
+  "version": "0.8.0",
   "type": "module",
   "license": "MIT",
   "author": "Bretzel (https://bretzel.app)",
@@ -29,6 +29,7 @@
     "docs:api": "tsx scripts/generate-api-docs.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@sveltejs/adapter-node": "^5.5.4",
     "@tiptap/core": "^3.20.1",
     "@tiptap/extension-link": "^3.20.1",
@@ -49,6 +50,7 @@
     "svelte-dnd-action": "^0.9.69",
     "tiptap-markdown": "^0.9.0",
     "uuid": "^11.1.0",
+    "zod": "^4.3.6",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {

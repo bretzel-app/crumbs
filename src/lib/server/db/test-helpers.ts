@@ -6,7 +6,7 @@ import * as schema from './schema.js';
  * Create an in-memory SQLite database for testing.
  * Each test gets a fresh database.
  */
-export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) {
+export function createTestDb() {
 	const sqlite = new Database(':memory:');
 	sqlite.pragma('journal_mode = WAL');
 	sqlite.pragma('foreign_keys = OFF');
@@ -36,7 +36,7 @@ export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) 
 
 		CREATE TABLE notes (
 			id TEXT PRIMARY KEY,
-			user_id INTEGER NOT NULL REFERENCES users(id),
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			title TEXT NOT NULL DEFAULT '',
 			content TEXT NOT NULL DEFAULT '',
 			color TEXT NOT NULL DEFAULT 'default',
@@ -56,7 +56,7 @@ export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) 
 
 		CREATE TABLE tags (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL REFERENCES users(id),
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			name TEXT NOT NULL
 		);
 		CREATE UNIQUE INDEX tags_name_user_unique ON tags(name, user_id);
@@ -70,7 +70,7 @@ export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) 
 
 		CREATE TABLE attachments (
 			id TEXT PRIMARY KEY,
-			user_id INTEGER NOT NULL REFERENCES users(id),
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
 			filename TEXT NOT NULL,
 			mime_type TEXT NOT NULL,
@@ -81,7 +81,7 @@ export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) 
 
 		CREATE TABLE sync_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL REFERENCES users(id),
+			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
 			note_id TEXT NOT NULL REFERENCES notes(id),
 			operation TEXT NOT NULL,
 			timestamp INTEGER NOT NULL,
@@ -97,11 +97,17 @@ export function createTestDb({ seedUser = false }: { seedUser?: boolean } = {}) 
 			timestamp INTEGER NOT NULL
 		);
 		CREATE INDEX login_attempts_ip_timestamp_idx ON login_attempts(ip, timestamp);
-	`);
 
-	if (seedUser) {
-		sqlite.prepare(`INSERT INTO users (id, email, created_at) VALUES (?, ?, ?)`).run(1, 'test@test.com', 0);
-	}
+		CREATE TABLE api_keys (
+			id TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id),
+			name TEXT NOT NULL,
+			key_hash TEXT NOT NULL,
+			key_prefix TEXT NOT NULL,
+			created_at INTEGER NOT NULL,
+			last_used_at INTEGER
+		);
+	`);
 
 	const db = drizzle(sqlite, { schema });
 	return { db, sqlite };
