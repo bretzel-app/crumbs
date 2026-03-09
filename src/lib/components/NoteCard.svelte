@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
-	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, updateNote, currentFilter } from '$lib/stores/notes.js';
+	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, updateNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import TagChip from './TagChip.svelte';
 	import ImageLightbox from './ImageLightbox.svelte';
+	import CollaboratorPopover from './CollaboratorPopover.svelte';
 	import type { Note } from '$lib/types/index.js';
 	import Undo2 from 'lucide-svelte/icons/undo-2';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Bookmark from 'lucide-svelte/icons/bookmark';
 	import Archive from 'lucide-svelte/icons/archive';
 	import ArchiveRestore from 'lucide-svelte/icons/archive-restore';
+	import UserMinus from 'lucide-svelte/icons/user-minus';
 
 	interface ChecklistItem {
 		text: string;
@@ -112,16 +114,25 @@
 		</div>
 	{/if}
 
-	{#if note.pinned}
-		<button
-			onclick={stop(() => togglePin(note.id, note.pinned))}
-			class="absolute top-1.5 right-1.5 rounded-sm p-1 text-[var(--primary)] hover:bg-[var(--border)]/10"
-			title="Unpin"
-			data-testid="pin-indicator"
-		>
-			<Bookmark class="h-4 w-4 fill-[var(--primary)]" />
-		</button>
-	{/if}
+	<!-- Status indicators (top-right) -->
+	<div class="absolute top-1.5 right-1.5 flex items-center gap-0.5">
+		{#if note.isShared && note.collaborators}
+			<CollaboratorPopover
+				collaborators={note.collaborators}
+				ownerName={note.isOwner ? 'You' : undefined}
+			/>
+		{/if}
+		{#if note.pinned}
+			<button
+				onclick={stop(() => togglePin(note.id, note.pinned))}
+				class="rounded-sm p-1 text-[var(--primary)] hover:bg-[var(--border)]/10"
+				title="Unpin"
+				data-testid="pin-indicator"
+			>
+				<Bookmark class="h-4 w-4 fill-[var(--primary)]" />
+			</button>
+		{/if}
+	</div>
 
 	{#if note.title}
 		<h3 class="mb-2 text-sm font-semibold text-[var(--text)]">{note.title}</h3>
@@ -208,14 +219,25 @@
 					<Archive class="h-4 w-4" />
 				</button>
 			{/if}
-			<button
-				onclick={stop(() => trashNote(note.id))}
-				class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
-				title="Delete"
-				data-testid="trash-btn"
-			>
-				<Trash2 class="h-4 w-4" />
-			</button>
+			{#if note.isShared && !note.isOwner}
+				<button
+					onclick={stop(() => leaveNote(note.id))}
+					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					title="Leave note"
+					data-testid="leave-btn"
+				>
+					<UserMinus class="h-4 w-4" />
+				</button>
+			{:else}
+				<button
+					onclick={stop(() => trashNote(note.id))}
+					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					title="Delete"
+					data-testid="trash-btn"
+				>
+					<Trash2 class="h-4 w-4" />
+				</button>
+			{/if}
 		{/if}
 	</div>
 

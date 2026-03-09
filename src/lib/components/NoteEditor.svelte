@@ -4,16 +4,20 @@
 	import FormattingToolbar from './FormattingToolbar.svelte';
 	import TiptapEditor from './TiptapEditor.svelte';
 	import ImageUpload from './ImageUpload.svelte';
+	import ShareDialog from './ShareDialog.svelte';
 	import { updateNote, createNote } from '$lib/stores/notes.js';
+	import { notes } from '$lib/stores/notes.js';
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import type { Editor } from '@tiptap/core';
-	import type { Note, NoteColor, Attachment } from '$lib/types/index.js';
+	import type { Note, NoteColor, Attachment, Collaborator } from '$lib/types/index.js';
 	import Palette from 'lucide-svelte/icons/palette';
 	import SquareCheck from 'lucide-svelte/icons/square-check';
 	import ImageIcon from 'lucide-svelte/icons/image';
 	import Type from 'lucide-svelte/icons/type';
 	import FileCode from 'lucide-svelte/icons/file-code';
 	import FileText from 'lucide-svelte/icons/file-text';
+	import UserPlus from 'lucide-svelte/icons/user-plus';
+	import Users from 'lucide-svelte/icons/users';
 
 	interface Props {
 		note: Note | null;
@@ -47,6 +51,36 @@
 
 	// svelte-ignore state_referenced_locally
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
+
+	let showShareDialog = $state(false);
+	// svelte-ignore state_referenced_locally
+	let collaboratorsList = $state<Collaborator[]>(note?.collaborators ?? []);
+	const isOwner = $derived(note?.isOwner !== false);
+	const isShared = $derived(collaboratorsList.length > 0);
+	// Use displayName from first user or 'You' for owner
+	const ownerName = $derived(isOwner ? 'You' : 'Owner');
+
+	function handleCollaboratorsUpdate(updated: Collaborator[]) {
+		collaboratorsList = updated;
+		// Update the note in the store
+		if (noteId) {
+			notes.update((list) =>
+				list.map((n) =>
+					n.id === noteId
+						? { ...n, collaborators: updated, isShared: updated.length > 0 }
+						: n
+				)
+			);
+		}
+	}
+
+	async function toggleShareDialog() {
+		if (currentlyNew) {
+			const id = await autoSave();
+			if (!id) return;
+		}
+		showShareDialog = !showShareDialog;
+	}
 
 	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB)
 	$effect(() => {
@@ -285,6 +319,26 @@
 						<FileCode class="h-5 w-5" />
 					{/if}
 				</button>
+
+				<!-- Share button (owner only for new shares, all for viewing) -->
+				{#if isOwner}
+					<button
+						onclick={toggleShareDialog}
+						class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+						title="Share note"
+						data-testid="share-toggle"
+					>
+						{#if isShared}
+							<Users class="h-5 w-5 text-[var(--primary)]" />
+						{:else}
+							<UserPlus class="h-5 w-5" />
+						{/if}
+					</button>
+				{:else if isShared}
+					<span class="flex items-center gap-1 rounded-sm p-2 text-[var(--text-muted)]" title="Shared note">
+						<Users class="h-5 w-5" />
+					</span>
+				{/if}
 			</div>
 
 			<button
@@ -297,3 +351,13 @@
 		</div>
 	</div>
 </div>
+
+{#if showShareDialog && noteId}
+	<ShareDialog
+		noteId={noteId}
+		collaborators={collaboratorsList}
+		{ownerName}
+		onClose={() => (showShareDialog = false)}
+		onUpdate={handleCollaboratorsUpdate}
+	/>
+{/if}
