@@ -54,7 +54,8 @@ export const POST: RequestHandler = async ({ params, request, ...event }) => {
 
 export const DELETE: RequestHandler = async ({ params, url, ...event }) => {
 	const userId = getUserId(event);
-	const targetUserId = Number(url.searchParams.get('userId'));
+	const userIdParam = url.searchParams.get('userId');
+	const targetUserId = userIdParam === 'self' ? userId : Number(userIdParam);
 	if (!targetUserId) {
 		throw error(400, 'userId query parameter is required');
 	}

@@ -233,6 +233,21 @@ export async function togglePin(id: string, currentPinned: boolean): Promise<Not
 	return updateNote(id, { pinned: !currentPinned });
 }
 
+export async function leaveNote(id: string): Promise<boolean> {
+	try {
+		const res = await fetch(`/api/notes/${id}/collaborators?userId=self`, { method: 'DELETE' });
+		if (res.ok) {
+			notes.update((list) => list.filter((n) => n.id !== id));
+			await deleteNoteFromIdb(id);
+			return true;
+		}
+		showToast('Failed to leave note', 'error');
+		return false;
+	} catch {
+		return false;
+	}
+}
+
 export async function updateSortOrders(orders: { id: string; sortOrder: number }[]): Promise<boolean> {
 	// Optimistic update
 	notes.update((list) =>

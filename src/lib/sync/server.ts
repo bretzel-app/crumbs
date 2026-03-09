@@ -1,8 +1,9 @@
 import { db } from '$lib/server/db/index.js';
-import { notes, syncLog } from '$lib/server/db/schema.js';
-import { eq, gt, and } from 'drizzle-orm';
+import { notes, noteCollaborators, noteUserState, syncLog } from '$lib/server/db/schema.js';
+import { eq, gt, and, or } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
+import { canAccessNote } from '$lib/server/api-utils.js';
 import type { SyncQueueItem } from './idb.js';
 
 /**
@@ -17,24 +18,78 @@ export async function processSyncPush(changes: SyncQueueItem[], userId: number):
 				case 'create':
 				case 'update': {
 					if (!change.data) continue;
-					const existing = tx
-						.select()
-						.from(notes)
-						.where(and(eq(notes.id, change.noteId), eq(notes.userId, userId)))
-						.get();
 
-					if (existing) {
-						if (change.timestamp > existing.updatedAt.getTime()) {
+					// Check access: owner can update all fields, collaborator can update shared fields
+					const note = tx.select().from(notes).where(eq(notes.id, change.noteId)).get();
+
+					if (note) {
+						const isOwner = note.userId === userId;
+						const isCollaborator = !isOwner && tx
+							.select({ userId: noteCollaborators.userId })
+							.from(noteCollaborators)
+							.where(and(eq(noteCollaborators.noteId, change.noteId), eq(noteCollaborators.userId, userId)))
+							.get();
+
+						if (!isOwner && !isCollaborator) continue;
+
+						if (change.timestamp > note.updatedAt.getTime()) {
+							// Shared fields: title, content, color, checklistMode
+							const sharedData: Record<string, unknown> = {
+								updatedAt: new Date(change.timestamp),
+								version: note.version + 1
+							};
+							if (change.data.title !== undefined) sharedData.title = change.data.title;
+							if (change.data.content !== undefined) sharedData.content = change.data.content;
+							if (change.data.color !== undefined) sharedData.color = change.data.color;
+							if (change.data.checklistMode !== undefined) sharedData.checklistMode = change.data.checklistMode;
+
+							if (isOwner) {
+								// Owner: per-user fields go to notes table
+								if (change.data.pinned !== undefined) sharedData.pinned = change.data.pinned;
+								if (change.data.archived !== undefined) sharedData.archived = change.data.archived;
+								if (change.data.trashed !== undefined) {
+									sharedData.trashed = change.data.trashed;
+									sharedData.trashedAt = change.data.trashed ? new Date(change.timestamp) : null;
+								}
+								if (change.data.sortOrder !== undefined) sharedData.sortOrder = change.data.sortOrder;
+							}
+
 							tx.update(notes)
-								.set({
-									...change.data,
-									updatedAt: new Date(change.timestamp),
-									version: existing.version + 1
-								})
-								.where(and(eq(notes.id, change.noteId), eq(notes.userId, userId)))
+								.set(sharedData)
+								.where(eq(notes.id, change.noteId))
 								.run();
+
+							// Collaborator: per-user fields go to noteUserState
+							if (!isOwner) {
+								const hasPerUser = change.data.pinned !== undefined ||
+									change.data.archived !== undefined ||
+									change.data.sortOrder !== undefined;
+								if (hasPerUser) {
+									const existing = tx.select().from(noteUserState)
+										.where(and(eq(noteUserState.noteId, change.noteId), eq(noteUserState.userId, userId)))
+										.get();
+									if (existing) {
+										const updates: Record<string, unknown> = {};
+										if (change.data.pinned !== undefined) updates.pinned = change.data.pinned;
+										if (change.data.archived !== undefined) updates.archived = change.data.archived;
+										if (change.data.sortOrder !== undefined) updates.sortOrder = change.data.sortOrder;
+										tx.update(noteUserState).set(updates)
+											.where(and(eq(noteUserState.noteId, change.noteId), eq(noteUserState.userId, userId)))
+											.run();
+									} else {
+										tx.insert(noteUserState).values({
+											noteId: change.noteId,
+											userId,
+											pinned: change.data.pinned ?? false,
+											archived: change.data.archived ?? false,
+											sortOrder: change.data.sortOrder ?? 0
+										}).run();
+									}
+								}
+							}
 						}
 					} else if (change.operation === 'create' && change.data) {
+						// Only owner can create notes
 						tx.insert(notes)
 							.values({
 								id: change.noteId,
@@ -60,6 +115,7 @@ export async function processSyncPush(changes: SyncQueueItem[], userId: number):
 					break;
 				}
 				case 'delete': {
+					// Only owner can delete
 					tx.delete(notes).where(and(eq(notes.id, change.noteId), eq(notes.userId, userId))).run();
 					break;
 				}
@@ -78,21 +134,55 @@ export async function processSyncPush(changes: SyncQueueItem[], userId: number):
 	});
 
 	for (const noteId of noteIdsToSyncTags) {
-		const note = db.select().from(notes).where(and(eq(notes.id, noteId), eq(notes.userId, userId))).get();
+		const note = db.select().from(notes).where(eq(notes.id, noteId)).get();
 		if (note) {
 			const content = `${note.title} ${note.content}`;
-			syncNoteTags(noteId, extractTags(content), userId);
+			syncNoteTags(noteId, extractTags(content), note.userId);
 		}
 	}
 }
 
 /**
  * Get all notes updated since a given timestamp for a specific user.
+ * Includes both owned and shared notes.
  */
 export async function getChangesSince(sinceTimestamp: number, userId: number) {
-	return db
+	const since = new Date(sinceTimestamp);
+
+	// Owned notes
+	const ownedNotes = db
 		.select()
 		.from(notes)
-		.where(and(eq(notes.userId, userId), gt(notes.updatedAt, new Date(sinceTimestamp))))
+		.where(and(eq(notes.userId, userId), gt(notes.updatedAt, since)))
 		.all();
+
+	// Shared notes (via collaborator relationship)
+	const sharedNotes = db
+		.select({
+			id: notes.id,
+			userId: notes.userId,
+			title: notes.title,
+			content: notes.content,
+			color: notes.color,
+			pinned: notes.pinned,
+			archived: notes.archived,
+			trashed: notes.trashed,
+			trashedAt: notes.trashedAt,
+			checklistMode: notes.checklistMode,
+			sortOrder: notes.sortOrder,
+			createdAt: notes.createdAt,
+			updatedAt: notes.updatedAt,
+			version: notes.version
+		})
+		.from(noteCollaborators)
+		.innerJoin(notes, eq(noteCollaborators.noteId, notes.id))
+		.where(
+			and(
+				eq(noteCollaborators.userId, userId),
+				gt(notes.updatedAt, since)
+			)
+		)
+		.all();
+
+	return [...ownedNotes, ...sharedNotes];
 }

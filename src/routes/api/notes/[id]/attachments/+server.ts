@@ -2,25 +2,11 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { saveAttachment, getAttachmentsByNote, getAttachment, deleteAttachment, updateAttachment } from '$lib/server/attachments.js';
 import { readFile } from 'fs/promises';
-import { db } from '$lib/server/db/index.js';
-import { notes } from '$lib/server/db/schema.js';
-import { eq, and } from 'drizzle-orm';
-import { getUserId } from '$lib/server/api-utils.js';
-
-/** Verify the note belongs to the authenticated user */
-async function verifyNoteOwnership(noteId: string, userId: number) {
-	const note = await db
-		.select()
-		.from(notes)
-		.where(and(eq(notes.id, noteId), eq(notes.userId, userId)))
-		.get();
-	if (!note) throw error(404, 'Note not found');
-	return note;
-}
+import { getUserId, requireNoteAccess } from '$lib/server/api-utils.js';
 
 export const GET: RequestHandler = async ({ params, url, ...event }) => {
 	const userId = getUserId(event);
-	await verifyNoteOwnership(params.id, userId);
+	requireNoteAccess(params.id, userId);
 
 	const attachmentId = url.searchParams.get('attachmentId');
 
@@ -48,7 +34,7 @@ export const GET: RequestHandler = async ({ params, url, ...event }) => {
 
 export const POST: RequestHandler = async ({ params, request, ...event }) => {
 	const userId = getUserId(event);
-	await verifyNoteOwnership(params.id, userId);
+	requireNoteAccess(params.id, userId);
 
 	const formData = await request.formData();
 	const file = formData.get('file') as File;
@@ -73,7 +59,7 @@ export const POST: RequestHandler = async ({ params, request, ...event }) => {
 
 export const PATCH: RequestHandler = async ({ params, url, request, ...event }) => {
 	const userId = getUserId(event);
-	await verifyNoteOwnership(params.id, userId);
+	requireNoteAccess(params.id, userId);
 
 	const attachmentId = url.searchParams.get('attachmentId');
 	if (!attachmentId) throw error(400, 'attachmentId required');
@@ -89,7 +75,7 @@ export const PATCH: RequestHandler = async ({ params, url, request, ...event }) 
 
 export const DELETE: RequestHandler = async ({ params, url, ...event }) => {
 	const userId = getUserId(event);
-	await verifyNoteOwnership(params.id, userId);
+	requireNoteAccess(params.id, userId);
 
 	const attachmentId = url.searchParams.get('attachmentId');
 	if (!attachmentId) throw error(400, 'attachmentId required');
