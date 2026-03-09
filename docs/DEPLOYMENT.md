@@ -116,6 +116,48 @@ The Docker image includes a health check that pings `/login`:
 docker inspect --format='{{.State.Health.Status}}' crumbs
 ```
 
+## MCP Server Configuration
+
+Crumbs includes a built-in MCP (Model Context Protocol) server that allows AI assistants to interact with your notes.
+
+### Setup
+
+1. Open **Settings** in the Crumbs UI
+2. Create an API key (give it a name like "Claude Code")
+3. Copy the key (shown only once)
+4. Configure your MCP client:
+
+```json
+{
+  "mcpServers": {
+    "crumbs": {
+      "type": "streamable-http",
+      "url": "https://your-crumbs-instance/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_notes` | List notes (filter by status/tag) |
+| `get_note` | Get a note by ID |
+| `create_note` | Create a new note |
+| `update_note` | Update a note |
+| `trash_note` / `restore_note` | Move to/from trash |
+| `archive_note` / `unarchive_note` | Archive/unarchive |
+| `delete_note` | Permanently delete |
+| `search_notes` | Full-text search |
+| `list_tags` | List all tags |
+| `pin_note` | Pin/unpin a note |
+| `reorder_notes` | Set sort orders |
+| `upload_image` | Attach image from URL |
+
 ## Security Notes
 
 - Always use HTTPS in production (via reverse proxy)
@@ -123,3 +165,4 @@ docker inspect --format='{{.State.Health.Status}}' crumbs
 - The `ORIGIN` variable must match your actual domain for CSRF protection
 - Sessions expire after 30 days
 - Passwords are hashed with Argon2
+- API keys are SHA-256 hashed (never stored in plain text)

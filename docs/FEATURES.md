@@ -102,6 +102,21 @@
 - LWW conflict resolution for multi-device use
 - Sync status indicator (synced/syncing/offline/error)
 
+### MCP Server (Model Context Protocol)
+- Built-in MCP endpoint at `POST /api/mcp` (Streamable HTTP transport)
+- 14 tools: list, get, create, update, trash, restore, archive, unarchive, delete, search notes; list tags; pin, reorder notes; upload images
+- API key authentication (Bearer token)
+- Compatible with Claude Code, Claude Desktop, and other MCP clients
+- Stateful sessions with automatic cleanup
+
+### API Key Management
+- Generate API keys from the Settings page
+- Keys use `crumbs_` prefix for easy identification
+- SHA-256 hashed storage (keys shown once at creation)
+- Track last-used timestamps
+- Revoke keys with confirmation dialog
+- MCP client config example shown in Settings
+
 ### Docker Deployment
 - Multi-stage Dockerfile (build + slim runtime)
 - docker-compose.yml with persistent volume

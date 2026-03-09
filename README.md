@@ -42,7 +42,8 @@ pnpm build         # Production build
 - Organize with #tags, pinning, archive, and trash
 - Full-text search across titles, content, and tags
 - PWA — installable, works offline via IndexedDB + LWW CRDT sync
-- Single-user password auth (Argon2)
+- MCP server — let AI assistants (Claude Code, etc.) manage your notes
+- Single-user password auth (Argon2) + API keys for MCP access
 - Docker deployment with a single command
 
 See [docs/FEATURES.md](docs/FEATURES.md) for detailed feature documentation.

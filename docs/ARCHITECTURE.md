@@ -98,17 +98,41 @@ Key tables:
 - `tags` - Unique tag names
 - `note_tags` - Many-to-many note ↔ tag
 - `attachments` - Image file metadata (path + thumbnailPath)
+- `api_keys` - MCP API keys (SHA-256 hashed, prefix for display)
 - `sync_log` - Sync operation history
+
+## MCP Server
+
+Crumbs includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/) server that allows AI assistants (Claude Code, Claude Desktop, etc.) to interact with notes programmatically.
+
+### Architecture
+- **Endpoint**: `POST /api/mcp` (Streamable HTTP transport)
+- **Auth**: Bearer token via API keys (generated in Settings)
+- **Sessions**: Stateful per MCP spec — session ID in `mcp-session-id` header
+- **Transport**: `WebStandardStreamableHTTPServerTransport` (works with SvelteKit's Web Standard Request/Response)
+
+### Shared Logic
+MCP tool handlers and REST API routes both call the same service layer (`src/lib/server/notes-service.ts`). This avoids duplicating business logic:
+
+```
+REST API routes ──┐
+                  ├──► notes-service.ts ──► Drizzle DB
+MCP tool handlers ┘
+```
+
+### Tools (14)
+`list_notes`, `get_note`, `create_note`, `update_note`, `trash_note`, `restore_note`, `archive_note`, `unarchive_note`, `delete_note`, `search_notes`, `list_tags`, `pin_note`, `reorder_notes`, `upload_image`
 
 ## File Organization
 
 ```
-src/lib/server/    # Server-only code (DB, auth, attachments)
+src/lib/server/    # Server-only code (DB, auth, attachments, notes-service)
+src/lib/server/mcp/ # MCP server + tool definitions
 src/lib/sync/      # Sync engine (shared types, server + client implementations)
 src/lib/stores/    # Svelte reactive stores (notes, theme, auth, search)
 src/lib/components/ # Svelte UI components
 src/lib/utils/     # Pure utility functions (markdown, tags, colors)
 src/lib/types/     # TypeScript type definitions
-src/routes/api/    # REST API endpoints
+src/routes/api/    # REST API + MCP endpoints
 src/routes/        # Page routes (SvelteKit file-based routing)
 ```

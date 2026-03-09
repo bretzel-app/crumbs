@@ -325,12 +325,101 @@ paths:
         '400':
           description: Invalid changes payload
 
+  /api/settings/api-keys:
+    get:
+      summary: List API keys
+      tags: [Settings]
+      responses:
+        '200':
+          description: List of API keys (without hashes)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiKey'
+    post:
+      summary: Create API key
+      tags: [Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: API key created (key shown only once)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  key:
+                    type: string
+                  name:
+                    type: string
+                  keyPrefix:
+                    type: string
+
+  /api/settings/api-keys/{id}:
+    delete:
+      summary: Revoke API key
+      tags: [Settings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Key not found
+
+  /api/mcp:
+    post:
+      summary: MCP Streamable HTTP endpoint
+      description: Model Context Protocol endpoint. Accepts JSON-RPC 2.0 messages. Authenticate via Bearer token (API key).
+      tags: [MCP]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: JSON-RPC 2.0 message
+      responses:
+        '200':
+          description: JSON-RPC response (may be SSE stream)
+        '400':
+          description: Invalid session
+        '401':
+          description: Invalid or missing API key
+
 components:
   securitySchemes:
     sessionCookie:
       type: apiKey
       in: cookie
       name: session
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API key (crumbs_...)
 
   schemas:
     Success:
@@ -452,3 +541,22 @@ components:
           description: Unix timestamp in milliseconds
         data:
           $ref: '#/components/schemas/NoteInput'
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        keyPrefix:
+          type: string
+          description: First 12 characters of the key for display
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true

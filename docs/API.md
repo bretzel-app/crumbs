@@ -111,6 +111,17 @@ List notes
     "version": 1,
     "tags": [
       "item"
+    ],
+    "attachments": [
+      {
+        "id": "id",
+        "noteId": "noteId",
+        "filename": "filename",
+        "mimeType": "mimeType",
+        "size": 1,
+        "thumbnailPath": "thumbnailPath",
+        "createdAt": "2025-01-01T00:00:00.000Z"
+      }
     ]
   }
 ]
@@ -157,6 +168,17 @@ Create a note
   "version": 1,
   "tags": [
     "item"
+  ],
+  "attachments": [
+    {
+      "id": "id",
+      "noteId": "noteId",
+      "filename": "filename",
+      "mimeType": "mimeType",
+      "size": 1,
+      "thumbnailPath": "thumbnailPath",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
   ]
 }
 ```
@@ -192,6 +214,17 @@ Get a note
   "version": 1,
   "tags": [
     "item"
+  ],
+  "attachments": [
+    {
+      "id": "id",
+      "noteId": "noteId",
+      "filename": "filename",
+      "mimeType": "mimeType",
+      "size": 1,
+      "thumbnailPath": "thumbnailPath",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
   ]
 }
 ```
@@ -247,6 +280,17 @@ Partial update — only include changed fields.
   "version": 1,
   "tags": [
     "item"
+  ],
+  "attachments": [
+    {
+      "id": "id",
+      "noteId": "noteId",
+      "filename": "filename",
+      "mimeType": "mimeType",
+      "size": 1,
+      "thumbnailPath": "thumbnailPath",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
   ]
 }
 ```
@@ -291,6 +335,7 @@ Without `attachmentId`, lists all attachments. With `attachmentId`, returns the 
 |------|----|------|----------|-------------|
 | `id` | path | string | yes |  |
 | `attachmentId` | query | string | no |  |
+| `thumb` | query | string | no | Set to "1" to return the thumbnail instead of the full image (requires attachmentId) (1) |
 
 **Response:** `200`
 
@@ -302,6 +347,7 @@ Without `attachmentId`, lists all attachments. With `attachmentId`, returns the 
     "filename": "filename",
     "mimeType": "mimeType",
     "size": 1,
+    "thumbnailPath": "thumbnailPath",
     "createdAt": "2025-01-01T00:00:00.000Z"
   }
 ]
@@ -330,6 +376,7 @@ Upload an image attachment
   "filename": "filename",
   "mimeType": "mimeType",
   "size": 1,
+  "thumbnailPath": "thumbnailPath",
   "createdAt": "2025-01-01T00:00:00.000Z"
 }
 ```
@@ -393,6 +440,17 @@ Searches across note titles, content, and tags. Excludes trashed notes.
     "version": 1,
     "tags": [
       "item"
+    ],
+    "attachments": [
+      {
+        "id": "id",
+        "noteId": "noteId",
+        "filename": "filename",
+        "mimeType": "mimeType",
+        "size": 1,
+        "thumbnailPath": "thumbnailPath",
+        "createdAt": "2025-01-01T00:00:00.000Z"
+      }
     ]
   }
 ]
@@ -451,6 +509,17 @@ Pull changes since timestamp
     "version": 1,
     "tags": [
       "item"
+    ],
+    "attachments": [
+      {
+        "id": "id",
+        "noteId": "noteId",
+        "filename": "filename",
+        "mimeType": "mimeType",
+        "size": 1,
+        "thumbnailPath": "thumbnailPath",
+        "createdAt": "2025-01-01T00:00:00.000Z"
+      }
     ]
   }
 ]
@@ -496,5 +565,94 @@ Push local changes
 ```
 
 **Errors:** `400` Invalid changes payload
+
+---
+
+## Settings
+
+### `GET /api/settings/api-keys`
+
+List API keys
+
+**Response:** `200`
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "name",
+    "keyPrefix": "keyPrefix",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "lastUsedAt": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+### `POST /api/settings/api-keys`
+
+Create API key
+
+**Request:**
+
+```json
+{
+  "name": "name"
+}
+```
+
+**Response:** `201`
+
+```json
+{
+  "id": "id",
+  "key": "key",
+  "name": "name",
+  "keyPrefix": "keyPrefix"
+}
+```
+
+---
+
+### `DELETE /api/settings/api-keys/{id}`
+
+Revoke API key
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+
+**Response:** `200`
+
+```json
+{
+  "success": true
+}
+```
+
+**Errors:** `404` Key not found
+
+---
+
+## MCP
+
+### `POST /api/mcp`
+
+MCP Streamable HTTP endpoint
+
+Model Context Protocol endpoint. Accepts JSON-RPC 2.0 messages. Authenticate via Bearer token (API key).
+
+**Request:**
+
+```json
+{}
+```
+
+**Response:** `200`
+
+**Errors:** `400` Invalid session, `401` Invalid or missing API key
 
 ---
