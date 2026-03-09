@@ -85,17 +85,7 @@
 	}
 </script>
 
-<svelte:head>
-	<title>User Management - Crumbs</title>
-</svelte:head>
-
-<div class="mx-auto max-w-2xl px-4 py-8">
-	<div class="mb-8 flex items-center gap-4">
-		<a href="/settings" class="text-sm text-[var(--text-muted)] hover:text-[var(--primary)]">← Settings</a>
-		<h1 class="text-2xl font-bold text-[var(--text)]">User Management</h1>
-	</div>
-
-	<!-- Create User -->
+<!-- Create User -->
 	<section class="mb-6 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--card-shadow)]">
 		<h2 class="mb-4 text-lg font-semibold text-[var(--text)]">Create User</h2>
 
@@ -178,4 +168,3 @@
 			{/each}
 		</div>
 	</section>
-</div>
