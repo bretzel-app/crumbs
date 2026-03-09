@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { validateSession, isSetupComplete } from '$lib/server/auth.js';
+import { validateApiKey, getUserForApiKey } from '$lib/server/api-keys.js';
 
 const PUBLIC_PATHS = [
 	'/login',
@@ -18,6 +19,38 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Allow public paths
 	if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+		return resolve(event);
+	}
+
+	// MCP endpoint: authenticate via Bearer token (API key)
+	if (pathname.startsWith('/api/mcp')) {
+		const authHeader = event.request.headers.get('authorization');
+		const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+		if (!token) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+		const { valid, userId } = validateApiKey(token);
+		if (!valid || !userId) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+		const user = getUserForApiKey(userId);
+		if (!user) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+		event.locals.user = user;
 		return resolve(event);
 	}
 
