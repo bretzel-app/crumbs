@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import tailwindcss from '@tailwindcss/vite';
+import istanbul from 'vite-plugin-istanbul';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -10,6 +11,17 @@ export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
+		...(process.env.VITE_COVERAGE === 'true'
+			? [
+					istanbul({
+						include: 'src/**/*',
+						exclude: ['node_modules', 'tests/', '**/*.test.ts'],
+						extension: ['.ts', '.svelte'],
+						requireEnv: true,
+						forceBuildInstrument: true
+					})
+				]
+			: []),
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			manifest: {

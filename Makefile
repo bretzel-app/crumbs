@@ -1,4 +1,5 @@
-.PHONY: help dev build preview check test test-unit test-e2e lint \
+.PHONY: help dev build preview check test test-unit test-e2e \
+	test-unit-coverage test-e2e-coverage lint \
 	db-push db-generate db-migrate db-studio docs-api \
 	install docker-build docker-up docker-down docker-logs clean \
 	release release-patch release-minor release-major
@@ -26,6 +27,12 @@ test-unit: ## Run unit tests only
 
 test-e2e: ## Run e2e tests only
 	pnpm test:e2e
+
+test-unit-coverage: ## Run unit tests with coverage
+	pnpm test:unit:coverage
+
+test-e2e-coverage: ## Run e2e tests with coverage
+	VITE_COVERAGE=true pnpm build && pnpm test:e2e && npx nyc report
 
 lint: ## Run linter
 	pnpm lint

@@ -32,6 +32,10 @@ vite.config.ts.timestamp-*
 /test-results
 /playwright-report
 
+# Coverage
+/coverage
+.nyc_output
+
 # Claude Code
 /.claude/
 

@@ -1,4 +1,5 @@
 import { test as base, expect, type Page, type Locator } from '@playwright/test';
+import { collectCoverage } from './coverage';
 
 const TEST_EMAIL = 'admin@test.com';
 const TEST_PASSWORD = 'testpassword123';
@@ -13,10 +14,12 @@ export function noteCard(page: Page, title: string): Locator {
  * Extended test fixture that handles setup/auth.
  */
 export const test = base.extend<{ authenticatedPage: Page }>({
-	authenticatedPage: async ({ page }, use) => {
+	authenticatedPage: async ({ page }, use, testInfo) => {
 		// Setup: create user and login
 		await setupAndLogin(page);
 		await use(page);
+		// Teardown: collect coverage data from the browser
+		await collectCoverage(page, testInfo.title);
 	}
 });
 

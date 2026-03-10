@@ -46,7 +46,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:unit
+      - run: pnpm test:unit:coverage
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-coverage
+          path: coverage/unit/
+          retention-days: 14
 
   e2e-tests:
     name: E2E Tests
@@ -80,15 +87,21 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Build
+      - name: Build (with coverage instrumentation)
         run: pnpm build
         env:
           DATABASE_URL: ./data/test-crumbs.db
           NODE_ENV: test
+          VITE_COVERAGE: 'true'
 
       - run: pnpm test:e2e
         env:
           CI: true
+          VITE_COVERAGE: 'true'
+
+      - name: Merge E2E coverage
+        if: always()
+        run: npx nyc report
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -98,6 +111,13 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-coverage
+          path: coverage/e2e/
+          retention-days: 14
 
   docker-build:
     name: Docker Build
