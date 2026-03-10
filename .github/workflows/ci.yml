@@ -48,6 +48,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit:coverage
 
+      - name: Coverage summary
+        if: always()
+        run: bash scripts/coverage-summary.sh "Unit Test Coverage" coverage/unit/coverage-summary.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,6 +106,10 @@ jobs:
       - name: Merge E2E coverage
         if: always()
         run: npx nyc report
+
+      - name: Coverage summary
+        if: always()
+        run: bash scripts/coverage-summary.sh "E2E Test Coverage" coverage/e2e/coverage-summary.json
 
       - uses: actions/upload-artifact@v4
         if: always()
