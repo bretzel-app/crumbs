@@ -1,4 +1,4 @@
-import { db } from './db/index.js';
+import type { Db } from './db/index.js';
 import { noteTags, tags } from './db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 
@@ -6,7 +6,7 @@ import { eq, and, inArray } from 'drizzle-orm';
  * Batch fetch tags for multiple notes in a single query.
  * Returns a Map of noteId → tag names.
  */
-export function fetchTagsForNotes(noteIds: string[]): Map<string, string[]> {
+export function fetchTagsForNotes(db: Db, noteIds: string[]): Map<string, string[]> {
 	if (noteIds.length === 0) return new Map();
 
 	const rows = db
@@ -32,7 +32,7 @@ export function fetchTagsForNotes(noteIds: string[]): Map<string, string[]> {
  * Sync tags for a note: removes old associations, upserts tags, creates new associations.
  * Should be called within a transaction for atomicity.
  */
-export function syncNoteTags(noteId: string, tagNames: string[], userId: number) {
+export function syncNoteTags(db: Db, noteId: string, tagNames: string[], userId: number) {
 	db.delete(noteTags).where(eq(noteTags.noteId, noteId)).run();
 
 	for (const name of tagNames) {

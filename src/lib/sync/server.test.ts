@@ -51,7 +51,7 @@ describe('getChangesSince — shared notes', () => {
 
 		seedSharedNote('n1', { updatedAt: t2, createdAt: t1 });
 
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(1);
 		expect(changes[0].id).toBe('n1');
@@ -65,7 +65,7 @@ describe('getChangesSince — shared notes', () => {
 
 		seedSharedNote('n1', { updatedAt: t1, createdAt: t1 });
 
-		const changes = await getChangesSince(t2.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t2.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(0);
 	});
@@ -86,7 +86,7 @@ describe('getChangesSince — shared notes', () => {
 			sortOrder: 5
 		}).run();
 
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(1);
 		// Should reflect the collaborator's per-user state, not the owner's
@@ -102,7 +102,7 @@ describe('getChangesSince — shared notes', () => {
 		// Owner has pinned=true, sortOrder=10
 		seedSharedNote('n1', { updatedAt: t2, createdAt: t1, pinned: true, sortOrder: 10 });
 
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(1);
 		// Without noteUserState, collaborator should get defaults (false/0), not owner's values
@@ -116,7 +116,7 @@ describe('getChangesSince — shared notes', () => {
 
 		seedSharedNote('n1', { updatedAt: t2, createdAt: t1, trashed: true });
 
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(0);
 	});
@@ -133,7 +133,7 @@ describe('getChangesSince — shared notes', () => {
 			.run();
 
 		// Collaborator syncs since t1
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(1);
 		expect(changes[0].content).toBe('Updated by owner');
@@ -157,7 +157,7 @@ describe('getChangesSince — shared notes', () => {
 		// Note shared with COLLAB_ID (owned by OWNER_ID)
 		seedSharedNote('shared-with-collab', { updatedAt: t2, createdAt: t1 });
 
-		const changes = await getChangesSince(t1.getTime(), COLLAB_ID, db);
+		const changes = await getChangesSince(db, t1.getTime(), COLLAB_ID);
 
 		expect(changes).toHaveLength(2);
 		const ids = changes.map((c) => c.id).sort();
@@ -171,12 +171,12 @@ describe('processSyncPush — shared notes', () => {
 		seedSharedNote('n1', { updatedAt: t1, createdAt: t1 });
 
 		const t2 = t1.getTime() + 1000;
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t2,
 			data: { title: 'Updated by collab', content: 'New content' }
-		}], COLLAB_ID, db);
+		}], COLLAB_ID);
 
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
 		expect(note.title).toBe('Updated by collab');
@@ -189,12 +189,12 @@ describe('processSyncPush — shared notes', () => {
 		seedSharedNote('n1', { updatedAt: t1, createdAt: t1 });
 
 		const t2 = t1.getTime() + 1000;
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t2,
 			data: { pinned: true, sortOrder: 3 }
-		}], COLLAB_ID, db);
+		}], COLLAB_ID);
 
 		// Per-user fields should be in noteUserState, not in notes
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
@@ -213,12 +213,12 @@ describe('processSyncPush — shared notes', () => {
 		seedSharedNote('n1', { updatedAt: t1, createdAt: t1 });
 
 		const t2 = t1.getTime() + 1000;
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t2,
 			data: { trashed: true }
-		}], COLLAB_ID, db);
+		}], COLLAB_ID);
 
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
 		expect(note.trashed).toBe(false);
@@ -230,12 +230,12 @@ describe('processSyncPush — shared notes', () => {
 
 		// Collaborator's change has a timestamp BEFORE the server's updatedAt
 		const t1 = new Date('2024-01-01T12:00:00Z').getTime();
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t1,
 			data: { title: 'Stale edit' }
-		}], COLLAB_ID, db);
+		}], COLLAB_ID);
 
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
 		expect(note.title).toBe('Shared Note'); // Unchanged
@@ -263,12 +263,12 @@ describe('processSyncPush — shared notes', () => {
 		}).run();
 
 		const t2 = t1.getTime() + 1000;
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t2,
 			data: { title: 'Hacked' }
-		}], 3, db); // User 3 is not owner or collaborator
+		}], 3); // User 3 is not owner or collaborator
 
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
 		expect(note.title).toBe('Private'); // Unchanged
@@ -279,12 +279,12 @@ describe('processSyncPush — shared notes', () => {
 		seedSharedNote('n1', { updatedAt: t1, createdAt: t1 });
 
 		const t2 = t1.getTime() + 1000;
-		await processSyncPush([{
+		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t2,
 			data: { title: 'Updated' }
-		}], COLLAB_ID, db);
+		}], COLLAB_ID);
 
 		const logs = db.select().from(syncLog).where(eq(syncLog.noteId, 'n1')).all();
 		expect(logs).toHaveLength(1);

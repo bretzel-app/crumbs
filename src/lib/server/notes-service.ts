@@ -1,4 +1,4 @@
-import { db as defaultDb } from './db/index.js';
+import type { Db } from './db/index.js';
 import { notes, noteTags, tags, noteCollaborators, noteUserState } from './db/schema.js';
 import { eq, and, desc, like, or, inArray, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,8 +8,6 @@ import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { canAccessNote } from './api-utils.js';
 import type { NoteFilter } from '$lib/types/index.js';
-
-const db = defaultDb;
 
 interface NoteRow {
 	id: string;
@@ -28,11 +26,11 @@ interface NoteRow {
 	version: number;
 }
 
-function hydrateNotes(noteRows: NoteRow[], userId: number) {
+function hydrateNotes(db: Db, noteRows: NoteRow[], userId: number) {
 	const noteIds = noteRows.map((n) => n.id);
-	const tagMap = fetchTagsForNotes(noteIds);
-	const attachmentMap = fetchAttachmentsForNotes(noteIds);
-	const collabMap = fetchCollaboratorsForNotes(noteIds);
+	const tagMap = fetchTagsForNotes(db, noteIds);
+	const attachmentMap = fetchAttachmentsForNotes(db, noteIds);
+	const collabMap = fetchCollaboratorsForNotes(db, noteIds);
 
 	return noteRows.map((note) => {
 		const collaborators = collabMap.get(note.id) ?? [];
@@ -52,7 +50,7 @@ function hydrateNotes(noteRows: NoteRow[], userId: number) {
 /**
  * Get shared notes for a user with per-user state overlay.
  */
-function getSharedNotes(userId: number, filter: 'all' | 'archived'): NoteRow[] {
+function getSharedNotes(db: Db, userId: number, filter: 'all' | 'archived'): NoteRow[] {
 	const rows = db
 		.select({
 			id: notes.id,
@@ -90,7 +88,7 @@ function getSharedNotes(userId: number, filter: 'all' | 'archived'): NoteRow[] {
 	return rows as NoteRow[];
 }
 
-export function listNotes(userId: number, filter: NoteFilter = 'all') {
+export function listNotes(db: Db, userId: number, filter: NoteFilter = 'all') {
 	// Owned notes
 	let conditions;
 	switch (filter) {
@@ -114,7 +112,7 @@ export function listNotes(userId: number, filter: NoteFilter = 'all') {
 	// Shared notes (not for trashed filter — collaborators don't see trash)
 	let sharedNotes: NoteRow[] = [];
 	if (filter !== 'trashed') {
-		sharedNotes = getSharedNotes(userId, filter === 'archived' ? 'archived' : 'all');
+		sharedNotes = getSharedNotes(db, userId, filter === 'archived' ? 'archived' : 'all');
 	}
 
 	const combined = [...ownedNotes, ...sharedNotes];
@@ -124,11 +122,11 @@ export function listNotes(userId: number, filter: NoteFilter = 'all') {
 		return b.updatedAt.getTime() - a.updatedAt.getTime();
 	});
 
-	return hydrateNotes(combined, userId);
+	return hydrateNotes(db, combined, userId);
 }
 
-export function getNote(userId: number, id: string) {
-	const { canAccess, isOwner } = canAccessNote(id, userId);
+export function getNote(db: Db, userId: number, id: string) {
+	const { canAccess, isOwner } = canAccessNote(db, id, userId);
 	if (!canAccess) return null;
 
 	const note = db.select().from(notes).where(eq(notes.id, id)).get();
@@ -151,7 +149,7 @@ export function getNote(userId: number, id: string) {
 		};
 	}
 
-	const result = hydrateNotes([effectiveNote], userId);
+	const result = hydrateNotes(db, [effectiveNote], userId);
 	return result[0] ?? null;
 }
 
@@ -165,7 +163,7 @@ export interface CreateNoteInput {
 	sortOrder?: number;
 }
 
-export function createNote(userId: number, input: CreateNoteInput) {
+export function createNote(db: Db, userId: number, input: CreateNoteInput) {
 	const now = new Date();
 	const id = input.id || uuidv4();
 
@@ -192,7 +190,7 @@ export function createNote(userId: number, input: CreateNoteInput) {
 	db.transaction((tx) => {
 		tx.insert(notes).values(newNote).run();
 	});
-	syncNoteTags(id, extractedTags, userId);
+	syncNoteTags(db, id, extractedTags, userId);
 
 	return { ...newNote, tags: extractedTags };
 }
@@ -211,8 +209,8 @@ export interface UpdateNoteInput {
 /** Per-user fields that go to noteUserState for collaborators */
 const PER_USER_FIELDS = ['pinned', 'archived', 'sortOrder'] as const;
 
-export function updateNote(userId: number, id: string, input: UpdateNoteInput) {
-	const { canAccess, isOwner } = canAccessNote(id, userId);
+export function updateNote(db: Db, userId: number, id: string, input: UpdateNoteInput) {
+	const { canAccess, isOwner } = canAccessNote(db, id, userId);
 	if (!canAccess) return null;
 
 	const existing = db.select().from(notes).where(eq(notes.id, id)).get();
@@ -291,14 +289,14 @@ export function updateNote(userId: number, id: string, input: UpdateNoteInput) {
 		if (updated) {
 			const content = `${updated.title} ${updated.content}`;
 			const extractedTags = extractTags(content);
-			syncNoteTags(id, extractedTags, existing.userId);
+			syncNoteTags(db, id, extractedTags, existing.userId);
 		}
 	}
 
-	return getNote(userId, id);
+	return getNote(db, userId, id);
 }
 
-export function deleteNote(userId: number, id: string): boolean {
+export function deleteNote(db: Db, userId: number, id: string): boolean {
 	const existing = db
 		.select()
 		.from(notes)
@@ -312,7 +310,7 @@ export function deleteNote(userId: number, id: string): boolean {
 	return true;
 }
 
-export function searchNotes(userId: number, query: string) {
+export function searchNotes(db: Db, userId: number, query: string) {
 	if (!query) return [];
 
 	const pattern = `%${query}%`;
@@ -386,17 +384,17 @@ export function searchNotes(userId: number, query: string) {
 	}
 
 	const combined = [...ownedResults, ...sharedResults, ...extraNotes] as NoteRow[];
-	return hydrateNotes(combined, userId);
+	return hydrateNotes(db, combined, userId);
 }
 
-export function listAllTags(userId: number) {
+export function listAllTags(db: Db, userId: number) {
 	return db.select().from(tags).where(eq(tags.userId, userId)).all();
 }
 
-export function reorderNotes(userId: number, orders: { id: string; sortOrder: number }[]) {
+export function reorderNotes(db: Db, userId: number, orders: { id: string; sortOrder: number }[]) {
 	const now = new Date();
 	for (const { id, sortOrder } of orders) {
-		const { canAccess, isOwner } = canAccessNote(id, userId);
+		const { canAccess, isOwner } = canAccessNote(db, id, userId);
 		if (!canAccess) continue;
 
 		if (isOwner) {

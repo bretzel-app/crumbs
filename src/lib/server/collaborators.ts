@@ -1,4 +1,4 @@
-import { db } from './db/index.js';
+import type { Db } from './db/index.js';
 import { noteCollaborators, noteUserState, users } from './db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { Collaborator } from '$lib/types/index.js';
@@ -7,7 +7,7 @@ import type { Collaborator } from '$lib/types/index.js';
  * Batch fetch collaborators for multiple notes.
  * Returns a Map of noteId → Collaborator[].
  */
-export function fetchCollaboratorsForNotes(noteIds: string[]): Map<string, Collaborator[]> {
+export function fetchCollaboratorsForNotes(db: Db, noteIds: string[]): Map<string, Collaborator[]> {
 	if (noteIds.length === 0) return new Map();
 
 	const rows = db
@@ -44,7 +44,7 @@ export function fetchCollaboratorsForNotes(noteIds: string[]): Map<string, Colla
 /**
  * Add a collaborator to a note.
  */
-export function addCollaborator(noteId: string, userId: number, addedBy: number): void {
+export function addCollaborator(db: Db, noteId: string, userId: number, addedBy: number): void {
 	db.insert(noteCollaborators)
 		.values({ noteId, userId, addedBy, addedAt: new Date() })
 		.run();
@@ -53,7 +53,7 @@ export function addCollaborator(noteId: string, userId: number, addedBy: number)
 /**
  * Remove a collaborator from a note. Also cleans up their per-user state.
  */
-export function removeCollaborator(noteId: string, userId: number): void {
+export function removeCollaborator(db: Db, noteId: string, userId: number): void {
 	db.delete(noteCollaborators)
 		.where(and(eq(noteCollaborators.noteId, noteId), eq(noteCollaborators.userId, userId)))
 		.run();
@@ -65,7 +65,7 @@ export function removeCollaborator(noteId: string, userId: number): void {
 /**
  * Get all collaborator user IDs for a note.
  */
-export function getCollaboratorIds(noteId: string): number[] {
+export function getCollaboratorIds(db: Db, noteId: string): number[] {
 	return db
 		.select({ userId: noteCollaborators.userId })
 		.from(noteCollaborators)

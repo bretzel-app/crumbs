@@ -8,15 +8,15 @@ import { eq, and } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ params, ...event }) => {
 	const userId = getUserId(event);
-	requireNoteAccess(params.id, userId);
+	requireNoteAccess(db, params.id, userId);
 
-	const collaborators = fetchCollaboratorsForNotes([params.id]);
+	const collaborators = fetchCollaboratorsForNotes(db, [params.id]);
 	return json(collaborators.get(params.id) ?? []);
 };
 
 export const POST: RequestHandler = async ({ params, request, ...event }) => {
 	const userId = getUserId(event);
-	requireNoteOwnership(params.id, userId);
+	requireNoteOwnership(db, params.id, userId);
 
 	const body = await request.json();
 	const targetUserId = body.userId;
@@ -46,9 +46,9 @@ export const POST: RequestHandler = async ({ params, request, ...event }) => {
 		throw error(409, 'User is already a collaborator');
 	}
 
-	addCollaborator(params.id, targetUserId, userId);
+	addCollaborator(db, params.id, targetUserId, userId);
 
-	const collaborators = fetchCollaboratorsForNotes([params.id]);
+	const collaborators = fetchCollaboratorsForNotes(db, [params.id]);
 	return json(collaborators.get(params.id) ?? [], { status: 201 });
 };
 
@@ -60,14 +60,14 @@ export const DELETE: RequestHandler = async ({ params, url, ...event }) => {
 		throw error(400, 'userId query parameter is required');
 	}
 
-	const { isOwner } = requireNoteAccess(params.id, userId);
+	const { isOwner } = requireNoteAccess(db, params.id, userId);
 
 	// Owner can remove anyone. Collaborator can only remove self.
 	if (!isOwner && targetUserId !== userId) {
 		throw error(403, 'Only the owner can remove other collaborators');
 	}
 
-	removeCollaborator(params.id, targetUserId);
+	removeCollaborator(db, params.id, targetUserId);
 
 	return json({ success: true });
 };

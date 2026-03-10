@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { db } from './db/index.js';
+import type { Db } from './db/index.js';
 import { notes, noteCollaborators } from './db/schema.js';
 import { eq, and } from 'drizzle-orm';
 
@@ -21,7 +21,7 @@ export function requireAdmin(event: EventWithLocals) {
 /**
  * Check if a user can access a note (as owner or collaborator).
  */
-export function canAccessNote(noteId: string, userId: number): { canAccess: boolean; isOwner: boolean } {
+export function canAccessNote(db: Db, noteId: string, userId: number): { canAccess: boolean; isOwner: boolean } {
 	const note = db.select({ userId: notes.userId }).from(notes).where(eq(notes.id, noteId)).get();
 	if (!note) return { canAccess: false, isOwner: false };
 	if (note.userId === userId) return { canAccess: true, isOwner: true };
@@ -37,8 +37,8 @@ export function canAccessNote(noteId: string, userId: number): { canAccess: bool
 /**
  * Require that a user can access a note. Throws 404 if no access.
  */
-export function requireNoteAccess(noteId: string, userId: number): { isOwner: boolean } {
-	const { canAccess, isOwner } = canAccessNote(noteId, userId);
+export function requireNoteAccess(db: Db, noteId: string, userId: number): { isOwner: boolean } {
+	const { canAccess, isOwner } = canAccessNote(db, noteId, userId);
 	if (!canAccess) throw error(404, 'Not found');
 	return { isOwner };
 }
@@ -46,7 +46,7 @@ export function requireNoteAccess(noteId: string, userId: number): { isOwner: bo
 /**
  * Require that a user is the owner of a note. Throws 404 if not owner.
  */
-export function requireNoteOwnership(noteId: string, userId: number): void {
+export function requireNoteOwnership(db: Db, noteId: string, userId: number): void {
 	const note = db.select({ userId: notes.userId }).from(notes).where(eq(notes.id, noteId)).get();
 	if (!note || note.userId !== userId) throw error(404, 'Not found');
 }

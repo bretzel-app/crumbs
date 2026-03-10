@@ -1,18 +1,14 @@
-import { db as defaultDb } from '$lib/server/db/index.js';
+import type { Db } from '$lib/server/db/index.js';
 import { notes, noteCollaborators, noteUserState, syncLog } from '$lib/server/db/schema.js';
 import { eq, gt, and, or, sql } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
 import { canAccessNote } from '$lib/server/api-utils.js';
 import type { SyncQueueItem } from './idb.js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyDb = import('drizzle-orm/better-sqlite3').BetterSQLite3Database<any>;
-
 /**
  * Process incoming sync changes from client.
  */
-export async function processSyncPush(changes: SyncQueueItem[], userId: number, injectedDb?: AnyDb): Promise<void> {
-	const db = injectedDb ?? defaultDb;
+export async function processSyncPush(db: Db, changes: SyncQueueItem[], userId: number): Promise<void> {
 	const noteIdsToSyncTags: string[] = [];
 
 	db.transaction((tx) => {
@@ -140,7 +136,7 @@ export async function processSyncPush(changes: SyncQueueItem[], userId: number, 
 		const note = db.select().from(notes).where(eq(notes.id, noteId)).get();
 		if (note) {
 			const content = `${note.title} ${note.content}`;
-			syncNoteTags(noteId, extractTags(content), note.userId);
+			syncNoteTags(db, noteId, extractTags(content), note.userId);
 		}
 	}
 }
@@ -151,8 +147,7 @@ export async function processSyncPush(changes: SyncQueueItem[], userId: number, 
  * For shared notes, per-user state (pinned, archived, sortOrder) is overlaid
  * from noteUserState so collaborators get their own view.
  */
-export async function getChangesSince(sinceTimestamp: number, userId: number, injectedDb?: AnyDb) {
-	const db = injectedDb ?? defaultDb;
+export async function getChangesSince(db: Db, sinceTimestamp: number, userId: number) {
 	const since = new Date(sinceTimestamp);
 
 	// Owned notes

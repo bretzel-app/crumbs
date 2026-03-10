@@ -247,4 +247,5 @@ if (pwCol && pwCol.notnull) {
 sqlite.pragma('foreign_keys = ON');
 
 export const db = drizzle(sqlite, { schema });
+export type Db = import('drizzle-orm/better-sqlite3').BetterSQLite3Database<typeof schema>;
 export { sqlite };

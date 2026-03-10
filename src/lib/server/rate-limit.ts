@@ -1,4 +1,4 @@
-import { db } from './db/index.js';
+import type { Db } from './db/index.js';
 import { loginAttempts } from './db/schema.js';
 import { and, eq, gte, sql } from 'drizzle-orm';
 
@@ -7,15 +7,13 @@ const WINDOW_MS = 60 * 1000; // 1 minute
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 export function checkRateLimit(
+	db: Db,
 	ip: string,
-	email: string
+	email: string,
+	now?: Date
 ): { allowed: boolean; retryAfter?: number } {
-	// Skip rate limiting in test environment
-	if (process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === '1') {
-		return { allowed: true };
-	}
-
-	const windowStart = new Date(Date.now() - LOCKOUT_MS);
+	const currentTime = now ?? new Date();
+	const windowStart = new Date(currentTime.getTime() - LOCKOUT_MS);
 
 	// Count failed attempts from this IP in the lockout window
 	const result = db
@@ -50,7 +48,7 @@ export function checkRateLimit(
 
 		if (latest) {
 			const retryAfter = Math.ceil(
-				(latest.timestamp.getTime() + LOCKOUT_MS - Date.now()) / 1000
+				(latest.timestamp.getTime() + LOCKOUT_MS - currentTime.getTime()) / 1000
 			);
 			return { allowed: false, retryAfter: Math.max(retryAfter, 1) };
 		}
@@ -60,19 +58,19 @@ export function checkRateLimit(
 	return { allowed: true };
 }
 
-export function recordLoginAttempt(ip: string, email: string, success: boolean): void {
+export function recordLoginAttempt(db: Db, ip: string, email: string, success: boolean, now?: Date): void {
 	db.insert(loginAttempts)
 		.values({
 			ip,
 			email,
 			success,
-			timestamp: new Date()
+			timestamp: now ?? new Date()
 		})
 		.run();
 }
 
-export function clearOldAttempts(): void {
-	const cutoff = new Date(Date.now() - LOCKOUT_MS * 2);
+export function clearOldAttempts(db: Db, now?: Date): void {
+	const cutoff = new Date((now ?? new Date()).getTime() - LOCKOUT_MS * 2);
 	db.delete(loginAttempts)
 		.where(sql`${loginAttempts.timestamp} < ${cutoff}`)
 		.run();

@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
+import { db } from '$lib/server/db/index.js';
 import { getUserId } from '$lib/server/api-utils.js';
 import { searchNotes } from '$lib/server/notes-service.js';
 
@@ -11,6 +12,6 @@ export const GET: RequestHandler = async ({ url, ...event }) => {
 		return json([]);
 	}
 
-	const results = searchNotes(userId, query);
+	const results = searchNotes(db, userId, query);
 	return json(results);
 };

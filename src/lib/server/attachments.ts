@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from './db/index.js';
+import type { Db } from './db/index.js';
 import { attachments } from './db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { Attachment } from '$lib/types/index.js';
@@ -16,6 +16,7 @@ if (!existsSync(ATTACHMENTS_DIR)) {
 }
 
 export async function saveAttachment(
+	db: Db,
 	noteId: string,
 	file: File,
 	userId: number,
@@ -59,7 +60,7 @@ export async function saveAttachment(
  * Batch fetch attachments for multiple notes in a single query.
  * Returns a Map of noteId → Attachment[].
  */
-export function fetchAttachmentsForNotes(noteIds: string[]): Map<string, Attachment[]> {
+export function fetchAttachmentsForNotes(db: Db, noteIds: string[]): Map<string, Attachment[]> {
 	if (noteIds.length === 0) return new Map();
 
 	const rows = db
@@ -80,7 +81,7 @@ export function fetchAttachmentsForNotes(noteIds: string[]): Map<string, Attachm
 	return map;
 }
 
-export async function getAttachment(id: string, noteId: string) {
+export async function getAttachment(db: Db, id: string, noteId: string) {
 	return db
 		.select()
 		.from(attachments)
@@ -88,11 +89,11 @@ export async function getAttachment(id: string, noteId: string) {
 		.get();
 }
 
-export async function getAttachmentsByNote(noteId: string) {
+export async function getAttachmentsByNote(db: Db, noteId: string) {
 	return db.select().from(attachments).where(eq(attachments.noteId, noteId));
 }
 
-export async function updateAttachment(id: string, noteId: string, data: { featured: boolean }) {
+export async function updateAttachment(db: Db, id: string, noteId: string, data: { featured: boolean }) {
 	const [updated] = await db
 		.update(attachments)
 		.set({ featured: data.featured })
@@ -101,8 +102,8 @@ export async function updateAttachment(id: string, noteId: string, data: { featu
 	return updated ?? null;
 }
 
-export async function deleteAttachment(id: string, noteId: string) {
-	const attachment = await getAttachment(id, noteId);
+export async function deleteAttachment(db: Db, id: string, noteId: string) {
+	const attachment = await getAttachment(db, id, noteId);
 	if (attachment) {
 		try {
 			await unlink(attachment.path);

@@ -12,6 +12,7 @@ import {
 	reorderNotes
 } from '../notes-service.js';
 import { saveAttachment } from '../attachments.js';
+import { db } from '../db/index.js';
 
 const NOTE_COLORS = [
 	'default',
@@ -45,7 +46,7 @@ export function createMcpServer(userId: number): McpServer {
 			tag: z.string().optional().describe('Filter by tag name')
 		},
 		async ({ filter = 'all', tag }: { filter?: string; tag?: string }) => {
-			let result = listNotes(userId, filter as NoteFilter);
+			let result = listNotes(db, userId, filter as NoteFilter);
 
 			if (tag) {
 				result = result.filter((n) =>
@@ -64,7 +65,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Get a single note by ID with its tags and attachments',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const note = getNote(userId, id);
+			const note = getNote(db, userId, id);
 			if (!note) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -88,7 +89,7 @@ export function createMcpServer(userId: number): McpServer {
 			checklistMode: z.boolean().optional().describe('Enable checklist mode')
 		},
 		async ({ title, content, color, checklistMode }: { title?: string; content?: string; color?: string; checklistMode?: boolean }) => {
-			const note = createNote(userId, { title, content, color, checklistMode });
+			const note = createNote(db, userId, { title, content, color, checklistMode });
 			return {
 				content: [{ type: 'text' as const, text: JSON.stringify(note, null, 2) }]
 			};
@@ -107,7 +108,7 @@ export function createMcpServer(userId: number): McpServer {
 			checklistMode: z.boolean().optional().describe('Enable/disable checklist mode')
 		},
 		async ({ id, ...updates }: { id: string; title?: string; content?: string; color?: string; pinned?: boolean; checklistMode?: boolean }) => {
-			const result = updateNote(userId, id, updates);
+			const result = updateNote(db, userId, id, updates);
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -126,7 +127,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Move a note to trash',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const result = updateNote(userId, id, { trashed: true });
+			const result = updateNote(db, userId, id, { trashed: true });
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -144,7 +145,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Restore a note from trash',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const result = updateNote(userId, id, { trashed: false });
+			const result = updateNote(db, userId, id, { trashed: false });
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -162,7 +163,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Archive a note',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const result = updateNote(userId, id, { archived: true });
+			const result = updateNote(db, userId, id, { archived: true });
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -180,7 +181,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Unarchive a note',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const result = updateNote(userId, id, { archived: false });
+			const result = updateNote(db, userId, id, { archived: false });
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -198,7 +199,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Permanently delete a note',
 		{ id: z.string().describe('Note ID') },
 		async ({ id }: { id: string }) => {
-			const existing = getNote(userId, id);
+			const existing = getNote(db, userId, id);
 			if (!existing) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -206,7 +207,7 @@ export function createMcpServer(userId: number): McpServer {
 				};
 			}
 
-			deleteNote(userId, id);
+			deleteNote(db, userId, id);
 			return {
 				content: [
 					{
@@ -223,7 +224,7 @@ export function createMcpServer(userId: number): McpServer {
 		'Search notes by title, content, or tag name',
 		{ query: z.string().describe('Search query') },
 		async ({ query }: { query: string }) => {
-			const results = searchNotes(userId, query);
+			const results = searchNotes(db, userId, query);
 			return {
 				content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }]
 			};
@@ -231,7 +232,7 @@ export function createMcpServer(userId: number): McpServer {
 	);
 
 	server.tool('list_tags', 'List all tags', {}, async () => {
-		const allTags = listAllTags(userId);
+		const allTags = listAllTags(db, userId);
 		return {
 			content: [{ type: 'text' as const, text: JSON.stringify(allTags, null, 2) }]
 		};
@@ -245,7 +246,7 @@ export function createMcpServer(userId: number): McpServer {
 			pinned: z.boolean().describe('Whether to pin (true) or unpin (false)')
 		},
 		async ({ id, pinned }: { id: string; pinned: boolean }) => {
-			const result = updateNote(userId, id, { pinned });
+			const result = updateNote(db, userId, id, { pinned });
 			if (!result) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -277,7 +278,7 @@ export function createMcpServer(userId: number): McpServer {
 				.describe('Array of note IDs with their new sort orders')
 		},
 		async ({ orders }: { orders: { id: string; sortOrder: number }[] }) => {
-			reorderNotes(userId, orders);
+			reorderNotes(db, userId, orders);
 			return {
 				content: [{ type: 'text' as const, text: `Reordered ${orders.length} notes` }]
 			};
@@ -292,7 +293,7 @@ export function createMcpServer(userId: number): McpServer {
 			imageUrl: z.string().url().describe('URL of the image to fetch')
 		},
 		async ({ noteId, imageUrl }: { noteId: string; imageUrl: string }) => {
-			const existing = getNote(userId, noteId);
+			const existing = getNote(db, userId, noteId);
 			if (!existing) {
 				return {
 					content: [{ type: 'text' as const, text: 'Note not found' }],
@@ -320,7 +321,7 @@ export function createMcpServer(userId: number): McpServer {
 				const filename = `upload_${Date.now()}.${ext}`;
 
 				const file = new File([buffer], filename, { type: contentType });
-				const attachment = await saveAttachment(noteId, file, userId);
+				const attachment = await saveAttachment(db, noteId, file, userId);
 
 				return {
 					content: [{ type: 'text' as const, text: JSON.stringify(attachment, null, 2) }]
