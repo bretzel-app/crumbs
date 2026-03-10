@@ -1,6 +1,6 @@
 import type { Db } from './db/index.js';
 import { loginAttempts } from './db/schema.js';
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq, gte, lt, sql } from 'drizzle-orm';
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60 * 1000; // 1 minute
@@ -72,6 +72,6 @@ export function recordLoginAttempt(db: Db, ip: string, email: string, success: b
 export function clearOldAttempts(db: Db, now?: Date): void {
 	const cutoff = new Date((now ?? new Date()).getTime() - LOCKOUT_MS * 2);
 	db.delete(loginAttempts)
-		.where(sql`${loginAttempts.timestamp} < ${cutoff}`)
+		.where(lt(loginAttempts.timestamp, cutoff))
 		.run();
 }
