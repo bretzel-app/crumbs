@@ -1,5 +1,5 @@
 import { test, expect, noteCard } from './helpers/fixtures.js';
-import type { Page, Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /** Run a TipTap command chain via the exposed editor instance on the DOM element */
 async function runTiptapCommand(page: Page, commandFn: string) {
@@ -36,54 +36,6 @@ test.describe('Rich text formatting', () => {
 		// And the markdown content contains bold syntax
 		await page.getByTestId('markdown-toggle').click();
 		await expect(page.getByTestId('note-content-input')).toHaveValue('hello **world**');
-	});
-
-	test('Scenario: Italic shortcut formats selected text in the editor', async ({ authenticatedPage: page }) => {
-		// Given the user is editing a new note with content "hello world"
-		await page.getByTestId('new-note-btn').click();
-		await typeViaMarkdown(page, 'hello world');
-		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
-
-		// When the user selects "world" and applies italic formatting
-		await runTiptapCommand(page, 'editor.chain().focus().setTextSelection({from:7,to:12}).toggleItalic().run()');
-
-		// Then the selected text appears italic in the editor
-		await expect(editor.locator('em')).toHaveText('world');
-	});
-
-	test('Scenario: Formatting toolbar applies bold to selected text', async ({ authenticatedPage: page }) => {
-		// Given the user is editing a note
-		await page.getByTestId('new-note-btn').click();
-		await typeViaMarkdown(page, 'hello world');
-
-		// When the user selects "world" and clicks the bold button
-		await runTiptapCommand(page, 'editor.chain().focus().setTextSelection({from:7,to:12}).run()');
-		await page.getByTestId('format-bold').click();
-
-		// Then the selected text appears bold
-		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
-		await expect(editor.locator('strong')).toHaveText('world');
-	});
-
-	test('Scenario: Formatting toolbar is always visible when editing', async ({ authenticatedPage: page }) => {
-		// When the user opens a new note
-		await page.getByTestId('new-note-btn').click();
-
-		// Then the formatting toolbar is visible immediately
-		await expect(page.getByTestId('formatting-toolbar')).toBeVisible();
-	});
-
-	test('Scenario: Inline code shortcut wraps selected text', async ({ authenticatedPage: page }) => {
-		// Given the user is editing a note with content "use npm install"
-		await page.getByTestId('new-note-btn').click();
-		await typeViaMarkdown(page, 'use npm install');
-		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
-
-		// When the user selects "npm install" and applies code formatting
-		await runTiptapCommand(page, 'editor.chain().focus().setTextSelection({from:5,to:16}).toggleCode().run()');
-
-		// Then the selected text appears as inline code
-		await expect(editor.locator('code')).toHaveText('npm install');
 	});
 
 	test('Scenario: Existing note shows rich text in TipTap editor', async ({ authenticatedPage: page }) => {

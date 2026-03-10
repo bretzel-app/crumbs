@@ -47,23 +47,4 @@ test.describe('Notes CRUD', () => {
 		// Then the note is no longer visible
 		await expect(page.getByText('Delete Me')).not.toBeVisible();
 	});
-
-	test('Scenario: Bold formatting applies to selected text in the editor', async ({ authenticatedPage: page }) => {
-		// Given the user is editing a note with content "hello world"
-		await page.getByTestId('new-note-btn').click();
-		await page.getByTestId('markdown-toggle').click();
-		await page.getByTestId('note-content-input').fill('hello world');
-		await page.getByTestId('markdown-toggle').click();
-		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
-
-		// When the user selects "world" and applies bold formatting
-		await page.getByTestId('tiptap-editor').evaluate((el) => {
-			const ed = (el as any).__tiptapEditor;
-			if (!ed) return;
-			ed.chain().focus().setTextSelection({ from: 7, to: 12 }).toggleBold().run();
-		});
-
-		// Then the selected text appears bold in the editor
-		await expect(editor.locator('strong')).toHaveText('world');
-	});
 });

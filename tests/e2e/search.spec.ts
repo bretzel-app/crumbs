@@ -13,7 +13,6 @@ test.describe('Search', () => {
 
 		// When the user searches for "Grocery"
 		await page.getByTestId('search-input').fill('Grocery');
-		await page.waitForTimeout(500);
 
 		// Then "Grocery Errands" is visible in the results
 		await expect(page.getByText('Grocery Errands')).toBeVisible();
@@ -30,7 +29,6 @@ test.describe('Search', () => {
 
 		// When the user searches for "tomato"
 		await page.getByTestId('search-input').fill('tomato');
-		await page.waitForTimeout(500);
 
 		// Then "Recipe" is visible in the results
 		await expect(page.getByText('Recipe')).toBeVisible();
@@ -39,7 +37,6 @@ test.describe('Search', () => {
 	test('Scenario: Searching for a nonexistent term yields no results', async ({ authenticatedPage: page }) => {
 		// When the user searches for a term that matches nothing
 		await page.getByTestId('search-input').fill('xyznonexistent');
-		await page.waitForTimeout(500);
 
 		// Then no notes are displayed
 		await expect(page.getByTestId('note-card')).toHaveCount(0);
