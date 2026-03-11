@@ -5,6 +5,8 @@ import { addCollaborator, removeCollaborator, fetchCollaboratorsForNotes } from 
 import { db } from '$lib/server/db/index.js';
 import { users, notes, noteCollaborators } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
+import { isEmailConfigured, sendShareNotification } from '$lib/server/email.js';
+import { getPreferences } from '$lib/server/preferences.js';
 
 export const GET: RequestHandler = async ({ params, ...event }) => {
 	const userId = getUserId(event);
@@ -47,6 +49,39 @@ export const POST: RequestHandler = async ({ params, request, ...event }) => {
 	}
 
 	addCollaborator(db, params.id, targetUserId, userId);
+
+	// Send email notification (fire-and-forget)
+	if (isEmailConfigured()) {
+		const targetPrefs = getPreferences(db, targetUserId);
+		if (targetPrefs.notifyOnShare !== 'false') {
+			const target = db
+				.select({ email: users.email, displayName: users.displayName })
+				.from(users)
+				.where(eq(users.id, targetUserId))
+				.get();
+			const sharer = db
+				.select({ displayName: users.displayName })
+				.from(users)
+				.where(eq(users.id, userId))
+				.get();
+			const noteData = db
+				.select({ title: notes.title })
+				.from(notes)
+				.where(eq(notes.id, params.id))
+				.get();
+			const origin = process.env.ORIGIN || 'http://localhost:3000';
+
+			if (target?.email) {
+				sendShareNotification(
+					target.email,
+					target.displayName,
+					sharer?.displayName || 'Someone',
+					noteData?.title || 'Untitled',
+					origin
+				).catch(() => {});
+			}
+		}
+	}
 
 	const collaborators = fetchCollaboratorsForNotes(db, [params.id]);
 	return json(collaborators.get(params.id) ?? [], { status: 201 });

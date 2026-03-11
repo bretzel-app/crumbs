@@ -114,6 +114,20 @@ node build
 
 Google, GitHub, and generic OIDC (Authentik, Keycloak, Okta, etc.) are supported. Providers are auto-enabled when their env vars are set. See **[AUTH.md](AUTH.md)** for environment variables, callback URLs, provider-specific setup guides, and troubleshooting.
 
+### Email Notifications (optional)
+
+Email notifications are sent when a note is shared with a user. Auto-enabled when `SMTP_HOST` is set.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMTP_HOST` | — | SMTP server hostname (e.g. `smtp.example.com`) |
+| `SMTP_PORT` | `587` | SMTP port (`587` for STARTTLS, `465` for SSL) |
+| `SMTP_USER` | — | SMTP username (optional for unauthenticated relays) |
+| `SMTP_PASS` | — | SMTP password |
+| `SMTP_FROM` | `Crumbs <noreply@localhost>` | Sender address |
+
+Users can opt out of share notifications in **Settings > Preferences**.
+
 ## Health Check
 
 The Docker image includes a health check that pings `/login`:

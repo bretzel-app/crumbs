@@ -64,4 +64,17 @@
 		/>
 		<label for="sidebar-default" class="text-sm text-[var(--text)]">Start with sidebar collapsed</label>
 	</div>
+
+	<!-- Email notifications -->
+	<div class="flex items-center gap-3">
+		<input
+			type="checkbox"
+			id="notify-on-share"
+			checked={prefs.notifyOnShare}
+			onchange={() => updatePreference('notifyOnShare', !prefs.notifyOnShare)}
+			class="h-4 w-4 rounded-sm"
+			data-testid="pref-notify-on-share"
+		/>
+		<label for="notify-on-share" class="text-sm text-[var(--text)]">Email me when someone shares a note with me</label>
+	</div>
 </div>

@@ -91,6 +91,7 @@
 - Share dialog accessible from editor toolbar
 - Collaborators can leave shared notes
 - Shared notes appear mixed in main list alongside owned notes
+- Email notifications when a note is shared with you (requires SMTP config, opt-out in preferences)
 
 ### Full-Text Search
 - Search across note titles, content, and tags
