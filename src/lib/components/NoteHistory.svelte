@@ -21,6 +21,8 @@
 	let showConfirm = $state(false);
 
 	$effect(() => {
+		// Track noteId explicitly so this only re-runs when the note changes
+		noteId;
 		void loadVersions();
 	});
 
@@ -122,9 +124,9 @@
 			</button>
 		</div>
 
-		<div class="flex min-h-0 flex-1">
+		<div class="flex min-h-0 max-h-[60vh] flex-1">
 			<!-- Version list -->
-			<div class="w-56 flex-none border-r border-[var(--border-subtle)] overflow-y-auto max-h-[60vh]">
+			<div class="w-56 flex-none border-r border-[var(--border-subtle)] overflow-y-auto">
 				{#if isLoading}
 					<div class="flex items-center justify-center py-8 text-sm text-[var(--text-muted)]">
 						Loading…
@@ -166,7 +168,7 @@
 						Loading…
 					</div>
 				{:else if selectedVersion}
-					<div class="flex flex-1 flex-col overflow-y-auto max-h-[60vh]">
+					<div class="flex flex-1 flex-col overflow-y-auto">
 						<div class="flex-1 overflow-y-auto px-4 py-3">
 							{#if selectedVersion.title}
 								<h3 class="mb-2 text-base font-semibold text-[var(--text)]">{selectedVersion.title}</h3>
