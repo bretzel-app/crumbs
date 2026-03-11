@@ -138,17 +138,17 @@
 	{/if}
 
 	{#if note.checklistMode && checklistItems.length > 0}
-		<ul class="space-y-1" data-testid="note-checklist-preview">
+		<ul class="space-y-2 mb-6" data-testid="note-checklist-preview">
 			{#each sortedChecklistItems.slice(0, 8) as item}
-				<li class="flex items-center gap-2 text-sm {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}">
+				<li class="flex items-start gap-2 text-sm {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}">
 					<input
 						type="checkbox"
 						checked={item.checked}
 						onclick={(e) => { e.stopPropagation(); toggleChecklistItem(item); }}
-						class="h-3.5 w-3.5 rounded border-[var(--border-subtle)] text-[var(--primary)] cursor-pointer"
+						class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)] text-[var(--primary)] cursor-pointer"
 						data-testid="card-checklist-checkbox"
 					/>
-					<span class="truncate">{item.text}</span>
+					<span class="break-words min-w-0">{item.text}</span>
 				</li>
 			{/each}
 			{#if checklistItems.length > 8}
