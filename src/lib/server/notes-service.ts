@@ -294,14 +294,14 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 		}
 	}
 
-	// Create a version snapshot whenever content-related fields are saved
-	const hasContentUpdate =
-		input.title !== undefined ||
-		input.content !== undefined ||
-		input.color !== undefined ||
-		input.checklistMode !== undefined;
+	// Create a version snapshot only when at least one content field actually changed
+	const hasActualContentChange =
+		(input.title !== undefined && input.title !== existing.title) ||
+		(input.content !== undefined && input.content !== existing.content) ||
+		(input.color !== undefined && input.color !== existing.color) ||
+		(input.checklistMode !== undefined && input.checklistMode !== existing.checklistMode);
 
-	if (hasContentUpdate) {
+	if (hasActualContentChange) {
 		const saved = db.select().from(notes).where(eq(notes.id, id)).get();
 		if (saved) {
 			createSnapshot(db, id, {
