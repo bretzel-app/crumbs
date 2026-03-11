@@ -5,6 +5,7 @@
 	import TiptapEditor from './TiptapEditor.svelte';
 	import ImageUpload from './ImageUpload.svelte';
 	import ShareDialog from './ShareDialog.svelte';
+	import NoteHistory from './NoteHistory.svelte';
 	import { updateNote, createNote } from '$lib/stores/notes.js';
 	import { notes } from '$lib/stores/notes.js';
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
@@ -19,6 +20,7 @@
 	import FileText from 'lucide-svelte/icons/file-text';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
 	import Users from 'lucide-svelte/icons/users';
+	import History from 'lucide-svelte/icons/history';
 
 	interface Props {
 		note: Note | null;
@@ -55,6 +57,7 @@
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
 
 	let showShareDialog = $state(false);
+	let showHistory = $state(false);
 	// svelte-ignore state_referenced_locally
 	let collaboratorsList = $state<Collaborator[]>(note?.collaborators ?? []);
 	const isOwner = $derived(note?.isOwner !== false);
@@ -82,6 +85,37 @@
 			if (!id) return;
 		}
 		showShareDialog = !showShareDialog;
+	}
+
+	async function toggleHistory() {
+		if (currentlyNew) {
+			const id = await autoSave();
+			if (!id) return;
+		}
+		showHistory = !showHistory;
+	}
+
+	async function handleHistoryRestored() {
+		if (!noteId) return;
+		// Reload the note content from the server after a restore
+		try {
+			const res = await fetch(`/api/notes/${noteId}`);
+			if (res.ok) {
+				const updated = await res.json();
+				title = updated.title ?? '';
+				content = updated.content ?? '';
+				color = updated.color ?? 'default';
+				checklistMode = updated.checklistMode ?? false;
+				// Bump editor tick to force TiptapEditor to re-render
+				editorTick++;
+				// Update the store too
+				notes.update((list) =>
+					list.map((n) => (n.id === noteId ? { ...n, ...updated } : n))
+				);
+			}
+		} catch {
+			// failed silently
+		}
 	}
 
 	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB)
@@ -381,6 +415,18 @@
 						<Users class="h-5 w-5" />
 					</span>
 				{/if}
+
+				<!-- History button (only for saved notes) -->
+				{#if !currentlyNew}
+					<button
+						onclick={toggleHistory}
+						class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+						title="Version history"
+						data-testid="history-toggle"
+					>
+						<History class="h-5 w-5 {showHistory ? 'text-[var(--primary)]' : ''}" />
+					</button>
+				{/if}
 			</div>
 
 			<button
@@ -401,5 +447,13 @@
 		{ownerName}
 		onClose={() => (showShareDialog = false)}
 		onUpdate={handleCollaboratorsUpdate}
+	/>
+{/if}
+
+{#if showHistory && noteId}
+	<NoteHistory
+		noteId={noteId}
+		onClose={() => (showHistory = false)}
+		onRestored={handleHistoryRestored}
 	/>
 {/if}

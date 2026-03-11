@@ -136,6 +136,19 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 			updated_at INTEGER NOT NULL
 		);
 		CREATE UNIQUE INDEX user_preferences_user_key_unique ON user_preferences(user_id, key);
+
+		CREATE TABLE note_versions (
+			id TEXT PRIMARY KEY,
+			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+			version INTEGER NOT NULL,
+			title TEXT NOT NULL DEFAULT '',
+			content TEXT NOT NULL DEFAULT '',
+			checklist_mode INTEGER NOT NULL DEFAULT 0,
+			color TEXT NOT NULL DEFAULT 'default',
+			created_at INTEGER NOT NULL,
+			UNIQUE(note_id, version)
+		);
+		CREATE INDEX note_versions_note_id_idx ON note_versions(note_id);
 	`);
 
 	const db = drizzle(sqlite, { schema });

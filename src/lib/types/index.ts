@@ -98,5 +98,25 @@ export type NoteFilter = 'all' | 'archived' | 'trashed';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 
+export interface NoteVersionSummary {
+	id: string;
+	noteId: string;
+	version: number;
+	title: string;
+	contentPreview: string;
+	createdAt: Date;
+}
+
+export interface NoteVersion {
+	id: string;
+	noteId: string;
+	version: number;
+	title: string;
+	content: string;
+	checklistMode: boolean;
+	color: NoteColor;
+	createdAt: Date;
+}
+
 export type { UserPreferences } from './preferences.js';
 export { DEFAULT_PREFERENCES, BOOLEAN_PREF_KEYS } from './preferences.js';

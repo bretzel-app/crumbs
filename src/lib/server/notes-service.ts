@@ -7,6 +7,7 @@ import { fetchTagsForNotes, syncNoteTags } from './tags.js';
 import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { canAccessNote } from './api-utils.js';
+import { createSnapshot } from './versions-service.js';
 import type { NoteFilter } from '$lib/types/index.js';
 
 interface NoteRow {
@@ -290,6 +291,26 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 			const content = `${updated.title} ${updated.content}`;
 			const extractedTags = extractTags(content);
 			syncNoteTags(db, id, extractedTags, existing.userId);
+		}
+	}
+
+	// Create a version snapshot whenever content-related fields are saved
+	const hasContentUpdate =
+		input.title !== undefined ||
+		input.content !== undefined ||
+		input.color !== undefined ||
+		input.checklistMode !== undefined;
+
+	if (hasContentUpdate) {
+		const saved = db.select().from(notes).where(eq(notes.id, id)).get();
+		if (saved) {
+			createSnapshot(db, id, {
+				version: saved.version,
+				title: saved.title,
+				content: saved.content,
+				checklistMode: saved.checklistMode,
+				color: saved.color
+			});
 		}
 	}
 

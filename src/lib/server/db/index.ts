@@ -123,6 +123,18 @@ sqlite.exec(`
 		value TEXT NOT NULL,
 		updated_at INTEGER NOT NULL
 	);
+
+	CREATE TABLE IF NOT EXISTS note_versions (
+		id TEXT PRIMARY KEY,
+		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+		version INTEGER NOT NULL,
+		title TEXT NOT NULL DEFAULT '',
+		content TEXT NOT NULL DEFAULT '',
+		checklist_mode INTEGER NOT NULL DEFAULT 0,
+		color TEXT NOT NULL DEFAULT 'default',
+		created_at INTEGER NOT NULL,
+		UNIQUE(note_id, version)
+	);
 `);
 
 // Migration: detect old schema (no email column on users) and add columns
@@ -195,6 +207,8 @@ sqlite.exec(`
 	CREATE INDEX IF NOT EXISTS note_collaborators_user_id_idx ON note_collaborators(user_id);
 	CREATE UNIQUE INDEX IF NOT EXISTS note_user_state_unique ON note_user_state(note_id, user_id);
 	CREATE UNIQUE INDEX IF NOT EXISTS user_preferences_user_key_unique ON user_preferences(user_id, key);
+
+	CREATE INDEX IF NOT EXISTS note_versions_note_id_idx ON note_versions(note_id);
 
 	CREATE TABLE IF NOT EXISTS api_keys (
 		id TEXT PRIMARY KEY,

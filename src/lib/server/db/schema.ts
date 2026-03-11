@@ -189,3 +189,23 @@ export const userPreferences = sqliteTable(
 	},
 	(table) => [uniqueIndex('user_preferences_user_key_unique').on(table.userId, table.key)]
 );
+
+export const noteVersions = sqliteTable(
+	'note_versions',
+	{
+		id: text('id').primaryKey(),
+		noteId: text('note_id')
+			.references(() => notes.id, { onDelete: 'cascade' })
+			.notNull(),
+		version: integer('version').notNull(),
+		title: text('title').notNull().default(''),
+		content: text('content').notNull().default(''),
+		checklistMode: integer('checklist_mode', { mode: 'boolean' }).notNull().default(false),
+		color: text('color').notNull().default('default'),
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+	},
+	(table) => [
+		index('note_versions_note_id_idx').on(table.noteId),
+		uniqueIndex('note_versions_note_id_version_unique').on(table.noteId, table.version)
+	]
+);
