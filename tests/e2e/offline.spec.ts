@@ -62,8 +62,9 @@ test.describe('Offline Support', () => {
 		await expect(page.getByText('Survive Reload')).toBeVisible();
 
 		// When the network is restored and sync completes
+		const syncResponse = page.waitForResponse('**/api/sync');
 		await page.context().setOffline(false);
-		await page.waitForResponse('**/api/sync');
+		await syncResponse;
 
 		// And the user reloads the page
 		await page.reload();
