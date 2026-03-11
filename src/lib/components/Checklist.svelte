@@ -121,7 +121,7 @@
 		class="space-y-0.5"
 	>
 		{#each activeItems as item (item.id)}
-			<div class="group flex items-center gap-2 py-1" animate:flip={{ duration: flipDurationMs }}>
+			<div class="group flex items-center gap-2 py-1.5" animate:flip={{ duration: flipDurationMs }}>
 				<div use:dragHandle aria-label="drag handle" class="drag-handle cursor-grab max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150" data-testid="checklist-drag-handle">
 					<GripVertical class="h-4 w-4 text-[var(--text-muted)]" />
 				</div>
@@ -137,7 +137,7 @@
 					value={item.text}
 					oninput={(e) => updateText(item.id, (e.target as HTMLInputElement).value)}
 					onkeydown={(e) => handleKeydown(e, item.id)}
-					class="flex-1 bg-transparent text-sm outline-none {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
+					class="flex-1 min-w-0 bg-transparent text-sm outline-none {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					placeholder="List item"
 					data-testid="checklist-input"
 				/>
@@ -176,7 +176,7 @@
 			{#if doneExpanded}
 				<div class="mt-1 space-y-0.5 pl-5" data-testid="checklist-done-section">
 					{#each doneItems as item (item.id)}
-						<div class="group flex items-center gap-2 py-1">
+						<div class="group flex items-center gap-2 py-1.5">
 							<input
 								type="checkbox"
 								checked={item.checked}
