@@ -44,3 +44,4 @@ todo.md
 
 # Worktrees
 .worktrees/
+package-lock.json
