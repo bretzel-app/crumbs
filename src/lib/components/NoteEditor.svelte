@@ -142,7 +142,24 @@
 	// but we only want to close if the press also started there.
 	let mousedownOnOverlay = false;
 
+	// On mobile, the tap that opens the editor produces synthetic mouse events
+	// (mousedown → mouseup → click) at the original touch coordinates. If those
+	// coordinates land on the overlay backdrop, the editor would close instantly.
+	// Guard against this by ignoring mousedowns that arrive within the first
+	// animation frame after mount.
+	let overlayReady = false;
+	$effect(() => {
+		const id = requestAnimationFrame(() => {
+			overlayReady = true;
+		});
+		return () => {
+			overlayReady = false;
+			cancelAnimationFrame(id);
+		};
+	});
+
 	function handleOverlayMousedown(e: MouseEvent) {
+		if (!overlayReady) return;
 		mousedownOnOverlay = e.target === e.currentTarget;
 	}
 
