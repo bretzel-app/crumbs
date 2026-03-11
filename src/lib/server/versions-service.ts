@@ -9,7 +9,7 @@ const CONTENT_PREVIEW_LENGTH = 80;
 
 /**
  * Create a snapshot of a note's current state.
- * Called on every save. Prunes snapshots beyond MAX_VERSIONS_PER_NOTE.
+ * Only called when content actually changed. Prunes snapshots beyond MAX_VERSIONS_PER_NOTE.
  */
 export function createSnapshot(
 db: Db,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestDb } from './db/test-helpers.js';
-import { notes, noteCollaborators, noteUserState, users } from './db/schema.js';
+import { notes, noteCollaborators, noteUserState, noteVersions, users } from './db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { Db } from './db/index.js';
 import {
@@ -231,6 +231,31 @@ describe('updateNote', () => {
 		seedNote('n1', { title: 'V1' });
 		const updated = updateNote(db, OWNER_ID, 'n1', { title: 'V2' });
 		expect(updated!.version).toBe(2);
+	});
+
+	it('should create a snapshot when content changes', () => {
+		seedNote('n1', { title: 'Original', content: 'Hello', color: 'default', checklistMode: false });
+		updateNote(db, OWNER_ID, 'n1', { title: 'Changed' });
+
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots).toHaveLength(1);
+	});
+
+	it('should not create a snapshot when no content field actually changed', () => {
+		seedNote('n1', { title: 'Same', content: 'Same', color: 'default', checklistMode: false });
+		// Send the same values — nothing actually changes
+		updateNote(db, OWNER_ID, 'n1', { title: 'Same', content: 'Same' });
+
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots).toHaveLength(0);
+	});
+
+	it('should not create a snapshot when only non-content fields change (pinned, archived)', () => {
+		seedNote('n1', { title: 'Note', pinned: false });
+		updateNote(db, OWNER_ID, 'n1', { pinned: true });
+
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots).toHaveLength(0);
 	});
 
 	it('should extract and sync tags on title/content change', () => {
