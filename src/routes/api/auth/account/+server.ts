@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { getUserId } from '$lib/server/api-utils.js';
 import { verifyPassword, deleteUser, deleteSession, getUser } from '$lib/server/auth.js';
+import { isEmailConfigured, sendAccountDeletedEmail } from '$lib/server/email.js';
 
 export const DELETE: RequestHandler = async ({ request, cookies, ...event }) => {
 	const userId = getUserId(event);
@@ -17,6 +18,9 @@ export const DELETE: RequestHandler = async ({ request, cookies, ...event }) => 
 		if (!verified) throw error(401, 'Invalid password');
 	}
 
+	// Capture email/name before deletion
+	const { email: userEmail, displayName: userName } = user;
+
 	// Delete user and all associated data
 	await deleteUser(userId);
 
@@ -25,6 +29,11 @@ export const DELETE: RequestHandler = async ({ request, cookies, ...event }) => 
 	if (token) {
 		await deleteSession(token);
 		cookies.delete('session', { path: '/' });
+	}
+
+	// Send deletion confirmation email (fire-and-forget)
+	if (isEmailConfigured() && userEmail) {
+		sendAccountDeletedEmail(userEmail, userName).catch(() => {});
 	}
 
 	return json({ success: true });

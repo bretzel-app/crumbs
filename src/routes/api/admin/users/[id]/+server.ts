@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireAdmin } from '$lib/server/api-utils.js';
 import { getUser, deleteUser, updateUserRole, resetPassword, revokeAllSessions } from '$lib/server/auth.js';
+import { isEmailConfigured, sendPasswordResetEmail, sendRoleChangedEmail } from '$lib/server/email.js';
 
 export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 	const admin = requireAdmin(event);
@@ -11,12 +12,19 @@ export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 	const user = getUser(userId);
 	if (!user) throw error(404, 'User not found');
 
+	const origin = process.env.ORIGIN || 'http://localhost:3000';
+
 	if (body.role !== undefined) {
 		// Prevent admin from demoting themselves
 		if (userId === admin.id && body.role !== 'admin') {
 			throw error(400, 'Cannot change your own role');
 		}
 		updateUserRole(userId, body.role);
+
+		// Notify user of role change (fire-and-forget)
+		if (isEmailConfigured() && user.email) {
+			sendRoleChangedEmail(user.email, user.displayName, body.role, origin).catch(() => {});
+		}
 	}
 
 	if (body.newPassword !== undefined) {
@@ -24,6 +32,11 @@ export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 			throw error(400, 'Password must be at least 8 characters');
 		}
 		await resetPassword(userId, body.newPassword);
+
+		// Notify user of password reset (fire-and-forget)
+		if (isEmailConfigured() && user.email) {
+			sendPasswordResetEmail(user.email, user.displayName, origin).catch(() => {});
+		}
 	}
 
 	if (body.revokeSessions) {

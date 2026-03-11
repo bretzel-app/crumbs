@@ -5,7 +5,11 @@ import { addCollaborator, removeCollaborator, fetchCollaboratorsForNotes } from 
 import { db } from '$lib/server/db/index.js';
 import { users, notes, noteCollaborators } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { isEmailConfigured, sendShareNotification } from '$lib/server/email.js';
+import {
+	isEmailConfigured,
+	sendShareNotification,
+	sendCollaboratorRemovedEmail
+} from '$lib/server/email.js';
 import { getPreferences } from '$lib/server/preferences.js';
 
 export const GET: RequestHandler = async ({ params, ...event }) => {
@@ -102,7 +106,50 @@ export const DELETE: RequestHandler = async ({ params, url, ...event }) => {
 		throw error(403, 'Only the owner can remove other collaborators');
 	}
 
+	// Fetch collaborator info and note title before removal for email notification
+	let removedUserEmail: string | undefined;
+	let removedUserName: string | undefined;
+	let noteTitle: string | undefined;
+	let ownerName: string | undefined;
+
+	if (isEmailConfigured() && isOwner && targetUserId !== userId) {
+		const targetPrefs = getPreferences(db, targetUserId);
+		if (targetPrefs.notifyOnCollabRemoved !== 'false') {
+			const target = db
+				.select({ email: users.email, displayName: users.displayName })
+				.from(users)
+				.where(eq(users.id, targetUserId))
+				.get();
+			const noteData = db
+				.select({ title: notes.title })
+				.from(notes)
+				.where(eq(notes.id, params.id))
+				.get();
+			const owner = db
+				.select({ displayName: users.displayName })
+				.from(users)
+				.where(eq(users.id, userId))
+				.get();
+			removedUserEmail = target?.email ?? undefined;
+			removedUserName = target?.displayName ?? undefined;
+			noteTitle = noteData?.title ?? undefined;
+			ownerName = owner?.displayName ?? undefined;
+		}
+	}
+
 	removeCollaborator(db, params.id, targetUserId);
+
+	// Send notification to removed collaborator (fire-and-forget)
+	if (removedUserEmail) {
+		const origin = process.env.ORIGIN || 'http://localhost:3000';
+		sendCollaboratorRemovedEmail(
+			removedUserEmail,
+			removedUserName || '',
+			ownerName || 'Someone',
+			noteTitle || 'Untitled',
+			origin
+		).catch(() => {});
+	}
 
 	return json({ success: true });
 };

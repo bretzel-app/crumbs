@@ -6,6 +6,8 @@ export interface UserPreferences {
 	hideFooter: boolean;
 	sidebarDefaultState: 'open' | 'collapsed';
 	notifyOnShare: boolean;
+	notifyOnCollabRemoved: boolean;
+	notifyOnNoteDeleted: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -13,10 +15,14 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 	defaultNoteColor: 'default',
 	hideFooter: false,
 	sidebarDefaultState: 'open',
-	notifyOnShare: true
+	notifyOnShare: true,
+	notifyOnCollabRemoved: true,
+	notifyOnNoteDeleted: true
 };
 
 export const BOOLEAN_PREF_KEYS: ReadonlySet<keyof UserPreferences> = new Set([
 	'hideFooter',
-	'notifyOnShare'
+	'notifyOnShare',
+	'notifyOnCollabRemoved',
+	'notifyOnNoteDeleted'
 ]);

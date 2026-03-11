@@ -3,6 +3,9 @@ import type { RequestHandler } from './$types.js';
 import { verifyPassword, createSession } from '$lib/server/auth.js';
 import { checkRateLimit, recordLoginAttempt } from '$lib/server/rate-limit.js';
 import { db } from '$lib/server/db/index.js';
+import { users } from '$lib/server/db/schema.js';
+import { eq } from 'drizzle-orm';
+import { isEmailConfigured, sendAccountLockedEmail } from '$lib/server/email.js';
 
 export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
 	const ip = getClientAddress();
@@ -23,6 +26,27 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 	const user = await verifyPassword(email, password);
 	if (!user) {
 		recordLoginAttempt(db, ip, email, false);
+
+		// Check if this failure just triggered a lockout — if so, notify the user
+		if (isEmailConfigured()) {
+			const newCheck = checkRateLimit(db, ip, email);
+			if (!newCheck.allowed) {
+				const retryAfterMinutes = Math.ceil((newCheck.retryAfter ?? 900) / 60);
+				const accountUser = db
+					.select({ email: users.email, displayName: users.displayName })
+					.from(users)
+					.where(eq(users.email, email))
+					.get();
+				if (accountUser?.email) {
+					sendAccountLockedEmail(
+						accountUser.email,
+						accountUser.displayName,
+						retryAfterMinutes
+					).catch(() => {});
+				}
+			}
+		}
+
 		throw error(401, 'Invalid email or password');
 	}
 

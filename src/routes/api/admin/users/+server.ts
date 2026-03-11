@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireAdmin } from '$lib/server/api-utils.js';
 import { listUsers, createUser } from '$lib/server/auth.js';
+import { isEmailConfigured, sendWelcomeEmail } from '$lib/server/email.js';
 
 export const GET: RequestHandler = async (event) => {
 	requireAdmin(event);
@@ -21,5 +22,12 @@ export const POST: RequestHandler = async ({ request, ...event }) => {
 	}
 
 	const user = await createUser(email, displayName || email.split('@')[0], password || null, role || 'user');
+
+	// Send welcome email (fire-and-forget)
+	if (isEmailConfigured() && user.email) {
+		const origin = process.env.ORIGIN || 'http://localhost:3000';
+		sendWelcomeEmail(user.email, user.displayName, origin).catch(() => {});
+	}
+
 	return json(user, { status: 201 });
 };

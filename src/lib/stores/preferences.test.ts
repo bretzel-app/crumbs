@@ -8,13 +8,17 @@ describe('preferences defaults', () => {
 			defaultNoteColor: 'default',
 			hideFooter: false,
 			sidebarDefaultState: 'open',
-			notifyOnShare: true
+			notifyOnShare: true,
+			notifyOnCollabRemoved: true,
+			notifyOnNoteDeleted: true
 		});
 	});
 
 	it('should identify boolean preference keys', () => {
 		expect(BOOLEAN_PREF_KEYS.has('hideFooter')).toBe(true);
 		expect(BOOLEAN_PREF_KEYS.has('notifyOnShare')).toBe(true);
+		expect(BOOLEAN_PREF_KEYS.has('notifyOnCollabRemoved')).toBe(true);
+		expect(BOOLEAN_PREF_KEYS.has('notifyOnNoteDeleted')).toBe(true);
 		expect(BOOLEAN_PREF_KEYS.has('defaultNoteMode')).toBe(false);
 		expect(BOOLEAN_PREF_KEYS.has('defaultNoteColor')).toBe(false);
 		expect(BOOLEAN_PREF_KEYS.has('sidebarDefaultState')).toBe(false);
