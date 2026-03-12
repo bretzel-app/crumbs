@@ -179,21 +179,13 @@
 	// On mobile, the tap that opens the editor produces synthetic mouse events
 	// (mousedown → mouseup → click) at the original touch coordinates. If those
 	// coordinates land on the overlay backdrop, the editor would close instantly.
-	// Guard against this by ignoring mousedowns that arrive within the first
-	// animation frame after mount.
-	let overlayReady = false;
-	$effect(() => {
-		const id = requestAnimationFrame(() => {
-			overlayReady = true;
-		});
-		return () => {
-			overlayReady = false;
-			cancelAnimationFrame(id);
-		};
-	});
+	// On first page load, synthetic mousedown can arrive ~300ms after the tap
+	// (well after a single rAF). Use a timestamp guard to ignore early events.
+	const mountTime = Date.now();
+	const OVERLAY_READY_DELAY = 400;
 
 	function handleOverlayMousedown(e: MouseEvent) {
-		if (!overlayReady) return;
+		if (Date.now() - mountTime < OVERLAY_READY_DELAY) return;
 		mousedownOnOverlay = e.target === e.currentTarget;
 	}
 
