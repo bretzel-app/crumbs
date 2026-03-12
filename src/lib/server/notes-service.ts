@@ -1,6 +1,6 @@
 import type { Db } from './db/index.js';
-import { notes, noteTags, tags, noteCollaborators, noteUserState } from './db/schema.js';
-import { eq, and, desc, like, or, inArray, sql } from 'drizzle-orm';
+import { notes, noteTags, tags, noteCollaborators, noteUserState, noteVersions } from './db/schema.js';
+import { eq, and, desc, like, or, inArray, sql, lte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from './tags.js';
@@ -8,6 +8,7 @@ import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { canAccessNote } from './api-utils.js';
 import { createSnapshot } from './versions-service.js';
+import { mergeContent } from '$lib/utils/content-merge.js';
 import type { NoteFilter } from '$lib/types/index.js';
 
 interface NoteRow {
@@ -205,6 +206,7 @@ export interface UpdateNoteInput {
 	trashed?: boolean;
 	checklistMode?: boolean;
 	sortOrder?: number;
+	baseVersion?: number;
 }
 
 /** Per-user fields that go to noteUserState for collaborators */
@@ -232,7 +234,33 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 	let hasSharedUpdates = false;
 
 	if (input.title !== undefined) { sharedUpdates.title = input.title; hasSharedUpdates = true; }
-	if (input.content !== undefined) { sharedUpdates.content = input.content; hasSharedUpdates = true; }
+	if (input.content !== undefined) {
+		// 3-way merge to preserve concurrent edits from other users
+		if (input.content !== existing.content) {
+			const baseSnapshot = input.baseVersion !== undefined
+				? db.select({ content: noteVersions.content })
+					.from(noteVersions)
+					.where(and(eq(noteVersions.noteId, id), lte(noteVersions.version, input.baseVersion)))
+					.orderBy(desc(noteVersions.version))
+					.limit(1)
+					.get()
+				: db.select({ content: noteVersions.content })
+					.from(noteVersions)
+					.where(eq(noteVersions.noteId, id))
+					.orderBy(desc(noteVersions.version))
+					.limit(1)
+					.get();
+
+			if (baseSnapshot && baseSnapshot.content !== existing.content) {
+				sharedUpdates.content = mergeContent(baseSnapshot.content, input.content, existing.content);
+			} else {
+				sharedUpdates.content = input.content;
+			}
+		} else {
+			sharedUpdates.content = input.content;
+		}
+		hasSharedUpdates = true;
+	}
 	if (input.color !== undefined) { sharedUpdates.color = input.color; hasSharedUpdates = true; }
 	if (input.checklistMode !== undefined) { sharedUpdates.checklistMode = input.checklistMode; hasSharedUpdates = true; }
 

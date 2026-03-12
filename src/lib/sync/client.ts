@@ -100,10 +100,26 @@ async function pullChanges(): Promise<Note[]> {
 			const localNotes = await getAllNotes();
 			const localMap = new Map(localNotes.map((n) => [n.id, n]));
 
+			// Build pending-fields map from sync queue to protect unpushed local changes
+			let pendingFieldsMap = new Map<string, Set<string>>();
+			try {
+				const queue = await getSyncQueue();
+				for (const item of queue) {
+					if (item.data) {
+						const fields = pendingFieldsMap.get(item.noteId) || new Set<string>();
+						Object.keys(item.data).forEach((k) => fields.add(k));
+						pendingFieldsMap.set(item.noteId, fields);
+					}
+				}
+			} catch {
+				// Queue unavailable — merge without protection
+			}
+
 			for (const remote of remoteNotes) {
 				const local = localMap.get(remote.id);
 				if (local) {
-					const merged = mergeNotes(local, remote);
+					const pendingFields = pendingFieldsMap.get(remote.id);
+					const merged = mergeNotes(local, remote, pendingFields);
 					await putNote(merged);
 				} else {
 					await putNote(remote);

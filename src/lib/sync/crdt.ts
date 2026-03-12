@@ -1,29 +1,39 @@
 import type { Note } from '$lib/types/index.js';
 
+/** Fields that can be individually merged between local and remote notes */
+const MUTABLE_FIELDS = ['title', 'content', 'color', 'pinned', 'archived', 'trashed', 'checklistMode', 'sortOrder'] as const;
+
 /**
- * Last-Write-Wins (LWW) merge strategy per field.
- * For a single-user app with multiple devices, this is sufficient.
- * Each field is resolved by comparing updatedAt timestamps.
+ * Last-Write-Wins (LWW) merge strategy with pending-field protection.
+ *
+ * When remote is newer, takes remote values for all fields EXCEPT those
+ * listed in `pendingFields` — these represent locally-queued changes that
+ * haven't been pushed yet and must be preserved.
  */
-export function mergeNotes(local: Note, remote: Note): Note {
-	// If remote is newer overall, take remote
+export function mergeNotes(local: Note, remote: Note, pendingFields?: Set<string>): Note {
 	const localTime = new Date(local.updatedAt).getTime();
 	const remoteTime = new Date(remote.updatedAt).getTime();
 
-	if (remoteTime > localTime) {
-		return { ...remote };
-	}
+	const remoteWins = remoteTime > localTime ||
+		(remoteTime === localTime && remote.version > local.version);
 
-	if (localTime > remoteTime) {
+	if (!remoteWins) {
 		return { ...local };
 	}
 
-	// Same timestamp - prefer higher version number
-	if (remote.version > local.version) {
+	// Remote wins — take remote as base, but preserve pending local fields
+	if (!pendingFields || pendingFields.size === 0) {
 		return { ...remote };
 	}
 
-	return { ...local };
+	const merged = { ...remote };
+	for (const field of MUTABLE_FIELDS) {
+		if (pendingFields.has(field)) {
+			(merged as unknown as Record<string, unknown>)[field] = (local as unknown as Record<string, unknown>)[field];
+		}
+	}
+
+	return merged;
 }
 
 /**

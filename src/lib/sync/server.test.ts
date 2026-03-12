@@ -224,21 +224,69 @@ describe('processSyncPush — shared notes', () => {
 		expect(note.trashed).toBe(false);
 	});
 
-	it('should reject changes with older timestamp than server note', async () => {
+	it('should apply field changes even when timestamp is older (no timestamp gate)', async () => {
 		const t2 = new Date('2024-01-02T00:00:00Z');
 		seedSharedNote('n1', { updatedAt: t2, createdAt: new Date('2024-01-01T00:00:00Z') });
 
-		// Collaborator's change has a timestamp BEFORE the server's updatedAt
+		// Collaborator's change has a timestamp BEFORE the server's updatedAt.
+		// With field-level sync, the title change should still be applied because
+		// the sync data only contains fields the client explicitly modified.
 		const t1 = new Date('2024-01-01T12:00:00Z').getTime();
 		await processSyncPush(db, [{
 			noteId: 'n1',
 			operation: 'update',
 			timestamp: t1,
-			data: { title: 'Stale edit' }
+			data: { title: 'Offline edit' }
 		}], COLLAB_ID);
 
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
-		expect(note.title).toBe('Shared Note'); // Unchanged
+		expect(note.title).toBe('Offline edit');
+		// updatedAt should be max of change timestamp and server timestamp
+		expect(note.updatedAt.getTime()).toBe(t2.getTime());
+	});
+
+	it('should merge checklist content when collaborator pushes concurrent content change', async () => {
+		const t1 = new Date('2024-01-01T00:00:00Z');
+		seedSharedNote('n1', {
+			updatedAt: t1,
+			createdAt: t1,
+			content: '- [ ] Milk\n- [ ] Bread',
+			checklistMode: true
+		});
+
+		// Simulate owner editing content on server (checking Bread)
+		const t2 = new Date('2024-01-01T12:00:00Z');
+		db.update(notes)
+			.set({ content: '- [ ] Milk\n- [x] Bread', updatedAt: t2, version: 2 })
+			.where(eq(notes.id, 'n1'))
+			.run();
+
+		// Create a version snapshot for the base content (version 1)
+		const { noteVersions } = await import('../server/db/schema.js');
+		db.insert(noteVersions).values({
+			id: 'snap-1',
+			noteId: 'n1',
+			version: 1,
+			title: 'Shared Note',
+			content: '- [ ] Milk\n- [ ] Bread',
+			checklistMode: true,
+			color: 'default',
+			createdAt: t1
+		}).run();
+
+		// Collaborator was offline since version 1, checked Milk
+		const t3 = new Date('2024-01-01T13:00:00Z').getTime();
+		await processSyncPush(db, [{
+			noteId: 'n1',
+			operation: 'update',
+			timestamp: t3,
+			data: { content: '- [x] Milk\n- [ ] Bread' },
+			baseVersion: 1
+		}], COLLAB_ID);
+
+		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
+		// Both changes should be merged: Milk checked by collab, Bread checked by owner
+		expect(note.content).toBe('- [x] Milk\n- [x] Bread');
 	});
 
 	it('should not allow non-collaborator to update the note', async () => {

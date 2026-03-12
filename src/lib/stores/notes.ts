@@ -142,11 +142,19 @@ export async function createNote(note: NoteCreate): Promise<Note | null> {
 }
 
 export async function updateNote(id: string, updates: NoteUpdate): Promise<Note | null> {
+	// Read current version for 3-way merge base on the server
+	let baseVersion: number | undefined;
+	notes.update((list) => {
+		const current = list.find((n) => n.id === id);
+		if (current) baseVersion = current.version;
+		return list;
+	});
+
 	try {
 		const res = await fetch(`/api/notes/${id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(updates)
+			body: JSON.stringify({ ...updates, baseVersion })
 		});
 		if (res.ok) {
 			const updated: Note = await res.json();
@@ -173,7 +181,7 @@ export async function updateNote(id: string, updates: NoteUpdate): Promise<Note 
 			);
 			if (optimistic) {
 				await putNote(optimistic);
-				await addToSyncQueue({ noteId: id, operation: 'update', data: updates, timestamp: Date.now() });
+				await addToSyncQueue({ noteId: id, operation: 'update', data: updates, timestamp: Date.now(), baseVersion });
 				showToast('Saved offline — will sync when reconnected', 'info');
 			}
 			return optimistic;

@@ -48,6 +48,7 @@ export interface SyncQueueItem {
 	operation: 'create' | 'update' | 'delete';
 	data?: Partial<Note>;
 	timestamp: number;
+	baseVersion?: number;
 }
 
 let dbPromise: Promise<IDBPDatabase<CrumbsDB>> | null = null;

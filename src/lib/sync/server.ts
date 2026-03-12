@@ -1,10 +1,37 @@
 import type { Db } from '$lib/server/db/index.js';
-import { notes, noteCollaborators, noteUserState, syncLog } from '$lib/server/db/schema.js';
-import { eq, gt, and, or, sql } from 'drizzle-orm';
+import { notes, noteCollaborators, noteUserState, noteVersions, syncLog } from '$lib/server/db/schema.js';
+import { eq, gt, and, or, sql, desc, lte } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
 import { canAccessNote } from '$lib/server/api-utils.js';
+import { mergeContent } from '$lib/utils/content-merge.js';
 import type { SyncQueueItem } from './idb.js';
+
+/**
+ * Find the base content for 3-way merge from version snapshots.
+ * Returns the content from the snapshot at or before the given version,
+ * or the current note content if no snapshot is found.
+ */
+function getBaseContent(tx: Parameters<Parameters<Db['transaction']>[0]>[0], noteId: string, baseVersion?: number): string | null {
+	if (baseVersion !== undefined) {
+		const snapshot = tx.select({ content: noteVersions.content })
+			.from(noteVersions)
+			.where(and(eq(noteVersions.noteId, noteId), lte(noteVersions.version, baseVersion)))
+			.orderBy(desc(noteVersions.version))
+			.limit(1)
+			.get();
+		if (snapshot) return snapshot.content;
+	}
+	// Fallback: get the most recent snapshot before the current version
+	const latest = tx.select({ content: noteVersions.content })
+		.from(noteVersions)
+		.where(eq(noteVersions.noteId, noteId))
+		.orderBy(desc(noteVersions.version))
+		.limit(1)
+		.get();
+	return latest?.content ?? null;
+}
+
 /**
  * Process incoming sync changes from client.
  */
@@ -31,59 +58,70 @@ export async function processSyncPush(db: Db, changes: SyncQueueItem[], userId: 
 
 						if (!isOwner && !isCollaborator) continue;
 
-						if (change.timestamp > note.updatedAt.getTime()) {
-							// Shared fields: title, content, color, checklistMode
-							const sharedData: Record<string, unknown> = {
-								updatedAt: new Date(change.timestamp),
-								version: note.version + 1
-							};
-							if (change.data.title !== undefined) sharedData.title = change.data.title;
-							if (change.data.content !== undefined) sharedData.content = change.data.content;
-							if (change.data.color !== undefined) sharedData.color = change.data.color;
-							if (change.data.checklistMode !== undefined) sharedData.checklistMode = change.data.checklistMode;
+						// Apply field-level updates unconditionally (no timestamp gate).
+						// Each sync change only contains the fields the client explicitly modified,
+						// so applying them won't overwrite other users' changes to different fields.
+						const sharedData: Record<string, unknown> = {
+							updatedAt: new Date(Math.max(change.timestamp, note.updatedAt.getTime())),
+							version: note.version + 1
+						};
+						if (change.data.title !== undefined) sharedData.title = change.data.title;
+						if (change.data.color !== undefined) sharedData.color = change.data.color;
+						if (change.data.checklistMode !== undefined) sharedData.checklistMode = change.data.checklistMode;
 
-							if (isOwner) {
-								// Owner: per-user fields go to notes table
-								if (change.data.pinned !== undefined) sharedData.pinned = change.data.pinned;
-								if (change.data.archived !== undefined) sharedData.archived = change.data.archived;
-								if (change.data.trashed !== undefined) {
-									sharedData.trashed = change.data.trashed;
-									sharedData.trashedAt = change.data.trashed ? new Date(change.timestamp) : null;
-								}
-								if (change.data.sortOrder !== undefined) sharedData.sortOrder = change.data.sortOrder;
+						// Content: 3-way merge to preserve concurrent edits from other users
+						if (change.data.content !== undefined && change.data.content !== note.content) {
+							const baseContent = getBaseContent(tx, change.noteId, change.baseVersion);
+							if (baseContent !== null && baseContent !== note.content) {
+								// 3-way merge: base, incoming (local), server current (remote)
+								sharedData.content = mergeContent(baseContent, change.data.content, note.content);
+							} else {
+								// No base or base matches server — take incoming content
+								sharedData.content = change.data.content;
 							}
+						}
 
-							tx.update(notes)
-								.set(sharedData)
-								.where(eq(notes.id, change.noteId))
-								.run();
+						if (isOwner) {
+							// Owner: per-user fields go to notes table
+							if (change.data.pinned !== undefined) sharedData.pinned = change.data.pinned;
+							if (change.data.archived !== undefined) sharedData.archived = change.data.archived;
+							if (change.data.trashed !== undefined) {
+								sharedData.trashed = change.data.trashed;
+								sharedData.trashedAt = change.data.trashed ? new Date(change.timestamp) : null;
+							}
+							if (change.data.sortOrder !== undefined) sharedData.sortOrder = change.data.sortOrder;
+						}
 
-							// Collaborator: per-user fields go to noteUserState
-							if (!isOwner) {
-								const hasPerUser = change.data.pinned !== undefined ||
-									change.data.archived !== undefined ||
-									change.data.sortOrder !== undefined;
-								if (hasPerUser) {
-									const existing = tx.select().from(noteUserState)
+						tx.update(notes)
+							.set(sharedData)
+							.where(eq(notes.id, change.noteId))
+							.run();
+
+						// Collaborator: per-user fields go to noteUserState
+						if (!isOwner) {
+							const hasPerUser = change.data.pinned !== undefined ||
+								change.data.archived !== undefined ||
+								change.data.sortOrder !== undefined;
+							if (hasPerUser) {
+								const existing = tx.select().from(noteUserState)
+									.where(and(eq(noteUserState.noteId, change.noteId), eq(noteUserState.userId, userId)))
+									.get();
+								if (existing) {
+									const updates: Record<string, unknown> = {};
+									if (change.data.pinned !== undefined) updates.pinned = change.data.pinned;
+									if (change.data.archived !== undefined) updates.archived = change.data.archived;
+									if (change.data.sortOrder !== undefined) updates.sortOrder = change.data.sortOrder;
+									tx.update(noteUserState).set(updates)
 										.where(and(eq(noteUserState.noteId, change.noteId), eq(noteUserState.userId, userId)))
-										.get();
-									if (existing) {
-										const updates: Record<string, unknown> = {};
-										if (change.data.pinned !== undefined) updates.pinned = change.data.pinned;
-										if (change.data.archived !== undefined) updates.archived = change.data.archived;
-										if (change.data.sortOrder !== undefined) updates.sortOrder = change.data.sortOrder;
-										tx.update(noteUserState).set(updates)
-											.where(and(eq(noteUserState.noteId, change.noteId), eq(noteUserState.userId, userId)))
-											.run();
-									} else {
-										tx.insert(noteUserState).values({
-											noteId: change.noteId,
-											userId,
-											pinned: change.data.pinned ?? false,
-											archived: change.data.archived ?? false,
-											sortOrder: change.data.sortOrder ?? 0
-										}).run();
-									}
+										.run();
+								} else {
+									tx.insert(noteUserState).values({
+										noteId: change.noteId,
+										userId,
+										pinned: change.data.pinned ?? false,
+										archived: change.data.archived ?? false,
+										sortOrder: change.data.sortOrder ?? 0
+									}).run();
 								}
 							}
 						}

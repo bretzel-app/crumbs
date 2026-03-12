@@ -55,6 +55,71 @@ describe('mergeNotes (LWW)', () => {
 		const result = mergeNotes(local, remote);
 		expect(result.title).toBe('Local');
 	});
+
+	it('should preserve pending local fields when remote is newer', () => {
+		const local = makeNote({
+			title: 'Local title',
+			content: 'Local content',
+			color: 'coral',
+			updatedAt: new Date('2024-01-01'),
+			version: 1
+		});
+		const remote = makeNote({
+			title: 'Remote title',
+			content: 'Remote content',
+			color: 'default',
+			updatedAt: new Date('2024-01-02'),
+			version: 2
+		});
+
+		// Content has pending local changes; title and color do not
+		const pendingFields = new Set(['content']);
+		const result = mergeNotes(local, remote, pendingFields);
+
+		// Remote wins overall, but content is preserved from local
+		expect(result.title).toBe('Remote title');
+		expect(result.content).toBe('Local content');
+		expect(result.color).toBe('default'); // remote wins for non-pending field
+		expect(result.version).toBe(2); // metadata from remote
+	});
+
+	it('should take remote values for non-pending fields when remote is newer', () => {
+		const local = makeNote({
+			pinned: true,
+			archived: true,
+			updatedAt: new Date('2024-01-01')
+		});
+		const remote = makeNote({
+			pinned: false,
+			archived: false,
+			updatedAt: new Date('2024-01-02')
+		});
+
+		const pendingFields = new Set(['pinned']);
+		const result = mergeNotes(local, remote, pendingFields);
+
+		expect(result.pinned).toBe(true); // pending — preserved
+		expect(result.archived).toBe(false); // not pending — remote wins
+	});
+
+	it('should ignore pendingFields when local is newer', () => {
+		const local = makeNote({
+			title: 'Local',
+			updatedAt: new Date('2024-01-02'),
+			version: 2
+		});
+		const remote = makeNote({
+			title: 'Remote',
+			updatedAt: new Date('2024-01-01'),
+			version: 1
+		});
+
+		const pendingFields = new Set(['title']);
+		const result = mergeNotes(local, remote, pendingFields);
+
+		// Local wins entirely since it's newer
+		expect(result.title).toBe('Local');
+	});
 });
 
 describe('hasChanges', () => {

@@ -124,6 +124,37 @@ test.describe('Note Sharing', () => {
 		expect(syncedNote.content).toBe('Owner sync update');
 	});
 
+	test('Scenario: Both users\' edits to different fields are preserved after concurrent PATCH', async ({
+		authenticatedPage: page,
+		collabPage
+	}) => {
+		// Given a shared checklist note exists
+		const note = await createSharedNote(
+			page,
+			collabPage,
+			'Shopping List',
+			'- [ ] Milk\n- [ ] Bread\n- [ ] Eggs'
+		);
+
+		// When the owner checks Milk
+		await page.request.patch(`/api/notes/${note.id}`, {
+			data: { content: '- [x] Milk\n- [ ] Bread\n- [ ] Eggs', baseVersion: note.version }
+		});
+
+		// And the collaborator adds Butter (based on the same original version)
+		await collabPage.request.patch(`/api/notes/${note.id}`, {
+			data: { content: '- [ ] Milk\n- [ ] Bread\n- [ ] Eggs\n- [ ] Butter', baseVersion: note.version }
+		});
+
+		// Then both changes are preserved via content merge
+		const res = await page.request.get(`/api/notes/${note.id}`);
+		const merged = await res.json();
+		expect(merged.content).toContain('- [x] Milk');
+		expect(merged.content).toContain('- [ ] Butter');
+		expect(merged.content).toContain('- [ ] Bread');
+		expect(merged.content).toContain('- [ ] Eggs');
+	});
+
 	test('Scenario: Collaborator sees leave action and can leave a shared note', async ({
 		authenticatedPage: page,
 		collabPage
