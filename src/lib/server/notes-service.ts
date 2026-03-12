@@ -330,16 +330,13 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 		(input.checklistMode !== undefined && input.checklistMode !== existing.checklistMode);
 
 	if (hasActualContentChange) {
-		const saved = db.select().from(notes).where(eq(notes.id, id)).get();
-		if (saved) {
-			createSnapshot(db, id, {
-				version: saved.version,
-				title: saved.title,
-				content: saved.content,
-				checklistMode: saved.checklistMode,
-				color: saved.color
-			});
-		}
+		createSnapshot(db, id, {
+			version: existing.version,
+			title: existing.title,
+			content: existing.content,
+			checklistMode: existing.checklistMode,
+			color: existing.color
+		});
 	}
 
 	return getNote(db, userId, id);
