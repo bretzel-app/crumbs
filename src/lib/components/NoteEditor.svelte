@@ -170,28 +170,19 @@
 		bgStyle = `background-color: ${colors.bg}`;
 	});
 
-	// Track whether mousedown started on the overlay (not inside the editor).
-	// Prevents closing when the user selects text inside the editor and
-	// releases the mouse outside — the click event fires on the overlay,
-	// but we only want to close if the press also started there.
-	let mousedownOnOverlay = false;
+	// Use pointer events to detect backdrop clicks. Unlike mouse events,
+	// pointer events are never synthetically re-dispatched from touch, so
+	// the tap that opened the editor on mobile cannot ghost-click the overlay.
+	// Both pointerdown and pointerup must target the overlay itself to close.
+	let pointerdownOnOverlay = false;
 
-	// On mobile, the tap that opens the editor produces synthetic mouse events
-	// (mousedown → mouseup → click) at the original touch coordinates. If those
-	// coordinates land on the overlay backdrop, the editor would close instantly.
-	// On first page load, synthetic mousedown can arrive ~300ms after the tap
-	// (well after a single rAF). Use a timestamp guard to ignore early events.
-	const mountTime = Date.now();
-	const OVERLAY_READY_DELAY = 400;
-
-	function handleOverlayMousedown(e: MouseEvent) {
-		if (Date.now() - mountTime < OVERLAY_READY_DELAY) return;
-		mousedownOnOverlay = e.target === e.currentTarget;
+	function handleOverlayPointerdown(e: PointerEvent) {
+		pointerdownOnOverlay = e.target === e.currentTarget;
 	}
 
-	function handleOverlayClick() {
-		if (mousedownOnOverlay) saveAndClose();
-		mousedownOnOverlay = false;
+	function handleOverlayPointerup(e: PointerEvent) {
+		if (pointerdownOnOverlay && e.target === e.currentTarget) saveAndClose();
+		pointerdownOnOverlay = false;
 	}
 
 	async function saveAndClose() {
@@ -255,8 +246,8 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 pt-20 pb-10 animate-[fade-in_150ms_ease-out]"
-	onmousedown={handleOverlayMousedown}
-	onclick={handleOverlayClick}
+	onpointerdown={handleOverlayPointerdown}
+	onpointerup={handleOverlayPointerup}
 	onkeydown={handleKeydown}
 	data-testid="note-editor-overlay"
 >
@@ -264,7 +255,7 @@
 	<div
 		class="mx-4 flex w-full max-w-xl md:max-w-2xl flex-col overflow-hidden rounded-sm border border-[var(--border)] shadow-[var(--card-shadow)] animate-[pop-in_150ms_ease-out]"
 		style={bgStyle}
-		onclick={(e) => e.stopPropagation()}
+		onpointerdown={(e) => e.stopPropagation()}
 		onkeydown={(e) => { e.stopPropagation(); handleKeydown(e); }}
 		data-testid="note-editor"
 	>
