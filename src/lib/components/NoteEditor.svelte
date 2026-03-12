@@ -255,7 +255,6 @@
 	<div
 		class="mx-4 flex w-full max-w-xl md:max-w-2xl flex-col overflow-hidden rounded-sm border border-[var(--border)] shadow-[var(--card-shadow)] animate-[pop-in_150ms_ease-out]"
 		style={bgStyle}
-		onpointerdown={(e) => e.stopPropagation()}
 		onkeydown={(e) => { e.stopPropagation(); handleKeydown(e); }}
 		data-testid="note-editor"
 	>
