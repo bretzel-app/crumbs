@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
-	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, updateNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
+	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import ImageLightbox from './ImageLightbox.svelte';
 	import CollaboratorPopover from './CollaboratorPopover.svelte';
 	import type { Note } from '$lib/types/index.js';
@@ -58,20 +58,6 @@
 		};
 	}
 
-	function toggleChecklistItem(item: ChecklistItem) {
-		const lines = note.content.split('\n');
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			const text = line.replace(/^- \[[ x]\] /, '');
-			if (text === item.text && line.startsWith(item.checked ? '- [x] ' : '- [ ] ')) {
-				lines[i] = item.checked
-					? `- [ ] ${text}`
-					: `- [x] ${text}`;
-				break;
-			}
-		}
-		updateNote(note.id, { content: lines.join('\n') });
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
@@ -144,8 +130,8 @@
 					<input
 						type="checkbox"
 						checked={item.checked}
-						onclick={(e) => { e.stopPropagation(); toggleChecklistItem(item); }}
-						class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)] text-[var(--primary)] cursor-pointer"
+						disabled
+						class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)] text-[var(--primary)]"
 						data-testid="card-checklist-checkbox"
 					/>
 					<span class="break-words min-w-0">{item.text}</span>
