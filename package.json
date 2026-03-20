@@ -55,6 +55,7 @@
     "idb": "^8.0.3",
     "lucide-svelte": "^0.577.0",
     "markdown-it": "^14.1.1",
+    "nanoid": "^5.1.7",
     "node-diff3": "^3.2.0",
     "nodemailer": "^8.0.2",
     "svelte-dnd-action": "^0.9.69",

@@ -6,6 +6,7 @@ import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from './tags.js';
 import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
+import { fetchSharesForNotes } from './shares-service.js';
 import { canAccessNote } from './api-utils.js';
 import { createSnapshot } from './versions-service.js';
 import { mergeContent } from '$lib/utils/content-merge.js';
@@ -33,6 +34,7 @@ function hydrateNotes(db: Db, noteRows: NoteRow[], userId: number) {
 	const tagMap = fetchTagsForNotes(db, noteIds);
 	const attachmentMap = fetchAttachmentsForNotes(db, noteIds);
 	const collabMap = fetchCollaboratorsForNotes(db, noteIds);
+	const shareMap = fetchSharesForNotes(db, noteIds);
 
 	return noteRows.map((note) => {
 		const collaborators = collabMap.get(note.id) ?? [];
@@ -44,7 +46,8 @@ function hydrateNotes(db: Db, noteRows: NoteRow[], userId: number) {
 			attachments: attachmentMap.get(note.id) ?? [],
 			collaborators,
 			isOwner,
-			isShared
+			isShared,
+			shareToken: shareMap.get(note.id) ?? undefined
 		};
 	});
 }
