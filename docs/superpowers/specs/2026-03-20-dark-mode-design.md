@@ -15,13 +15,15 @@ Add a dark variant of the retro parchment theme with a three-way toggle (system 
 - **Implementation:** CSS `[data-theme="dark"]` attribute on `<html>`, variable overrides in `app.css`
 - **Pixel grid texture:** Inverted to light dots (`#e8dcc8`) at 3% opacity in dark mode
 - **Default:** `system` (follows `prefers-color-scheme`)
+- **Light mode:** No `data-theme` attribute set (`:root` defaults apply). `data-theme="dark"` is only set for dark mode. This means no redundant `[data-theme="light"]` block is needed.
 
 ## 1. CSS Variable Overrides
 
-Add to `app.css` after `:root`:
+Add `--grid-dot` to the existing `:root` block and add a `[data-theme="dark"]` block after it in `app.css`:
 
 ```css
 :root {
+  /* ...existing vars... */
   --grid-dot: #1a1a2e;  /* new — extracted from body::before */
 }
 
@@ -38,13 +40,15 @@ Add to `app.css` after `:root`:
   --error-text: #e8a090;
   --success-bg: #203020;
   --success-text: #90c880;
-  --card-shadow: 2px 2px 0px #111010;
+  --card-shadow: 2px 2px 0px var(--border-subtle);
   --card-shadow-hover: 3px 3px 0px var(--primary);
   --grid-dot: #e8dcc8;
 }
 ```
 
 `--primary` and `--primary-hover` remain unchanged — gold works on both backgrounds.
+
+`--card-shadow` uses `var(--border-subtle)` in both modes for consistency — the dark `--border-subtle` (#3a3530) produces the right effect.
 
 Update `body::before` to use the new variable:
 ```css
@@ -60,14 +64,16 @@ Extend the existing `UserPreferences` system:
 - **Type change:** Add `theme: 'system' | 'light' | 'dark'` to `UserPreferences` interface
 - **Default:** `'system'`
 - **Storage:** Same key-value `userPreferences` table + localStorage cache — no schema migration needed
+- **Do NOT add `theme` to `BOOLEAN_PREF_KEYS`** — it's a string enum, not a boolean
 
 Files to modify:
 - `src/lib/types/preferences.ts` — add `theme` field and default
-- `src/lib/stores/preferences.svelte.ts` — no changes needed (generic key-value system)
+
+The existing `fromServerRecord` in `preferences.svelte.ts` does not validate string values. The `applyTheme` function (Section 4) must guard against unexpected values and fall back to `'system'` if the value is not one of the three valid options.
 
 ## 3. FOUC Prevention
 
-Add a blocking `<script>` in `app.html` `<head>` before `%sveltekit.head%`:
+Add a blocking `<script>` in `app.html` `<head>`, **after** the `<meta name="theme-color">` tag and **before** `%sveltekit.head%`:
 
 ```html
 <script>
@@ -75,29 +81,28 @@ Add a blocking `<script>` in `app.html` `<head>` before `%sveltekit.head%`:
     try {
       var p = JSON.parse(localStorage.getItem('crumbs-preferences') || '{}');
       var t = p.theme || 'system';
+      if (t !== 'light' && t !== 'dark') t = 'system';
       if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       if (t === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        document.querySelector('meta[name="theme-color"]').content = '#1a1715';
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = '#1a1715';
       }
     } catch(e) {}
   })();
 </script>
 ```
 
-This runs synchronously before first paint.
+This runs synchronously before first paint. The script validates the theme value and null-checks the meta element.
 
 ## 4. Reactive Theme Application
 
-Create `src/lib/utils/theme.ts` with a function `applyTheme(theme: 'system' | 'light' | 'dark')` that:
+Create `src/lib/utils/theme.svelte.ts` (`.svelte.ts` to enable Svelte 5 runes) with:
 
-1. Resolves `'system'` to actual preference via `matchMedia`
-2. Sets/removes `data-theme="dark"` on `document.documentElement`
-3. Updates `<meta name="theme-color">` content (`#f0e6d3` for light, `#1a1715` for dark)
+- `applyTheme(theme: 'system' | 'light' | 'dark')` — resolves system preference, sets/removes `data-theme="dark"` on `document.documentElement`, updates `<meta name="theme-color">`. Guards against unexpected values (falls back to `'system'`). All DOM/`matchMedia` access guarded with `browser` check from `$app/environment`.
+- `isDarkMode` — a reactive `$state` boolean, updated by `applyTheme` and the `matchMedia` listener. Components import this to conditionally use dark color variants.
 
-Call this from an `$effect` in the `(app)/+layout.svelte` that watches `preferences.theme`. Also register a `matchMedia` listener for `prefers-color-scheme` changes when in system mode (clean up on destroy).
-
-The `(auth)` layout group also needs the theme applied — either duplicate the effect or place it in the root `+layout.svelte`.
+Place the theme `$effect` in the **root `+layout.svelte`** (not just `(app)` layout). This ensures both `(app)` and `(auth)` layout groups get the theme applied. The root layout currently only imports CSS — this adds a small `$effect` that watches `preferences.theme` and calls `applyTheme`. It also registers a `matchMedia('(prefers-color-scheme: dark)')` change listener when in system mode, cleaned up on destroy.
 
 ## 5. Note Card Dark Colors
 
@@ -118,38 +123,37 @@ Add a parallel `NOTE_COLORS_DARK` map in `src/lib/utils/colors.ts`:
 | clay | `#e9e3d4` | `#302e28` |
 | chalk | `#efeff1` | `#2e2e30` |
 
-Export a helper `getNoteColor(color, isDark)` that returns the correct bg hex.
+Export a helper `getNoteColor(color: NoteColor, isDark: boolean): string` that returns the correct bg hex.
 
-Components that apply note card colors (`NoteCard.svelte`, `NoteEditor.svelte`, `ColorPicker.svelte`) need to use this helper instead of directly reading `NOTE_COLORS[color].bg`. They detect dark mode by checking `document.documentElement.dataset.theme === 'dark'` or by receiving it as a prop/derived value.
-
-Preferred approach: expose a reactive `isDarkMode` derived value from the theme utility so components can import and use it.
+Components (`NoteCard.svelte`, `NoteEditor.svelte`, `ColorPicker.svelte`) import `isDarkMode` from `theme.svelte.ts` and pass it to `getNoteColor`. This is the single approach — do not use direct DOM inspection for dark mode detection.
 
 ## 6. Settings UI
 
-Add a "Theme" section to `src/routes/(app)/settings/preferences/+page.svelte`:
+Add a "Theme" section to `src/routes/(app)/settings/preferences/+page.svelte` as the **first** preference (before "Default note mode"):
 
 ```svelte
 <!-- Theme -->
 <div class="space-y-2">
   <span class="block text-sm font-medium text-[var(--text)]">Theme</span>
   <div class="flex gap-1" role="group" aria-label="Theme">
-    {#each ['system', 'light', 'dark'] as option}
+    {#each [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as [value, label]}
       <button
-        onclick={() => updatePreference('theme', option)}
+        onclick={() => updatePreference('theme', value)}
         class="rounded-sm border px-4 py-2 text-sm transition-colors ..."
+        data-testid="pref-theme-{value}"
       >
-        {option === 'system' ? 'System' : option === 'light' ? 'Light' : 'Dark'}
+        {label}
       </button>
     {/each}
   </div>
 </div>
 ```
 
-Place it as the first preference (before "Default note mode") since it's the most visually impactful setting.
+Test IDs: `pref-theme-system`, `pref-theme-light`, `pref-theme-dark`.
 
 ## 7. Landing Page
 
-The static landing page (`website/index.html`) is separate from the app. It should respect `prefers-color-scheme` with a CSS media query — no toggle needed. Add `@media (prefers-color-scheme: dark)` overrides in `website/styles.css`.
+Out of scope for this spec. The landing page (`website/`) uses its own color system separate from `app.css`. Dark mode support for the landing page will be tracked separately.
 
 ## 8. Prose / Typography Overrides
 
@@ -159,19 +163,23 @@ The TipTap editor styles (table borders, selected cells, task lists) also use CS
 
 ## 9. Color Picker in Dark Mode
 
-The `ColorPicker` component shows circular swatches. In dark mode, these should display the dark color variants. The component needs to read `isDarkMode` and use `NOTE_COLORS_DARK` when active.
+The `ColorPicker` component shows circular swatches. In dark mode, these should display the dark color variants. The component imports `isDarkMode` from `theme.svelte.ts` and uses `getNoteColor(color, isDarkMode)` to get the correct swatch background.
 
 ## 10. Testing
 
 ### Unit tests
-- `theme.ts` — test `applyTheme` sets correct attribute and meta tag
+- `theme.svelte.ts` — test `applyTheme` sets correct attribute and meta tag, validates unknown values
 - `colors.ts` — test `getNoteColor` returns correct color for light/dark
 
 ### E2E tests
-- Theme toggle in preferences persists and applies
+- Theme toggle in preferences persists and applies (use `data-testid` selectors)
 - System preference detection (use Playwright's `page.emulateMedia({ colorScheme: 'dark' })`)
 - No FOUC on page reload in dark mode
 - Note cards render with correct dark colors
+
+## 11. PWA Manifest
+
+The PWA manifest (`@vite-pwa/sveltekit`) contains a static `theme_color`. This cannot be dynamically changed. The manifest will keep the light theme color (`#f0e6d3`). The `<meta name="theme-color">` is updated dynamically by the FOUC script and `applyTheme`, which handles the browser chrome color. This is a known limitation of PWA manifests and is acceptable.
 
 ## Out of Scope
 
@@ -179,3 +187,4 @@ The `ColorPicker` component shows circular swatches. In dark mode, these should 
 - Per-note theme override
 - Custom color theme builder
 - Dark mode for public shared note pages (can be added later)
+- Dark mode for landing page (separate task)
