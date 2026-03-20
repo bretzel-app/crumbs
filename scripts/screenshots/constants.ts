@@ -12,7 +12,7 @@ export const ADMIN = {
 };
 
 export const COLLABORATOR = {
-	email: 'alice@bretzel.app',
-	displayName: 'Alice Chen',
-	password: 'alice2026!!'
+	email: 'salzig@bretzel.app',
+	displayName: 'Salzig Bretzel',
+	password: 'salzig2026!!'
 };

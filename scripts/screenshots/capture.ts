@@ -72,17 +72,7 @@ export async function captureDesktop(page: Page): Promise<void> {
 	await page.getByTestId('close-editor-btn').click();
 	await waitForApp(page);
 
-	// D6: Attachments — open "Bretzel Ingredients" (has featured bretzel image)
-	await noteCard(page, 'Bretzel Ingredients').click();
-	await page.waitForSelector('[data-testid="note-editor"]');
-	await page.getByTestId('image-toggle').click();
-	await page.waitForSelector('[data-testid="image-upload"]');
-	await waitForApp(page);
-	await screenshot(page, 'screenshot-attachments.png');
-	await page.getByTestId('close-editor-btn').click();
-	await waitForApp(page);
-
-	// D7: API/MCP settings
+	// D6: API/MCP settings
 	await page.goto(`${BASE_URL}/settings/mcp`);
 	await waitForApp(page);
 	await screenshot(page, 'screenshot-api.png');
