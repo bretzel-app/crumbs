@@ -20,6 +20,25 @@
 	--success-text: #3a5a2e;
 	--card-shadow: 2px 2px 0px var(--border-subtle);
 	--card-shadow-hover: 3px 3px 0px var(--primary);
+	--grid-dot: #1a1a2e;
+}
+
+[data-theme="dark"] {
+	--bg-base: #1a1715;
+	--bg-surface: #2a2520;
+	--text: #e8dcc8;
+	--text-muted: #9a8e7e;
+	--border: #e8dcc8;
+	--border-subtle: #3a3530;
+	--destructive: #d4604e;
+	--error-bg: #3a2020;
+	--error-border: #5a3030;
+	--error-text: #e8a090;
+	--success-bg: #203020;
+	--success-text: #90c880;
+	--card-shadow: 2px 2px 0px var(--border-subtle);
+	--card-shadow-hover: 3px 3px 0px var(--primary);
+	--grid-dot: #e8dcc8;
 }
 
 body {
@@ -33,7 +52,7 @@ body::before {
 	inset: 0;
 	pointer-events: none;
 	opacity: 0.03;
-	background-image: repeating-conic-gradient(#1a1a2e 0% 25%, transparent 0% 50%);
+	background-image: repeating-conic-gradient(var(--grid-dot) 0% 25%, transparent 0% 50%);
 	background-size: 4px 4px;
 	z-index: 0;
 }
