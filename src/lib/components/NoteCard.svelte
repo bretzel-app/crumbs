@@ -5,12 +5,7 @@
 	import ImageLightbox from './ImageLightbox.svelte';
 	import CollaboratorPopover from './CollaboratorPopover.svelte';
 	import type { Note } from '$lib/types/index.js';
-	import Undo2 from 'lucide-svelte/icons/undo-2';
-	import Trash2 from 'lucide-svelte/icons/trash-2';
-	import Bookmark from 'lucide-svelte/icons/bookmark';
-	import Archive from 'lucide-svelte/icons/archive';
-	import ArchiveRestore from 'lucide-svelte/icons/archive-restore';
-	import UserMinus from 'lucide-svelte/icons/user-minus';
+	import Icon from '@iconify/svelte';
 
 	interface ChecklistItem {
 		text: string;
@@ -114,7 +109,7 @@
 				title="Unfavorite"
 				data-testid="favorite-indicator"
 			>
-				<Bookmark class="h-4 w-4 fill-[var(--primary)]" />
+				<Icon icon="pixelarticons:heart" class="h-4 w-4 fill-[var(--primary)]" />
 			</button>
 		{/if}
 	</div>
@@ -156,7 +151,7 @@
 				title="Restore"
 				data-testid="restore-btn"
 			>
-				<Undo2 class="h-4 w-4" />
+				<Icon icon="pixelarticons:undo" class="h-4 w-4" />
 			</button>
 			<button
 				onclick={stop(() => deleteNote(note.id))}
@@ -164,7 +159,7 @@
 				title="Delete forever"
 				data-testid="delete-forever-btn"
 			>
-				<Trash2 class="h-4 w-4 text-[var(--destructive)]" />
+				<Icon icon="pixelarticons:trash" class="h-4 w-4 text-[var(--destructive)]" />
 			</button>
 		{:else}
 			{#if !note.pinned}
@@ -174,7 +169,7 @@
 					title="Favorite"
 					data-testid="favorite-btn"
 				>
-					<Bookmark class="h-4 w-4" />
+					<Icon icon="pixelarticons:heart" class="h-4 w-4" />
 				</button>
 			{/if}
 			{#if $currentFilter === 'archived'}
@@ -184,7 +179,7 @@
 					title="Unarchive"
 					data-testid="unarchive-btn"
 				>
-					<ArchiveRestore class="h-4 w-4" />
+					<Icon icon="pixelarticons:archive" class="h-4 w-4" />
 				</button>
 			{:else}
 				<button
@@ -193,7 +188,7 @@
 					title="Archive"
 					data-testid="archive-btn"
 				>
-					<Archive class="h-4 w-4" />
+					<Icon icon="pixelarticons:archive" class="h-4 w-4" />
 				</button>
 			{/if}
 			{#if note.isShared && !note.isOwner}
@@ -203,7 +198,7 @@
 					title="Leave note"
 					data-testid="leave-btn"
 				>
-					<UserMinus class="h-4 w-4" />
+					<Icon icon="pixelarticons:user-minus" class="h-4 w-4" />
 				</button>
 			{:else}
 				<button
@@ -212,7 +207,7 @@
 					title="Delete"
 					data-testid="trash-btn"
 				>
-					<Trash2 class="h-4 w-4" />
+					<Icon icon="pixelarticons:trash" class="h-4 w-4" />
 				</button>
 			{/if}
 		{/if}

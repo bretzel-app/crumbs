@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { notes, loadNotes, currentFilter } from '$lib/stores/notes.js';
 	import type { Note } from '$lib/types/index.js';
-	import Search from 'lucide-svelte/icons/search';
-	import X from 'lucide-svelte/icons/x';
-	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		onClose?: () => void;
@@ -59,10 +57,10 @@
 	<div class="flex items-center rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-2 focus-within:border-[var(--primary)]">
 		{#if onClose}
 			<button onclick={close} class="mr-2 text-[var(--text-muted)] hover:text-[var(--text)]" aria-label="Back">
-				<ArrowLeft class="h-5 w-5" />
+				<Icon icon="pixelarticons:arrow-left" class="h-5 w-5" />
 			</button>
 		{:else}
-			<Search class="mr-3 h-5 w-5 text-[var(--text-muted)]" />
+			<Icon icon="pixelarticons:search" class="mr-3 h-5 w-5 text-[var(--text-muted)]" />
 		{/if}
 		<input
 			bind:this={inputEl}
@@ -75,7 +73,7 @@
 		/>
 		{#if query}
 			<button onclick={clearSearch} class="ml-2 text-[var(--text-muted)] hover:text-[var(--text)]" aria-label="Clear search">
-				<X class="h-5 w-5" />
+				<Icon icon="pixelarticons:close" class="h-5 w-5" />
 			</button>
 		{/if}
 	</div>

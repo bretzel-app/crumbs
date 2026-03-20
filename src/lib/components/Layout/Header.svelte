@@ -1,8 +1,7 @@
 <script lang="ts">
 	import SearchBar from '../SearchBar.svelte';
 	import SyncIndicator from '../SyncIndicator.svelte';
-	import Menu from 'lucide-svelte/icons/menu';
-	import Search from 'lucide-svelte/icons/search';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		onMenuToggle: () => void;
@@ -24,7 +23,7 @@
 			class="rounded-sm p-2 hover:bg-[var(--border)]/10"
 			aria-label="Toggle sidebar"
 		>
-			<Menu class="h-6 w-6 text-[var(--text)]" />
+			<Icon icon="pixelarticons:menu" class="h-6 w-6 text-[var(--text)]" />
 		</button>
 
 		<div class="flex items-center gap-2">
@@ -43,7 +42,7 @@
 			class="ml-auto rounded-sm p-2 hover:bg-[var(--border)]/10 lg:hidden"
 			aria-label="Search"
 		>
-			<Search class="h-5 w-5 text-[var(--text)]" />
+			<Icon icon="pixelarticons:search" class="h-5 w-5 text-[var(--text)]" />
 		</button>
 
 		<div class="flex items-center gap-2">

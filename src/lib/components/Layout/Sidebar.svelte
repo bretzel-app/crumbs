@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { allTags } from '$lib/stores/notes.js';
-	import { StickyNote, Archive, Trash2, Tag, Settings } from 'lucide-svelte';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		open: boolean;
@@ -17,9 +17,9 @@
 	}
 
 	const navItems = [
-		{ href: '/', label: 'Crumbs', icon: StickyNote, match: (p: string) => p === '/' },
-		{ href: '/archive', label: 'Archive', icon: Archive, match: (p: string) => p === '/archive' },
-		{ href: '/trash', label: 'Trash', icon: Trash2, match: (p: string) => p === '/trash' }
+		{ href: '/', label: 'Crumbs', icon: 'pixelarticons:sticky-note', match: (p: string) => p === '/' },
+		{ href: '/archive', label: 'Archive', icon: 'pixelarticons:archive', match: (p: string) => p === '/archive' },
+		{ href: '/trash', label: 'Trash', icon: 'pixelarticons:trash', match: (p: string) => p === '/trash' }
 	];
 </script>
 
@@ -44,7 +44,7 @@
 						onclick={closeMobile}
 						class="flex w-full items-center gap-3 rounded-sm px-6 py-3 text-left text-sm transition-colors {item.match($page.url.pathname) ? 'bg-[var(--primary)]/15 text-[var(--primary)]' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 					>
-						<item.icon size={20} />
+						<Icon icon={item.icon} width={20} />
 						{item.label}
 					</a>
 				</li>
@@ -62,7 +62,7 @@
 								onclick={closeMobile}
 								class="flex w-full items-center gap-3 rounded-sm px-6 py-2 text-left text-sm transition-colors {$page.url.pathname === `/tag/${tag}` ? 'bg-[var(--primary)]/15 text-[var(--primary)]' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 							>
-								<Tag size={16} />
+								<Icon icon="pixelarticons:label" width={16} />
 								#{tag}
 							</a>
 						</li>
@@ -78,7 +78,7 @@
 			onclick={closeMobile}
 			data-testid="settings-link"
 		>
-			<Settings size={20} />
+			<Icon icon="pixelarticons:settings-cog" width={20} />
 			Settings
 		</a>
 	</div>

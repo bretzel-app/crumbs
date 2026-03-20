@@ -13,15 +13,7 @@
 	import { getPreferences } from '$lib/stores/preferences.svelte.js';
 	import type { Editor } from '@tiptap/core';
 	import type { Note, NoteColor, Attachment, Collaborator } from '$lib/types/index.js';
-	import Palette from 'lucide-svelte/icons/palette';
-	import SquareCheck from 'lucide-svelte/icons/square-check';
-	import ImageIcon from 'lucide-svelte/icons/image';
-	import Type from 'lucide-svelte/icons/type';
-	import FileCode from 'lucide-svelte/icons/file-code';
-	import FileText from 'lucide-svelte/icons/file-text';
-	import UserPlus from 'lucide-svelte/icons/user-plus';
-	import Users from 'lucide-svelte/icons/users';
-	import History from 'lucide-svelte/icons/history';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		note: Note | null;
@@ -345,7 +337,7 @@
 						title="Background color"
 						data-testid="color-picker-toggle"
 					>
-						<Palette class="h-5 w-5 text-[var(--text-muted)]" />
+						<Icon icon="pixelarticons:colors-swatch" class="h-5 w-5 text-[var(--text-muted)]" />
 					</button>
 					{#if showColorPicker}
 						<div class="absolute left-0 bottom-full z-10 mb-2 w-[calc(100vw-4rem)] max-w-xs rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] p-2">
@@ -362,9 +354,9 @@
 					data-testid="checklist-toggle"
 				>
 					{#if checklistMode}
-						<Type class="h-5 w-5" />
+						<Icon icon="pixelarticons:art-text" class="h-5 w-5" />
 					{:else}
-						<SquareCheck class="h-5 w-5" />
+						<Icon icon="pixelarticons:checkbox-on" class="h-5 w-5" />
 					{/if}
 				</button>
 
@@ -375,7 +367,7 @@
 					title="Image attachments"
 					data-testid="image-toggle"
 				>
-					<ImageIcon class="h-5 w-5 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
+					<Icon icon="pixelarticons:image" class="h-5 w-5 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
 				</button>
 
 				<!-- Raw markdown mode toggle -->
@@ -387,9 +379,9 @@
 					data-testid="markdown-toggle"
 				>
 					{#if rawMarkdownMode}
-						<FileText class="h-5 w-5" />
+						<Icon icon="pixelarticons:file-text" class="h-5 w-5" />
 					{:else}
-						<FileCode class="h-5 w-5" />
+						<Icon icon="pixelarticons:script" class="h-5 w-5" />
 					{/if}
 				</button>
 
@@ -402,14 +394,14 @@
 						data-testid="share-toggle"
 					>
 						{#if isShared}
-							<Users class="h-5 w-5 text-[var(--primary)]" />
+							<Icon icon="pixelarticons:users" class="h-5 w-5 text-[var(--primary)]" />
 						{:else}
-							<UserPlus class="h-5 w-5" />
+							<Icon icon="pixelarticons:user-plus" class="h-5 w-5" />
 						{/if}
 					</button>
 				{:else if isShared}
 					<span class="flex items-center gap-1 rounded-sm p-2 text-[var(--text-muted)]" title="Shared note">
-						<Users class="h-5 w-5" />
+						<Icon icon="pixelarticons:users" class="h-5 w-5" />
 					</span>
 				{/if}
 
@@ -421,7 +413,7 @@
 						title="Version history"
 						data-testid="history-toggle"
 					>
-						<History class="h-5 w-5 {showHistory ? 'text-[var(--primary)]' : ''}" />
+						<Icon icon="pixelarticons:timeline" class="h-5 w-5 {showHistory ? 'text-[var(--primary)]' : ''}" />
 					</button>
 				{/if}
 			</div>
