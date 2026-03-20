@@ -64,6 +64,12 @@
 - Fog, Storm, Dusk, Blossom, Clay, Chalk
 - Colors adapt to note theme
 
+### Dark Mode
+- Three-way theme toggle: System / Light / Dark (in Settings > Preferences)
+- Dark mode uses a warm parchment variant — retro aesthetic preserved in both themes
+- Respects system `prefers-color-scheme` preference by default
+- FOUC-free: theme applied before first paint via a blocking inline script
+
 ### Pin Notes
 - Pin important notes to always appear at top
 - Pinned section separated from unpinned notes
