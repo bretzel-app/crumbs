@@ -1,6 +1,7 @@
 import type { NoteColor } from './index.js';
 
 export interface UserPreferences {
+	theme: 'system' | 'light' | 'dark';
 	defaultNoteMode: 'richtext' | 'markdown';
 	defaultNoteColor: NoteColor;
 	hideFooter: boolean;
@@ -11,6 +12,7 @@ export interface UserPreferences {
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
+	theme: 'system',
 	defaultNoteMode: 'richtext',
 	defaultNoteColor: 'default',
 	hideFooter: false,
