@@ -44,4 +44,7 @@ todo.md
 
 # Worktrees
 .worktrees/
+
+# Superpowers brainstorm artifacts
+.superpowers/
 package-lock.json
