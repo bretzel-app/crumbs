@@ -4,6 +4,7 @@
 	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import ImageLightbox from './ImageLightbox.svelte';
 	import CollaboratorPopover from './CollaboratorPopover.svelte';
+	import SharingIndicator from './SharingIndicator.svelte';
 	import type { Note } from '$lib/types/index.js';
 	import Undo2 from 'lucide-svelte/icons/undo-2';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
@@ -101,10 +102,11 @@
 
 	<!-- Status indicators (top-right) -->
 	<div class="absolute top-1.5 right-1.5 flex items-center gap-0.5">
-		{#if note.isShared && note.collaborators}
-			<CollaboratorPopover
-				collaborators={note.collaborators}
-				ownerName={note.isOwner ? 'You' : undefined}
+		{#if note.shareToken || (note.isShared && note.collaborators)}
+			<SharingIndicator
+				shareToken={note.shareToken}
+				collaborators={note.collaborators ?? []}
+				isOwner={note.isOwner ?? true}
 			/>
 		{/if}
 		{#if note.pinned}

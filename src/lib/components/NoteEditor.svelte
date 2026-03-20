@@ -21,6 +21,7 @@
 	import FileText from 'lucide-svelte/icons/file-text';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
 	import Users from 'lucide-svelte/icons/users';
+	import Globe from 'lucide-svelte/icons/globe';
 	import History from 'lucide-svelte/icons/history';
 
 	interface Props {
@@ -70,19 +71,34 @@
 	let showHistory = $state(false);
 	// svelte-ignore state_referenced_locally
 	let collaboratorsList = $state<Collaborator[]>(note?.collaborators ?? []);
+	// svelte-ignore state_referenced_locally
+	let currentShareToken = $state<string | undefined>(note?.shareToken);
 	const isOwner = $derived(note?.isOwner !== false);
 	const isShared = $derived(collaboratorsList.length > 0);
+	const hasPublicLink = $derived(!!currentShareToken);
 	// Use displayName from first user or 'You' for owner
 	const ownerName = $derived(isOwner ? 'You' : 'Owner');
 
 	function handleCollaboratorsUpdate(updated: Collaborator[]) {
 		collaboratorsList = updated;
-		// Update the note in the store
 		if (noteId) {
 			notes.update((list) =>
 				list.map((n) =>
 					n.id === noteId
 						? { ...n, collaborators: updated, isShared: updated.length > 0 }
+						: n
+				)
+			);
+		}
+	}
+
+	function handleShareUpdate(token: string | null) {
+		currentShareToken = token ?? undefined;
+		if (noteId) {
+			notes.update((list) =>
+				list.map((n) =>
+					n.id === noteId
+						? { ...n, shareToken: token ?? undefined }
 						: n
 				)
 			);
@@ -401,7 +417,9 @@
 						title="Share note"
 						data-testid="share-toggle"
 					>
-						{#if isShared}
+						{#if hasPublicLink}
+							<Globe class="h-5 w-5 text-[var(--primary)]" />
+						{:else if isShared}
 							<Users class="h-5 w-5 text-[var(--primary)]" />
 						{:else}
 							<UserPlus class="h-5 w-5" />
@@ -442,8 +460,10 @@
 		noteId={noteId}
 		collaborators={collaboratorsList}
 		{ownerName}
+		shareToken={currentShareToken}
 		onClose={() => (showShareDialog = false)}
 		onUpdate={handleCollaboratorsUpdate}
+		onShareUpdate={handleShareUpdate}
 	/>
 {/if}
 
