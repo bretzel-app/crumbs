@@ -1,4 +1,4 @@
-import { test, expect } from './helpers/fixtures.js';
+import { test, expect, createNote } from './helpers/fixtures.js';
 
 test.describe.serial('Dark mode', () => {
 	test('Scenario: Theme toggle persists selection across page reload', async ({
@@ -62,7 +62,12 @@ test.describe.serial('Dark mode', () => {
 	test('Scenario: Note cards use dark colors in dark mode', async ({
 		authenticatedPage: page
 	}) => {
-		// Given dark theme is active
+		// Given a note exists
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await createNote(page, 'Dark Mode Test Note');
+
+		// And dark theme is active
 		await page.goto('/settings/preferences');
 		await page.waitForLoadState('networkidle');
 		await page.getByTestId('pref-theme-dark').click();
@@ -72,12 +77,11 @@ test.describe.serial('Dark mode', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		// Then note cards should have dark background colors (if any exist)
+		// Then note cards should have dark background colors
 		const noteCard = page.getByTestId('note-card').first();
-		if (await noteCard.isVisible()) {
-			const bg = await noteCard.evaluate((el) => getComputedStyle(el).backgroundColor);
-			// Dark default color is #2a2520 = rgb(42, 37, 32)
-			expect(bg).not.toBe('rgb(250, 245, 235)'); // Not the light default
-		}
+		await expect(noteCard).toBeVisible();
+		const bg = await noteCard.evaluate((el) => getComputedStyle(el).backgroundColor);
+		// Dark default color is #2a2520 = rgb(42, 37, 32); NOT light default rgb(250, 245, 235)
+		expect(bg).not.toBe('rgb(250, 245, 235)');
 	});
 });
