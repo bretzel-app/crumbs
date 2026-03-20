@@ -83,17 +83,8 @@ For slow mornings in the kitchen:
 		},
 		{
 			key: 'manifesto',
-			title: 'Own Your Software',
-			content: `## The Rules
-
-1. **Self-host everything.** Trust no cloud.
-2. **Own your data.** Your server, your rules.
-3. **Keep it simple.** If it needs a PhD to deploy, it's wrong.
-4. **SQLite > Postgres** for single-user apps. Fight me.
-
-> If it can't run on your hardware, it's not really yours.
-
-Seven services, one VPS, *zero* vendor lock-in.
+			title: '',
+			content: `The best software is the software you **own**. Self-host everything. Trust no cloud. 🥨
 
 #personal #selfhosting`,
 			color: 'coral'
