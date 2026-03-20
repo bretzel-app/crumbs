@@ -3,6 +3,10 @@
 	import X from 'lucide-svelte/icons/x';
 	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import Search from 'lucide-svelte/icons/search';
+	import Globe from 'lucide-svelte/icons/globe';
+	import Link from 'lucide-svelte/icons/link';
+	import Copy from 'lucide-svelte/icons/copy';
+	import Check from 'lucide-svelte/icons/check';
 	import { showToast } from '$lib/stores/toast.js';
 
 	interface UserResult {
@@ -15,16 +19,60 @@
 		noteId: string;
 		collaborators: Collaborator[];
 		ownerName: string;
+		shareToken?: string;
 		onClose: () => void;
 		onUpdate: (collaborators: Collaborator[]) => void;
+		onShareUpdate: (token: string | null) => void;
 	}
 
-	const { noteId, collaborators, ownerName, onClose, onUpdate }: Props = $props();
+	const { noteId, collaborators, ownerName, shareToken, onClose, onUpdate, onShareUpdate }: Props = $props();
 
+	let publicShareToken = $state(shareToken ?? null);
+	let copying = $state(false);
+	let togglingShare = $state(false);
 	let searchQuery = $state('');
 	let searchResults = $state<UserResult[]>([]);
 	let isSearching = $state(false);
 	let searchTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	const shareUrl = $derived(publicShareToken ? `${window.location.origin}/s/${publicShareToken}` : null);
+
+	async function togglePublicShare() {
+		togglingShare = true;
+		try {
+			if (publicShareToken) {
+				const res = await fetch(`/api/notes/${noteId}/share`, { method: 'DELETE' });
+				if (res.ok) {
+					publicShareToken = null;
+					onShareUpdate(null);
+					showToast('Public link removed', 'success');
+				}
+			} else {
+				const res = await fetch(`/api/notes/${noteId}/share`, { method: 'POST' });
+				if (res.ok) {
+					const data = await res.json();
+					publicShareToken = data.token;
+					onShareUpdate(data.token);
+					showToast('Public link created', 'success');
+				}
+			}
+		} catch {
+			showToast('Failed to update share link', 'error');
+		} finally {
+			togglingShare = false;
+		}
+	}
+
+	async function copyShareUrl() {
+		if (!shareUrl) return;
+		try {
+			await navigator.clipboard.writeText(shareUrl);
+			copying = true;
+			setTimeout(() => (copying = false), 2000);
+		} catch {
+			showToast('Failed to copy link', 'error');
+		}
+	}
 
 	function handleSearch(query: string) {
 		clearTimeout(searchTimeout);
@@ -38,7 +86,6 @@
 				const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
 				if (res.ok) {
 					const users: UserResult[] = await res.json();
-					// Filter out existing collaborators
 					const collabIds = new Set(collaborators.map((c) => c.userId));
 					searchResults = users.filter((u) => !collabIds.has(u.id));
 				}
@@ -122,6 +169,60 @@
 				<X class="h-4 w-4" />
 			</button>
 		</div>
+
+		<!-- Public link section -->
+		<div class="px-4 pt-3 pb-3" data-testid="public-link-section">
+			<div
+				class="rounded-sm border p-3 transition-colors {publicShareToken
+					? 'border-[var(--primary)] bg-[var(--primary)]/5'
+					: 'border-[var(--border-subtle)]'}"
+			>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<Globe class="h-4 w-4 {publicShareToken ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}" />
+						<span class="text-sm font-medium text-[var(--text)]">Public link</span>
+					</div>
+					<button
+						onclick={togglePublicShare}
+						disabled={togglingShare}
+						class="relative h-5 w-9 rounded-sm transition-colors {publicShareToken
+							? 'bg-[var(--primary)]'
+							: 'bg-[var(--border-subtle)]'}"
+						title={publicShareToken ? 'Disable public link' : 'Enable public link'}
+						data-testid="public-share-toggle"
+					>
+						<span
+							class="absolute top-0.5 h-4 w-4 rounded-sm bg-[var(--bg-surface)] shadow-[1px_1px_0px_var(--border-subtle)] transition-all {publicShareToken
+								? 'left-4.5'
+								: 'left-0.5'}"
+						></span>
+					</button>
+				</div>
+
+				{#if publicShareToken && shareUrl}
+					<div class="mt-2 flex items-center gap-1" data-testid="share-url-container">
+						<div class="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5">
+							<Link class="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+							<span class="truncate text-xs text-[var(--text-muted)]" data-testid="share-url-text">{shareUrl}</span>
+						</div>
+						<button
+							onclick={copyShareUrl}
+							class="shrink-0 rounded-sm border border-[var(--border-subtle)] p-1.5 hover:border-[var(--primary)] hover:bg-[var(--primary)]/5 transition-colors"
+							title="Copy link"
+							data-testid="copy-share-url-btn"
+						>
+							{#if copying}
+								<Check class="h-4 w-4 text-[var(--success-text)]" />
+							{:else}
+								<Copy class="h-4 w-4 text-[var(--text-muted)]" />
+							{/if}
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<div class="border-t border-[var(--border-subtle)]"></div>
 
 		<!-- Search input -->
 		<div class="relative px-4 pt-3">
