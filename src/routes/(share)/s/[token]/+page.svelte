@@ -112,7 +112,7 @@
 
 	<div class="mt-6 text-center">
 		<a
-			href="https://github.com/bretzel-app/crumbs"
+			href="https://crumbs.bretzel.app"
 			target="_blank"
 			rel="noopener noreferrer"
 			class="font-['Press_Start_2P'] text-[8px] tracking-wider text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
