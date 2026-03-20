@@ -2,7 +2,7 @@
 	import NoteGrid from '$lib/components/NoteGrid.svelte';
 	import NoteEditor from '$lib/components/NoteEditor.svelte';
 	import TagFilter from '$lib/components/TagFilter.svelte';
-	import { pinnedNotes, unpinnedNotes, selectedTag, currentFilter, notes, notesLoaded, loadNotes, updateSortOrders } from '$lib/stores/notes.js';
+	import { favoriteNotes, unfavoritedNotes, selectedTag, currentFilter, notes, notesLoaded, loadNotes, updateSortOrders } from '$lib/stores/notes.js';
 	import { onMount } from 'svelte';
 	import type { Note, NoteFilter } from '$lib/types/index.js';
 	import Plus from 'lucide-svelte/icons/plus';
@@ -86,22 +86,22 @@
 	<h2 class="mb-4 text-lg font-medium text-[var(--text-muted)]">#{tag}</h2>
 {/if}
 
-{#if $pinnedNotes.length > 0}
+{#if $favoriteNotes.length > 0}
 	<div class="mb-6">
-		<NoteGrid notes={$pinnedNotes} label="Pinned" onEdit={openEditor} draggable dndType="pinned-notes" onReorder={handleReorder} />
+		<NoteGrid notes={$favoriteNotes} label="Favorites" onEdit={openEditor} draggable dndType="pinned-notes" onReorder={handleReorder} />
 	</div>
 {/if}
 
 <NoteGrid
-	notes={$unpinnedNotes}
-	label={$pinnedNotes.length > 0 ? 'Others' : ''}
+	notes={$unfavoritedNotes}
+	label={$favoriteNotes.length > 0 ? 'Others' : ''}
 	onEdit={openEditor}
 	draggable
 	dndType="unpinned-notes"
 	onReorder={handleReorder}
 />
 
-{#if $notesLoaded && $pinnedNotes.length === 0 && $unpinnedNotes.length === 0}
+{#if $notesLoaded && $favoriteNotes.length === 0 && $unfavoritedNotes.length === 0}
 	<div class="flex flex-col items-center justify-center py-20 text-[var(--text-muted)]">
 		<img src="/favicon.svg" alt="" class="mb-4 h-18 w-18" />
 		<p class="font-['Press_Start_2P'] text-xs">

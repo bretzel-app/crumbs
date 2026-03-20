@@ -35,11 +35,11 @@ function sortNotes(list: Note[]): Note[] {
 	});
 }
 
-export const pinnedNotes = derived(filteredNotes, ($notes) =>
+export const favoriteNotes = derived(filteredNotes, ($notes) =>
 	sortNotes($notes.filter((n) => n.pinned))
 );
 
-export const unpinnedNotes = derived(filteredNotes, ($notes) =>
+export const unfavoritedNotes = derived(filteredNotes, ($notes) =>
 	sortNotes($notes.filter((n) => !n.pinned))
 );
 
@@ -231,7 +231,7 @@ export async function unarchiveNote(id: string): Promise<Note | null> {
 	return updateNote(id, { archived: false });
 }
 
-export async function togglePin(id: string, currentPinned: boolean): Promise<Note | null> {
+export async function toggleFavorite(id: string, currentPinned: boolean): Promise<Note | null> {
 	return updateNote(id, { pinned: !currentPinned });
 }
 

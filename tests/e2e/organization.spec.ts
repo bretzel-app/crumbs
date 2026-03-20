@@ -1,17 +1,17 @@
 import { test, expect, noteCard, createNote } from './helpers/fixtures.js';
 
 test.describe('Organization Features', () => {
-	test('Scenario: Pinned note appears under the Pinned section', async ({ authenticatedPage: page }) => {
-		// Given a note titled "Pin Me" exists
-		await createNote(page, 'Pin Me');
+	test('Scenario: Favorited note appears under the Favorites section', async ({ authenticatedPage: page }) => {
+		// Given a note titled "Favorite Me" exists
+		await createNote(page, 'Favorite Me');
 
-		// When the user pins the note
-		const pinCard = noteCard(page, 'Pin Me');
-		await pinCard.hover();
-		await pinCard.getByTestId('pin-btn').first().click({ force: true });
+		// When the user favorites the note
+		const favCard = noteCard(page, 'Favorite Me');
+		await favCard.hover();
+		await favCard.getByTestId('favorite-btn').first().click({ force: true });
 
-		// Then the "Pinned" section is visible
-		await expect(page.getByText('Pinned')).toBeVisible();
+		// Then the "Favorites" section is visible
+		await expect(page.getByText('Favorites')).toBeVisible();
 	});
 
 	test('Scenario: Archived note is removed from the main view', async ({ authenticatedPage: page }) => {

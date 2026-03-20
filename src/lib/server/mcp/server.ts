@@ -239,8 +239,8 @@ export function createMcpServer(userId: number): McpServer {
 	});
 
 	server.tool(
-		'pin_note',
-		'Pin or unpin a note',
+		'favorite_note',
+		'Favorite or unfavorite a note',
 		{
 			id: z.string().describe('Note ID'),
 			pinned: z.boolean().describe('Whether to pin (true) or unpin (false)')
@@ -257,7 +257,7 @@ export function createMcpServer(userId: number): McpServer {
 				content: [
 					{
 						type: 'text' as const,
-						text: `Note "${result.title}" ${pinned ? 'pinned' : 'unpinned'}`
+						text: `Note "${result.title}" ${pinned ? 'favorited' : 'unfavorited'}`
 					}
 				]
 			};

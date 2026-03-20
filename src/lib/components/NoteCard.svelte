@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
-	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
+	import { toggleFavorite, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import ImageLightbox from './ImageLightbox.svelte';
 	import CollaboratorPopover from './CollaboratorPopover.svelte';
 	import type { Note } from '$lib/types/index.js';
@@ -109,10 +109,10 @@
 		{/if}
 		{#if note.pinned}
 			<button
-				onclick={stop(() => togglePin(note.id, note.pinned))}
+				onclick={stop(() => toggleFavorite(note.id, note.pinned))}
 				class="rounded-sm p-1 text-[var(--primary)] hover:bg-[var(--border)]/10"
-				title="Unpin"
-				data-testid="pin-indicator"
+				title="Unfavorite"
+				data-testid="favorite-indicator"
 			>
 				<Bookmark class="h-4 w-4 fill-[var(--primary)]" />
 			</button>
@@ -169,10 +169,10 @@
 		{:else}
 			{#if !note.pinned}
 				<button
-					onclick={stop(() => togglePin(note.id, note.pinned))}
+					onclick={stop(() => toggleFavorite(note.id, note.pinned))}
 					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
-					title="Pin"
-					data-testid="pin-btn"
+					title="Favorite"
+					data-testid="favorite-btn"
 				>
 					<Bookmark class="h-4 w-4" />
 				</button>
