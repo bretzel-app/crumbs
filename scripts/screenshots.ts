@@ -21,6 +21,20 @@ function cleanDatabase(): void {
 	}
 }
 
+async function waitForServer(url: string, timeoutMs: number): Promise<void> {
+	const start = Date.now();
+	while (Date.now() - start < timeoutMs) {
+		try {
+			const res = await fetch(url);
+			if (res.ok || res.status === 302) return;
+		} catch {
+			// Server not ready yet
+		}
+		await new Promise((r) => setTimeout(r, 500));
+	}
+	throw new Error(`Server not reachable at ${url} after ${timeoutMs}ms`);
+}
+
 function startServer(): Promise<ChildProcess> {
 	return new Promise((resolve, reject) => {
 		const dir = SCREENSHOT_DB.substring(0, SCREENSHOT_DB.lastIndexOf('/'));
@@ -31,28 +45,15 @@ function startServer(): Promise<ChildProcess> {
 			stdio: 'pipe'
 		});
 
-		const timeout = setTimeout(() => reject(new Error('Server start timeout (30s)')), 30_000);
-
-		function checkReady(data: Buffer) {
-			const text = data.toString();
-			if (text.includes('localhost:4173') || text.includes('0.0.0.0:4173')) {
-				clearTimeout(timeout);
-				resolve(server);
-			}
-		}
-
-		server.stdout?.on('data', checkReady);
-		server.stderr?.on('data', checkReady);
-
-		server.on('error', (err) => {
-			clearTimeout(timeout);
-			reject(err);
-		});
-
+		server.on('error', reject);
 		server.on('exit', (code) => {
-			clearTimeout(timeout);
 			if (code !== null && code !== 0) reject(new Error(`Server exited with code ${code}`));
 		});
+
+		// Poll until server responds (stdout detection is unreliable in CI)
+		waitForServer(BASE_URL, 60_000)
+			.then(() => resolve(server))
+			.catch(reject);
 	});
 }
 
