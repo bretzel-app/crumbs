@@ -25,8 +25,8 @@ interface NoteData {
 }
 
 function getNotesData(): NoteData[] {
-	// Created in reverse display order so newest (first created) appears last,
-	// and the grid reads naturally with pinned "Bretzel Ingredients" at top-left
+	// Created in reverse display order so newest (first created) appears last
+	// and the grid reads naturally top-left to bottom-right
 	return [
 		{
 			key: 'bakingcode',
