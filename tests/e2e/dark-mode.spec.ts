@@ -1,22 +1,29 @@
 import { test, expect } from './helpers/fixtures.js';
 
-test.describe('Dark mode', () => {
+test.describe.serial('Dark mode', () => {
 	test('Scenario: Theme toggle persists selection across page reload', async ({
 		authenticatedPage: page
 	}) => {
 		// Given the user is on the preferences page
 		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
 
 		// When the user selects dark theme
+		// Set up response listener BEFORE clicking (response may arrive before waitForResponse)
+		const prefSaved = page.waitForResponse((r) => r.url().includes('/api/preferences') && r.ok());
 		await page.getByTestId('pref-theme-dark').click();
 
 		// Then the page applies dark theme
 		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
+		// Wait for preference to persist to server before reloading
+		await prefSaved;
+
 		// When the page is reloaded
 		await page.reload();
+		await page.waitForLoadState('networkidle');
 
-		// Then the dark theme persists without flash
+		// Then the dark theme persists (FOUC script applies it before paint)
 		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 		await expect(page.getByTestId('pref-theme-dark')).toHaveClass(/font-medium/);
 	});
@@ -26,6 +33,7 @@ test.describe('Dark mode', () => {
 	}) => {
 		// Given dark theme is active
 		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
 		await page.getByTestId('pref-theme-dark').click();
 		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
@@ -42,13 +50,13 @@ test.describe('Dark mode', () => {
 		// Given the OS prefers dark mode
 		await page.emulateMedia({ colorScheme: 'dark' });
 
-		// When the user selects system theme
+		// When the user navigates to preferences with system theme active
 		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
 		await page.getByTestId('pref-theme-system').click();
 
 		// Then the page applies dark theme from system preference
-		// Use toHaveAttribute with timeout to handle async $effect execution
-		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark', { timeout: 5000 });
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 	});
 
 	test('Scenario: Note cards use dark colors in dark mode', async ({
@@ -56,12 +64,15 @@ test.describe('Dark mode', () => {
 	}) => {
 		// Given dark theme is active
 		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
 		await page.getByTestId('pref-theme-dark').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
 		// When viewing the notes page
 		await page.goto('/');
+		await page.waitForLoadState('networkidle');
 
-		// Then note cards should have dark background colors
+		// Then note cards should have dark background colors (if any exist)
 		const noteCard = page.getByTestId('note-card').first();
 		if (await noteCard.isVisible()) {
 			const bg = await noteCard.evaluate((el) => getComputedStyle(el).backgroundColor);
