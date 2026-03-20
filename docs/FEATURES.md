@@ -64,10 +64,10 @@
 - Fog, Storm, Dusk, Blossom, Clay, Chalk
 - Colors adapt to note theme
 
-### Pin Notes
-- Pin important notes to always appear at top
-- Pinned section separated from unpinned notes
-- Toggle pin from note card hover actions
+### Favorite Notes
+- Favorite important notes to always appear at top
+- Favorites section separated from other notes
+- Toggle favorite from note card hover actions
 
 ### Archive
 - Archive notes to declutter main view
@@ -138,7 +138,7 @@
 
 ### MCP Server (Model Context Protocol)
 - Built-in MCP endpoint at `POST /api/mcp` (Streamable HTTP transport)
-- 14 tools: list, get, create, update, trash, restore, archive, unarchive, delete, search notes; list tags; pin, reorder notes; upload images
+- 14 tools: list, get, create, update, trash, restore, archive, unarchive, delete, search notes; list tags; favorite, reorder notes; upload images
 - API key authentication (Bearer token)
 - Compatible with Claude Code, Claude Desktop, and other MCP clients
 - Stateful sessions with automatic cleanup
