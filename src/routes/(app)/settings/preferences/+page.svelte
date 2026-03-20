@@ -15,7 +15,7 @@
 		<div class="flex gap-1" role="group" aria-label="Theme">
 			{#each [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] as [value, label]}
 				<button
-					onclick={() => updatePreference('theme', value)}
+					onclick={() => updatePreference('theme', value as 'system' | 'light' | 'dark')}
 					class="rounded-sm border px-4 py-2 text-sm transition-colors {prefs.theme === value ? 'border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'border-[var(--border-subtle)] text-[var(--text)] hover:border-[var(--primary)]'}"
 					data-testid="pref-theme-{value}"
 				>

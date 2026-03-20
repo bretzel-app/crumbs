@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { NOTE_COLORS } from '$lib/utils/colors.js';
+	import { getNoteColor } from '$lib/utils/colors.js';
+	import { getIsDarkMode } from '$lib/utils/theme.svelte.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
 	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import ImageLightbox from './ImageLightbox.svelte';
@@ -27,8 +28,7 @@
 	let { note, onEdit, fullHeight = false }: Props = $props();
 
 	$effect(() => {
-		const colors = NOTE_COLORS[note.color];
-		cardStyle = `background-color: ${colors.bg}`;
+		cardStyle = `background-color: ${getNoteColor(note.color, getIsDarkMode())}`;
 	});
 
 	let cardStyle = $state('');

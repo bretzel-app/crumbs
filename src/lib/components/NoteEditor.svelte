@@ -9,7 +9,8 @@
 	import NoteHistory from './NoteHistory.svelte';
 	import { updateNote, createNote } from '$lib/stores/notes.js';
 	import { notes } from '$lib/stores/notes.js';
-	import { NOTE_COLORS } from '$lib/utils/colors.js';
+	import { getNoteColor } from '$lib/utils/colors.js';
+	import { getIsDarkMode } from '$lib/utils/theme.svelte.js';
 	import { getPreferences } from '$lib/stores/preferences.svelte.js';
 	import type { Editor } from '@tiptap/core';
 	import type { Note, NoteColor, Attachment, Collaborator } from '$lib/types/index.js';
@@ -192,8 +193,7 @@
 
 	let bgStyle = $state('');
 	$effect(() => {
-		const colors = NOTE_COLORS[color];
-		bgStyle = `background-color: ${colors.bg}`;
+		bgStyle = `background-color: ${getNoteColor(color, getIsDarkMode())}`;
 	});
 
 	// Use pointer events to detect backdrop clicks. Unlike mouse events,
