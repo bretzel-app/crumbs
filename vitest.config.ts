@@ -4,7 +4,8 @@ import path from 'path';
 export default defineConfig({
 	resolve: {
 		alias: {
-			$lib: path.resolve(__dirname, 'src/lib')
+			$lib: path.resolve(__dirname, 'src/lib'),
+			'$app/environment': path.resolve(__dirname, 'src/lib/__mocks__/app-environment.ts')
 		}
 	},
 	test: {
