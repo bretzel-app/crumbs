@@ -4,6 +4,7 @@ import { DEFAULT_PREFERENCES, BOOLEAN_PREF_KEYS } from '$lib/types/preferences.j
 describe('preferences defaults', () => {
 	it('should have correct default values', () => {
 		expect(DEFAULT_PREFERENCES).toEqual({
+			theme: 'system',
 			defaultNoteMode: 'richtext',
 			defaultNoteColor: 'default',
 			hideFooter: false,
