@@ -1,8 +1,6 @@
 <script lang="ts">
 	import type { Collaborator } from '$lib/types/index.js';
-	import X from 'lucide-svelte/icons/x';
-	import UserMinus from 'lucide-svelte/icons/user-minus';
-	import Search from 'lucide-svelte/icons/search';
+	import Icon from '@iconify/svelte';
 	import { showToast } from '$lib/stores/toast.js';
 
 	interface UserResult {
@@ -119,14 +117,14 @@
 				class="rounded-sm p-1 hover:bg-[var(--border)]/10"
 				title="Close"
 			>
-				<X class="h-4 w-4" />
+				<Icon icon="pixelarticons:close" class="h-4 w-4" />
 			</button>
 		</div>
 
 		<!-- Search input -->
 		<div class="relative px-4 pt-3">
 			<div class="relative">
-				<Search class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+				<Icon icon="pixelarticons:search" class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
 				<input
 					type="text"
 					placeholder="Search users..."
@@ -181,7 +179,7 @@
 							title="Remove"
 							data-testid="remove-collaborator-btn"
 						>
-							<UserMinus class="h-4 w-4" />
+							<Icon icon="pixelarticons:user-minus" class="h-4 w-4" />
 						</button>
 					</li>
 				{/each}

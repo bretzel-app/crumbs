@@ -1,8 +1,6 @@
 <script lang="ts">
 	import type { NoteVersionSummary, NoteVersion } from '$lib/types/index.js';
-	import X from 'lucide-svelte/icons/x';
-	import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
-	import Clock from 'lucide-svelte/icons/clock';
+	import Icon from '@iconify/svelte';
 	import { showToast } from '$lib/stores/toast.js';
 
 	interface Props {
@@ -111,7 +109,7 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
 			<div class="flex items-center gap-2">
-				<Clock class="h-4 w-4 text-[var(--text-muted)]" />
+				<Icon icon="pixelarticons:clock" class="h-4 w-4 text-[var(--text-muted)]" />
 				<h2 class="text-sm font-semibold text-[var(--text)]">Version History</h2>
 			</div>
 			<button
@@ -120,7 +118,7 @@
 				title="Close history"
 				data-testid="close-history-btn"
 			>
-				<X class="h-4 w-4 text-[var(--text-muted)]" />
+				<Icon icon="pixelarticons:close" class="h-4 w-4 text-[var(--text-muted)]" />
 			</button>
 		</div>
 
@@ -190,7 +188,7 @@
 											class="flex items-center gap-1.5 rounded-sm border border-[var(--destructive)] bg-[var(--destructive)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
 											data-testid="confirm-restore-btn"
 										>
-											<RotateCcw class="h-3.5 w-3.5" />
+											<Icon icon="pixelarticons:undo" class="h-3.5 w-3.5" />
 											{isRestoring ? 'Restoring…' : 'Confirm Restore'}
 										</button>
 										<button
@@ -207,7 +205,7 @@
 									class="flex items-center gap-1.5 rounded-sm border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
 									data-testid="restore-btn"
 								>
-									<RotateCcw class="h-3.5 w-3.5" />
+									<Icon icon="pixelarticons:undo" class="h-3.5 w-3.5" />
 									Restore this version
 								</button>
 							{/if}

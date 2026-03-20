@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { getSyncStatus, onSyncStatusChange, sync, type SyncStatus } from '$lib/sync/client.js';
-	import CloudCheck from 'lucide-svelte/icons/cloud-check';
-	import CloudSync from 'lucide-svelte/icons/cloud-sync';
-	import CloudOff from 'lucide-svelte/icons/cloud-off';
-	import CloudAlert from 'lucide-svelte/icons/cloud-alert';
+	import Icon from '@iconify/svelte';
 
 	let status: SyncStatus = $state(getSyncStatus());
 	let displayStatus: SyncStatus = $state(getSyncStatus());
@@ -51,12 +48,12 @@
 	data-testid="sync-indicator"
 >
 	{#if displayStatus === 'synced'}
-		<CloudCheck class="h-5 w-5 text-[var(--primary)]" />
+		<Icon icon="pixelarticons:cloud-done" class="h-5 w-5 text-[var(--primary)]" />
 	{:else if displayStatus === 'syncing'}
-		<CloudSync class="h-5 w-5 text-[var(--primary)] opacity-60" />
+		<Icon icon="pixelarticons:sync" class="h-5 w-5 text-[var(--primary)] opacity-60" />
 	{:else if displayStatus === 'offline'}
-		<CloudOff class="h-5 w-5 text-[var(--text-muted)]" />
+		<Icon icon="pixelarticons:cloud" class="h-5 w-5 text-[var(--text-muted)]" />
 	{:else}
-		<CloudAlert class="h-5 w-5 text-[var(--destructive)]" />
+		<Icon icon="pixelarticons:cloud" class="h-5 w-5 text-[var(--destructive)]" />
 	{/if}
 </button>

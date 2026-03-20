@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { User, Cpu, ShieldCheck, SlidersHorizontal, Info } from 'lucide-svelte';
+	import Icon from '@iconify/svelte';
 
 	let { data, children } = $props();
 	let pathname = $derived(page.url.pathname);
@@ -23,7 +23,7 @@
 						class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/preferences' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 						data-testid="settings-nav-preferences"
 					>
-						<SlidersHorizontal size={16} />
+						<Icon icon="pixelarticons:sliders" width={16} />
 						Preferences
 					</a>
 				</li>
@@ -32,7 +32,7 @@
 						href="/settings/profile"
 						class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/profile' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 					>
-						<User size={16} />
+						<Icon icon="pixelarticons:user" width={16} />
 						Profile
 					</a>
 				</li>
@@ -41,7 +41,7 @@
 						href="/settings/mcp"
 						class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/mcp' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 					>
-						<Cpu size={16} />
+						<Icon icon="pixelarticons:cpu" width={16} />
 						API
 					</a>
 				</li>
@@ -51,7 +51,7 @@
 							href="/settings/users"
 							class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/users' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 						>
-							<ShieldCheck size={16} />
+							<Icon icon="pixelarticons:shield" width={16} />
 							Users
 						</a>
 					</li>
@@ -61,7 +61,7 @@
 						href="/settings/about"
 						class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/about' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
 					>
-						<Info size={16} />
+						<Icon icon="pixelarticons:info-box" width={16} />
 						About
 					</a>
 				</li>

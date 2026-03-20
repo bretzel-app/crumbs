@@ -1,7 +1,5 @@
 <script lang="ts">
-	import XIcon from 'lucide-svelte/icons/x';
-	import Star from 'lucide-svelte/icons/star';
-	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import Icon from '@iconify/svelte';
 	import ImageLightbox from './ImageLightbox.svelte';
 	import type { Attachment } from '$lib/types/index.js';
 	import { optimizeImage } from '$lib/utils/image-optimize.js';
@@ -133,7 +131,7 @@
 					</button>
 					{#if isPending}
 						<div class="absolute bottom-0.5 left-0.5 rounded-sm bg-black/50 p-0.5" title="Pending sync">
-							<RefreshCw class="h-3 w-3 text-white" />
+							<Icon icon="pixelarticons:reload" class="h-3 w-3 text-white" />
 						</div>
 					{:else if onToggleFeatured}
 						<button
@@ -142,7 +140,7 @@
 							aria-label={attachment.featured ? 'Unfeature image' : 'Feature image'}
 							data-testid="toggle-featured"
 						>
-							<Star class="h-3 w-3 {attachment.featured ? 'fill-[var(--primary)] text-[var(--primary)]' : 'text-white'}" />
+							<Icon icon="pixelarticons:pin" class="h-3 w-3 {attachment.featured ? 'fill-[var(--primary)] text-[var(--primary)]' : 'text-white'}" />
 						</button>
 					{/if}
 					<button
@@ -151,7 +149,7 @@
 						aria-label="Remove attachment"
 						data-testid="remove-attachment"
 					>
-						<XIcon class="h-3 w-3" />
+						<Icon icon="pixelarticons:close" class="h-3 w-3" />
 					</button>
 				</div>
 			{/each}

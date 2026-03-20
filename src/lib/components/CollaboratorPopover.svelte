@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Collaborator } from '$lib/types/index.js';
-	import Users from 'lucide-svelte/icons/users';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		collaborators: Collaborator[];
@@ -42,7 +42,7 @@
 		onclick={handleClick}
 		data-testid="collaborator-indicator"
 	>
-		<Users class="h-4 w-4" />
+		<Icon icon="pixelarticons:users" class="h-4 w-4" />
 	</button>
 
 	{#if showPopover}

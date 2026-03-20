@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Key, Copy, Trash2, Plus, Check } from 'lucide-svelte';
+	import Icon from '@iconify/svelte';
 
 	interface ApiKey {
 		id: string;
@@ -118,7 +118,7 @@ ${mcpJsonConfig}`);
 <!-- API Keys -->
 <section class="mb-6 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--card-shadow)]">
 	<div class="mb-4 flex items-center gap-2">
-		<Key size={16} class="text-[var(--primary)]" />
+		<Icon icon="pixelarticons:lock" width={16} class="text-[var(--primary)]" />
 		<h2 class="text-lg font-semibold text-[var(--text)]">API Keys</h2>
 	</div>
 	<p class="mb-4 text-xs text-[var(--text-muted)]">
@@ -140,7 +140,7 @@ ${mcpJsonConfig}`);
 			class="flex items-center gap-1 rounded-sm bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
 			data-testid="create-api-key-btn"
 		>
-			<Plus size={14} />
+			<Icon icon="pixelarticons:plus" width={14} />
 			Create
 		</button>
 	</form>
@@ -167,9 +167,9 @@ ${mcpJsonConfig}`);
 					data-testid="copy-key-btn"
 				>
 					{#if copiedKey}
-						<Check size={14} class="text-[var(--success-text,#3a5a40)]" />
+						<Icon icon="pixelarticons:check" width={14} class="text-[var(--success-text,#3a5a40)]" />
 					{:else}
-						<Copy size={14} />
+						<Icon icon="pixelarticons:copy" width={14} />
 					{/if}
 				</button>
 			</div>
@@ -219,7 +219,7 @@ ${mcpJsonConfig}`);
 								data-testid="delete-api-key-btn"
 								title="Revoke key"
 							>
-								<Trash2 size={14} />
+								<Icon icon="pixelarticons:trash" width={14} />
 							</button>
 						{/if}
 					</div>
@@ -253,9 +253,9 @@ ${mcpJsonConfig}`);
 			title="Copy JSON config"
 		>
 			{#if copiedJson}
-				<Check size={12} class="text-[var(--success-text,#3a5a40)]" />
+				<Icon icon="pixelarticons:check" width={12} class="text-[var(--success-text,#3a5a40)]" />
 			{:else}
-				<Copy size={12} />
+				<Icon icon="pixelarticons:copy" width={12} />
 			{/if}
 		</button>
 	</div>
@@ -279,9 +279,9 @@ ${mcpJsonConfig}`);
 				title="Copy LLM prompt"
 			>
 				{#if copiedPrompt}
-					<Check size={12} class="text-[var(--success-text,#3a5a40)]" />
+					<Icon icon="pixelarticons:check" width={12} class="text-[var(--success-text,#3a5a40)]" />
 				{:else}
-					<Copy size={12} />
+					<Icon icon="pixelarticons:copy" width={12} />
 				{/if}
 			</button>
 		</div>

@@ -5,7 +5,7 @@
 	import { favoriteNotes, unfavoritedNotes, selectedTag, currentFilter, notes, notesLoaded, loadNotes, updateSortOrders } from '$lib/stores/notes.js';
 	import { onMount } from 'svelte';
 	import type { Note, NoteFilter } from '$lib/types/index.js';
-	import Plus from 'lucide-svelte/icons/plus';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		filter: NoteFilter;
@@ -60,7 +60,7 @@
 			class="flex w-full items-center gap-3 rounded-sm border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3 text-left text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
 			data-testid="new-note-btn"
 		>
-			<Plus class="h-4 w-4" />
+			<Icon icon="pixelarticons:plus" class="h-4 w-4" />
 			Add a crumb...
 		</button>
 	</div>
@@ -70,7 +70,7 @@
 		aria-label="Add a crumb"
 		data-testid="new-note-fab"
 	>
-		<Plus class="h-5 w-5" />
+		<Icon icon="pixelarticons:plus" class="h-5 w-5" />
 	</button>
 {/if}
 

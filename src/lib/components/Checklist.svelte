@@ -1,8 +1,5 @@
 <script lang="ts">
-	import XIcon from 'lucide-svelte/icons/x';
-	import Plus from 'lucide-svelte/icons/plus';
-	import GripVertical from 'lucide-svelte/icons/grip-vertical';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import Icon from '@iconify/svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 
@@ -123,7 +120,7 @@
 		{#each activeItems as item (item.id)}
 			<div class="group flex items-center gap-2 py-1.5" animate:flip={{ duration: flipDurationMs }}>
 				<div use:dragHandle aria-label="drag handle" class="drag-handle cursor-grab max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150" data-testid="checklist-drag-handle">
-					<GripVertical class="h-4 w-4 text-[var(--text-muted)]" />
+					<Icon icon="pixelarticons:drag-and-drop" class="h-4 w-4 text-[var(--text-muted)]" />
 				</div>
 				<input
 					type="checkbox"
@@ -147,7 +144,7 @@
 					aria-label="Remove item"
 					data-testid="checklist-remove"
 				>
-					<XIcon class="h-4 w-4 text-[var(--text-muted)]" />
+					<Icon icon="pixelarticons:close" class="h-4 w-4 text-[var(--text-muted)]" />
 				</button>
 			</div>
 		{/each}
@@ -158,7 +155,7 @@
 		class="flex items-center gap-2 py-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
 		data-testid="checklist-add"
 	>
-		<Plus class="h-4 w-4" />
+		<Icon icon="pixelarticons:plus" class="h-4 w-4" />
 		Add item
 	</button>
 
@@ -169,7 +166,7 @@
 				class="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
 				data-testid="checklist-toggle-done"
 			>
-				<ChevronRight class="h-3 w-3 transition-transform duration-150 {doneExpanded ? 'rotate-90' : ''}" />
+				<Icon icon="pixelarticons:chevron-right" class="h-3 w-3 transition-transform duration-150 {doneExpanded ? 'rotate-90' : ''}" />
 				{doneCount} done
 			</button>
 
@@ -191,7 +188,7 @@
 								aria-label="Remove item"
 								data-testid="checklist-done-remove"
 							>
-								<XIcon class="h-4 w-4 text-[var(--text-muted)]" />
+								<Icon icon="pixelarticons:close" class="h-4 w-4 text-[var(--text-muted)]" />
 							</button>
 						</div>
 					{/each}

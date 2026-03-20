@@ -1,5 +1,5 @@
 <script lang="ts">
-	import XIcon from 'lucide-svelte/icons/x';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		src: string;
@@ -46,7 +46,7 @@
 		aria-label="Close lightbox"
 		data-testid="lightbox-close"
 	>
-		<XIcon class="h-6 w-6" />
+		<Icon icon="pixelarticons:close" class="h-6 w-6" />
 	</button>
 
 	<img
