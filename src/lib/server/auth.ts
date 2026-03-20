@@ -238,6 +238,11 @@ export async function deleteUser(userId: number): Promise<void> {
 	sqlite.prepare('DELETE FROM attachments WHERE user_id = ?').run(userId);
 	sqlite
 		.prepare(
+			'DELETE FROM shared_notes WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+		)
+		.run(userId);
+	sqlite
+		.prepare(
 			'DELETE FROM note_tags WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
 		)
 		.run(userId);

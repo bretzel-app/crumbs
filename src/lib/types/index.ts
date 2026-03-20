@@ -17,6 +17,7 @@ export interface Note {
 	collaborators?: Collaborator[];
 	isOwner?: boolean;
 	isShared?: boolean;
+	shareToken?: string;
 }
 
 export interface Collaborator {
@@ -116,6 +117,23 @@ export interface NoteVersion {
 	checklistMode: boolean;
 	color: NoteColor;
 	createdAt: Date;
+}
+
+export interface NoteShare {
+	noteId: string;
+	token: string;
+	createdAt: Date;
+	expiresAt: Date | null;
+}
+
+export interface SharedNoteData {
+	title: string;
+	content: string;
+	checklistMode: boolean;
+	color: NoteColor;
+	attachments: Attachment[];
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export type { UserPreferences } from './preferences.js';

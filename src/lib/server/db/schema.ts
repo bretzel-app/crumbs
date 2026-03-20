@@ -190,6 +190,15 @@ export const userPreferences = sqliteTable(
 	(table) => [uniqueIndex('user_preferences_user_key_unique').on(table.userId, table.key)]
 );
 
+export const sharedNotes = sqliteTable('shared_notes', {
+	noteId: text('note_id')
+		.primaryKey()
+		.references(() => notes.id, { onDelete: 'cascade' }),
+	token: text('token').notNull().unique(),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	expiresAt: integer('expires_at', { mode: 'timestamp' })
+});
+
 export const noteVersions = sqliteTable(
 	'note_versions',
 	{
