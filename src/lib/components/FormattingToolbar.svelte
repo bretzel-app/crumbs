@@ -1,34 +1,12 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
 	import {
-		Undo2,
-		Redo2,
-		Heading,
-		List,
-		ListOrdered,
-		ListChecks,
-		TextQuote,
-		CodeXml,
 		Bold,
 		Italic,
 		Strikethrough,
-		Code,
-		Underline,
-		Link,
-		CornerDownLeft,
-		ExternalLink,
-		Trash2,
-		AlignLeft,
-		AlignCenter,
-		AlignRight,
-		AlignJustify,
-		Minus,
-		ChevronDown,
-		Table2,
-		BetweenHorizontalEnd,
-		BetweenVerticalEnd,
-		RemoveFormatting
+		Underline
 	} from 'lucide-svelte';
+	import Icon from '@iconify/svelte';
 
 	interface Props {
 		tick?: number;
@@ -128,7 +106,7 @@
 		title="Undo"
 		data-testid="format-undo"
 	>
-		<Undo2 size={iconSize} />
+		<Icon icon="pixelarticons:undo" width={iconSize} />
 	</button>
 	<button
 		onclick={() => editor?.chain().focus().redo().run()}
@@ -137,7 +115,7 @@
 		title="Redo"
 		data-testid="format-redo"
 	>
-		<Redo2 size={iconSize} />
+		<Icon icon="pixelarticons:redo" width={iconSize} />
 	</button>
 
 	<div class="mx-1 h-4 w-px shrink-0 bg-[var(--border-subtle)]"></div>
@@ -186,8 +164,8 @@
 			title="Heading"
 			data-testid="format-heading"
 		>
-			<Heading size={iconSize} />
-			<ChevronDown size={chevronSize} />
+			<Icon icon="pixelarticons:heading" width={iconSize} />
+			<Icon icon="pixelarticons:chevron-down" width={chevronSize} />
 		</button>
 		{#if openDropdown === 'heading'}
 			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[150px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
@@ -227,8 +205,8 @@
 			title="Lists"
 			data-testid="format-list"
 		>
-			<List size={iconSize} />
-			<ChevronDown size={chevronSize} />
+			<Icon icon="pixelarticons:list" width={iconSize} />
+			<Icon icon="pixelarticons:chevron-down" width={chevronSize} />
 		</button>
 		{#if openDropdown === 'list'}
 			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[170px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
@@ -237,7 +215,7 @@
 					class={dropdownItemClass(isActive('bulletList'))}
 					data-testid="format-bullet-list"
 				>
-					<List size={iconSize} />
+					<Icon icon="pixelarticons:list" width={iconSize} />
 					<span>Bullet list</span>
 				</button>
 				<button
@@ -245,7 +223,7 @@
 					class={dropdownItemClass(isActive('orderedList'))}
 					data-testid="format-ordered-list"
 				>
-					<ListOrdered size={iconSize} />
+					<Icon icon="pixelarticons:bulletlist" width={iconSize} />
 					<span>Ordered list</span>
 				</button>
 				<button
@@ -253,7 +231,7 @@
 					class={dropdownItemClass(isActive('taskList'))}
 					data-testid="format-task-list"
 				>
-					<ListChecks size={iconSize} />
+					<Icon icon="pixelarticons:checklist" width={iconSize} />
 					<span>Task list</span>
 				</button>
 			</div>
@@ -268,7 +246,7 @@
 			title="Insert link (Ctrl+K)"
 			data-testid="format-link"
 		>
-			<Link size={iconSize} />
+			<Icon icon="pixelarticons:link" width={iconSize} />
 		</button>
 		{#if openDropdown === 'link'}
 			<div class="absolute left-1/2 bottom-full z-50 mb-1 -translate-x-1/2 rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] px-2 py-1.5">
@@ -290,7 +268,7 @@
 						title="Apply link"
 						data-testid="format-link-apply"
 					>
-						<CornerDownLeft size={16} />
+						<Icon icon="pixelarticons:corner-down-left" width={16} />
 					</button>
 					<div class="mx-0.5 h-4 w-px bg-[var(--border-subtle)]"></div>
 					<button
@@ -301,7 +279,7 @@
 						title="Open link"
 						data-testid="format-link-open"
 					>
-						<ExternalLink size={16} />
+						<Icon icon="pixelarticons:external-link" width={16} />
 					</button>
 					<button
 						type="button"
@@ -311,7 +289,7 @@
 						title="Remove link"
 						data-testid="format-unlink"
 					>
-						<Trash2 size={16} />
+						<Icon icon="pixelarticons:trash" width={16} />
 					</button>
 				</form>
 			</div>
@@ -326,8 +304,8 @@
 			title="Table"
 			data-testid="format-table"
 		>
-			<Table2 size={iconSize} />
-			<ChevronDown size={chevronSize} />
+			<Icon icon="pixelarticons:table" width={iconSize} />
+			<Icon icon="pixelarticons:chevron-down" width={chevronSize} />
 		</button>
 		{#if openDropdown === 'table'}
 			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[190px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
@@ -336,7 +314,7 @@
 					class={dropdownItemClass()}
 					data-testid="format-table-insert"
 				>
-					<Table2 size={iconSize} />
+					<Icon icon="pixelarticons:table" width={iconSize} />
 					<span>Insert table</span>
 				</button>
 				{#if isActive('table')}
@@ -346,7 +324,7 @@
 						class={dropdownItemClass()}
 						data-testid="format-table-add-row"
 					>
-						<BetweenHorizontalEnd size={iconSize} />
+						<Icon icon="pixelarticons:add-row" width={iconSize} />
 						<span>Add row</span>
 					</button>
 					<button
@@ -354,7 +332,7 @@
 						class={dropdownItemClass()}
 						data-testid="format-table-add-col"
 					>
-						<BetweenVerticalEnd size={iconSize} />
+						<Icon icon="pixelarticons:add-col" width={iconSize} />
 						<span>Add column</span>
 					</button>
 					<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
@@ -363,7 +341,7 @@
 						class={dropdownItemClass()}
 						data-testid="format-table-delete-row"
 					>
-						<Minus size={iconSize} />
+						<Icon icon="pixelarticons:minus" width={iconSize} />
 						<span>Delete row</span>
 					</button>
 					<button
@@ -371,7 +349,7 @@
 						class={dropdownItemClass()}
 						data-testid="format-table-delete-col"
 					>
-						<Minus size={iconSize} />
+						<Icon icon="pixelarticons:minus" width={iconSize} />
 						<span>Delete column</span>
 					</button>
 					<button
@@ -379,7 +357,7 @@
 						class={`${dropdownItemClass()} text-[var(--destructive)]`}
 						data-testid="format-table-delete"
 					>
-						<RemoveFormatting size={iconSize} />
+						<Icon icon="pixelarticons:remove-box" width={iconSize} />
 						<span>Delete table</span>
 					</button>
 				{/if}
@@ -396,15 +374,15 @@
 			data-testid="format-align"
 		>
 			{#if isActive({ textAlign: 'center' })}
-				<AlignCenter size={iconSize} />
+				<Icon icon="pixelarticons:text-align-center" width={iconSize} />
 			{:else if isActive({ textAlign: 'right' })}
-				<AlignRight size={iconSize} />
+				<Icon icon="pixelarticons:text-align-right" width={iconSize} />
 			{:else if isActive({ textAlign: 'justify' })}
-				<AlignJustify size={iconSize} />
+				<Icon icon="pixelarticons:text-align-justify" width={iconSize} />
 			{:else}
-				<AlignLeft size={iconSize} />
+				<Icon icon="pixelarticons:text-align-left" width={iconSize} />
 			{/if}
-			<ChevronDown size={chevronSize} />
+			<Icon icon="pixelarticons:chevron-down" width={chevronSize} />
 		</button>
 		{#if openDropdown === 'align'}
 			<div class="absolute right-0 bottom-full z-50 mb-1 min-w-[160px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
@@ -413,7 +391,7 @@
 					class={dropdownItemClass(isActive({ textAlign: 'left' }))}
 					data-testid="format-align-left"
 				>
-					<AlignLeft size={iconSize} />
+					<Icon icon="pixelarticons:text-align-left" width={iconSize} />
 					<span>Left</span>
 				</button>
 				<button
@@ -421,7 +399,7 @@
 					class={dropdownItemClass(isActive({ textAlign: 'center' }))}
 					data-testid="format-align-center"
 				>
-					<AlignCenter size={iconSize} />
+					<Icon icon="pixelarticons:text-align-center" width={iconSize} />
 					<span>Center</span>
 				</button>
 				<button
@@ -429,7 +407,7 @@
 					class={dropdownItemClass(isActive({ textAlign: 'right' }))}
 					data-testid="format-align-right"
 				>
-					<AlignRight size={iconSize} />
+					<Icon icon="pixelarticons:text-align-right" width={iconSize} />
 					<span>Right</span>
 				</button>
 				<button
@@ -437,7 +415,7 @@
 					class={dropdownItemClass(isActive({ textAlign: 'justify' }))}
 					data-testid="format-align-justify"
 				>
-					<AlignJustify size={iconSize} />
+					<Icon icon="pixelarticons:text-align-justify" width={iconSize} />
 					<span>Justify</span>
 				</button>
 			</div>
@@ -453,7 +431,7 @@
 		title="Inline code"
 		data-testid="format-code"
 	>
-		<Code size={iconSize} />
+		<Icon icon="pixelarticons:braces" width={iconSize} />
 	</button>
 	<button
 		onclick={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -461,7 +439,7 @@
 		title="Blockquote"
 		data-testid="format-blockquote"
 	>
-		<TextQuote size={iconSize} />
+		<Icon icon="pixelarticons:quote-text-inline" width={iconSize} />
 	</button>
 	<button
 		onclick={() => editor?.chain().focus().toggleCodeBlock().run()}
@@ -469,7 +447,7 @@
 		title="Code block"
 		data-testid="format-code-block"
 	>
-		<CodeXml size={iconSize} />
+		<Icon icon="pixelarticons:braces" width={iconSize} />
 	</button>
 	<button
 		onclick={() => editor?.chain().focus().setHorizontalRule().run()}
@@ -477,6 +455,6 @@
 		title="Divider"
 		data-testid="format-hr"
 	>
-		<Minus size={iconSize} />
+		<Icon icon="pixelarticons:minus" width={iconSize} />
 	</button>
 </div>
