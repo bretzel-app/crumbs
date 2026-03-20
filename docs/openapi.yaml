@@ -237,6 +237,104 @@ paths:
               schema:
                 $ref: '#/components/schemas/Success'
 
+  /api/notes/{id}/share:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Create a public share link
+      description: Owner-only. Creates a public share URL for the note. Idempotent — returns existing token if already shared.
+      tags: [Sharing]
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  url:
+                    type: string
+                    format: uri
+        '404':
+          description: Note not found or not owner
+    delete:
+      summary: Revoke a public share link
+      description: Owner-only. Removes the public share link for the note.
+      tags: [Sharing]
+      responses:
+        '204':
+          description: Share link revoked
+        '404':
+          description: Note not found or not owner
+
+  /api/shared/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a shared note (public)
+      description: No authentication required. Returns the note content for a valid share token. Rate limited to 60 requests per minute per IP.
+      tags: [Sharing]
+      security: []
+      responses:
+        '200':
+          description: Shared note data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedNoteData'
+        '404':
+          description: Invalid token or note is trashed
+        '429':
+          description: Rate limit exceeded
+
+  /api/shared/{token}/attachment/{attachmentId}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get an attachment from a shared note (public)
+      description: No authentication required. Serves image binary for an attachment belonging to the shared note. Rate limited.
+      tags: [Sharing]
+      security: []
+      parameters:
+        - name: thumb
+          in: query
+          schema:
+            type: string
+            enum: ['1']
+          description: Set to '1' to get the thumbnail version
+      responses:
+        '200':
+          description: Image binary
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Invalid token, note trashed, or attachment not found
+        '429':
+          description: Rate limit exceeded
+
   /api/users/search:
     get:
       summary: Search users
@@ -520,6 +618,29 @@ components:
       description: API key (crumbs_...)
 
   schemas:
+    SharedNoteData:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        checklistMode:
+          type: boolean
+        color:
+          type: string
+          enum: [default, coral, peach, sand, mint, sage, fog, storm, dusk, blossom, clay, chalk]
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     Success:
       type: object
       properties:

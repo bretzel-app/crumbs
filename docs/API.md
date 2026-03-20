@@ -410,6 +410,115 @@ Owner can remove anyone. Collaborator can only remove self (leave). Use `userId=
 
 ---
 
+## Sharing
+
+### `POST /api/notes/{id}/share`
+
+Create a public share link
+
+Owner-only. Creates a public share URL for the note. Idempotent — returns existing token if already shared.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+
+**Response:** `201`
+
+```json
+{
+  "token": "token",
+  "url": "url"
+}
+```
+
+**Errors:** `404` Note not found or not owner
+
+---
+
+### `DELETE /api/notes/{id}/share`
+
+Revoke a public share link
+
+Owner-only. Removes the public share link for the note.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `id` | path | string | yes |  |
+
+**Response:** `204`
+
+**Errors:** `404` Note not found or not owner
+
+---
+
+### `GET /api/shared/{token}`
+
+Get a shared note (public)
+
+No authentication required. Returns the note content for a valid share token. Rate limited to 60 requests per minute per IP.
+
+> No authentication required.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `token` | path | string | yes |  |
+
+**Response:** `200`
+
+```json
+{
+  "title": "title",
+  "content": "content",
+  "checklistMode": true,
+  "color": "default",
+  "attachments": [
+    {
+      "id": "id",
+      "noteId": "noteId",
+      "filename": "filename",
+      "mimeType": "mimeType",
+      "size": 1,
+      "thumbnailPath": "thumbnailPath",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "createdAt": "2025-01-01T00:00:00.000Z",
+  "updatedAt": "2025-01-01T00:00:00.000Z"
+}
+```
+
+**Errors:** `404` Invalid token or note is trashed, `429` Rate limit exceeded
+
+---
+
+### `GET /api/shared/{token}/attachment/{attachmentId}`
+
+Get an attachment from a shared note (public)
+
+No authentication required. Serves image binary for an attachment belonging to the shared note. Rate limited.
+
+> No authentication required.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `token` | path | string | yes |  |
+| `attachmentId` | path | string | yes |  |
+| `thumb` | query | string | no | Set to '1' to get the thumbnail version (1) |
+
+**Response:** `200`
+
+**Errors:** `404` Invalid token, note trashed, or attachment not found, `429` Rate limit exceeded
+
+---
+
 ## Users
 
 ### `GET /api/users/search`

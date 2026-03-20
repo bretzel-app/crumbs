@@ -100,6 +100,7 @@ Key tables:
 - `api_keys` - MCP API keys (SHA-256 hashed, prefix for display)
 - `note_collaborators` - Sharing relationships (noteId + userId + addedBy)
 - `note_user_state` - Per-user pin/archive/sortOrder for shared notes
+- `shared_notes` - Public share links (noteId → token, 1:1 with cascade delete)
 - `sync_log` - Sync operation history
 
 ### Collaboration Access Control
