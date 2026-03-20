@@ -3,7 +3,7 @@ import { sharedNotes, notes, attachments } from './db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { requireNoteOwnership } from './api-utils.js';
-import type { SharedNoteData, Attachment } from '$lib/types/index.js';
+import type { SharedNoteData } from '$lib/types/index.js';
 
 /**
  * Batch fetch share tokens for multiple notes.
@@ -93,7 +93,16 @@ export function getSharedNote(db: Db, token: string): (SharedNoteData & { noteId
 		.select()
 		.from(attachments)
 		.where(eq(attachments.noteId, share.noteId))
-		.all() as Attachment[];
+		.all();
+
+	const publicAttachments = noteAttachments.map((a) => ({
+		id: a.id,
+		filename: a.filename,
+		mimeType: a.mimeType,
+		size: a.size,
+		featured: a.featured,
+		createdAt: a.createdAt
+	}));
 
 	return {
 		noteId: note.id,
@@ -101,7 +110,7 @@ export function getSharedNote(db: Db, token: string): (SharedNoteData & { noteId
 		content: note.content,
 		checklistMode: note.checklistMode,
 		color: note.color as SharedNoteData['color'],
-		attachments: noteAttachments,
+		attachments: publicAttachments,
 		createdAt: note.createdAt,
 		updatedAt: note.updatedAt
 	};

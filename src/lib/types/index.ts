@@ -126,12 +126,21 @@ export interface NoteShare {
 	expiresAt: Date | null;
 }
 
+export interface PublicAttachment {
+	id: string;
+	filename: string;
+	mimeType: string;
+	size: number;
+	featured: boolean;
+	createdAt: Date;
+}
+
 export interface SharedNoteData {
 	title: string;
 	content: string;
 	checklistMode: boolean;
 	color: NoteColor;
-	attachments: Attachment[];
+	attachments: PublicAttachment[];
 	createdAt: Date;
 	updatedAt: Date;
 }

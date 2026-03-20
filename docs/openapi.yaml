@@ -618,6 +618,24 @@ components:
       description: API key (crumbs_...)
 
   schemas:
+    PublicAttachment:
+      type: object
+      description: Sanitized attachment metadata for public sharing (no server paths)
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        featured:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
     SharedNoteData:
       type: object
       properties:
@@ -633,7 +651,7 @@ components:
         attachments:
           type: array
           items:
-            $ref: '#/components/schemas/Attachment'
+            $ref: '#/components/schemas/PublicAttachment'
         createdAt:
           type: string
           format: date-time

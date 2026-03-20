@@ -53,6 +53,7 @@
 		type="button"
 		class="rounded-sm p-1 {hasPublicLink ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'} hover:text-[var(--primary)]"
 		title={tooltipLines.join(', ')}
+		aria-label={tooltipLines.join(', ')}
 		onclick={handleClick}
 		data-testid="sharing-indicator"
 	>

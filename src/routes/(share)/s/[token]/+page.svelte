@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
-	import type { NoteColor, Attachment } from '$lib/types/index.js';
+	import type { NoteColor, PublicAttachment } from '$lib/types/index.js';
 
 	interface ChecklistItem {
 		text: string;
@@ -29,7 +29,7 @@
 	const doneChecklistItems = checklistItems.filter((i) => i.checked);
 	const sortedChecklistItems = [...activeChecklistItems, ...doneChecklistItems];
 
-	const imageAttachments = (data.attachments as Attachment[]).filter((a) =>
+	const imageAttachments = (data.attachments as PublicAttachment[]).filter((a) =>
 		a.mimeType.startsWith('image/')
 	);
 

@@ -139,6 +139,9 @@ describe('getSharedNote', () => {
 		const data = getSharedNote(db, token);
 		expect(data!.attachments).toHaveLength(1);
 		expect(data!.attachments[0].filename).toBe('image.png');
+		// Verify server paths are not exposed
+		expect(data!.attachments[0]).not.toHaveProperty('path');
+		expect(data!.attachments[0]).not.toHaveProperty('thumbnailPath');
 	});
 });
 

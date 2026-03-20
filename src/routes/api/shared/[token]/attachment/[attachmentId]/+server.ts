@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ params, url, getClientAddress }) => 
 		headers: {
 			'Content-Type': mimeType,
 			'Content-Disposition': `inline; filename="${attachment.filename}"`,
-			'Cache-Control': 'public, max-age=31536000, immutable'
+			'Cache-Control': 'public, max-age=3600'
 		}
 	});
 };

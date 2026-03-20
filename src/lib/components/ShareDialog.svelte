@@ -8,6 +8,7 @@
 	import Copy from 'lucide-svelte/icons/copy';
 	import Check from 'lucide-svelte/icons/check';
 	import { showToast } from '$lib/stores/toast.js';
+	import { page } from '$app/state';
 
 	interface UserResult {
 		id: number;
@@ -35,7 +36,7 @@
 	let isSearching = $state(false);
 	let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
-	const shareUrl = $derived(publicShareToken ? `${window.location.origin}/s/${publicShareToken}` : null);
+	const shareUrl = $derived(publicShareToken ? `${page.url.origin}/s/${publicShareToken}` : null);
 
 	async function togglePublicShare() {
 		togglingShare = true;
@@ -193,7 +194,7 @@
 					>
 						<span
 							class="absolute top-0.5 h-4 w-4 rounded-sm bg-[var(--bg-surface)] shadow-[1px_1px_0px_var(--border-subtle)] transition-all {publicShareToken
-								? 'left-4.5'
+								? 'left-[1.125rem]'
 								: 'left-0.5'}"
 						></span>
 					</button>

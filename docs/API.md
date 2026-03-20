@@ -480,11 +480,10 @@ No authentication required. Returns the note content for a valid share token. Ra
   "attachments": [
     {
       "id": "id",
-      "noteId": "noteId",
       "filename": "filename",
       "mimeType": "mimeType",
       "size": 1,
-      "thumbnailPath": "thumbnailPath",
+      "featured": true,
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
   ],
