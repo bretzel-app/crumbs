@@ -1,4 +1,4 @@
-import type { Page } from 'playwright';
+import type { Page } from '@playwright/test';
 import { generateBretzelPng, generateSaltShakerPng } from './bretzel-pixel';
 import { BASE_URL, ADMIN, COLLABORATOR } from './constants';
 
@@ -24,6 +24,7 @@ async function uploadAttachment(
 	featured: boolean
 ): Promise<void> {
 	const res = await page.request.post(`${BASE_URL}/api/notes/${noteId}/attachments`, {
+		headers: { Origin: BASE_URL },
 		multipart: {
 			file: {
 				name: filename,
