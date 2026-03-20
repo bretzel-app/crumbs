@@ -98,6 +98,9 @@ async function main(): Promise<void> {
 	} finally {
 		await browser.close();
 		server.kill('SIGTERM');
+		// Force exit — pnpm spawns vite as a grandchild process that
+		// server.kill() doesn't reach, leaving the CI job hanging
+		process.exit(0);
 	}
 }
 
