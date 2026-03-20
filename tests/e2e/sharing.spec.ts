@@ -54,8 +54,8 @@ test.describe('Note Sharing', () => {
 		await page.getByTestId('share-dialog-overlay').click({ position: { x: 10, y: 10 } });
 		await page.getByTestId('close-editor-btn').click();
 
-		// Then the owner sees a collaborator indicator
-		await expect(noteCard(page, 'Share Test').getByTestId('collaborator-indicator')).toBeVisible();
+		// Then the owner sees a sharing indicator
+		await expect(noteCard(page, 'Share Test').getByTestId('sharing-indicator')).toBeVisible();
 
 		// And the collaborator sees the shared note in their list
 		await collabPage.reload();

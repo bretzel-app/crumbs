@@ -137,6 +137,13 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 		);
 		CREATE UNIQUE INDEX user_preferences_user_key_unique ON user_preferences(user_id, key);
 
+		CREATE TABLE shared_notes (
+			note_id TEXT PRIMARY KEY REFERENCES notes(id) ON DELETE CASCADE,
+			token TEXT NOT NULL UNIQUE,
+			created_at INTEGER NOT NULL,
+			expires_at INTEGER
+		);
+
 		CREATE TABLE note_versions (
 			id TEXT PRIMARY KEY,
 			note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,

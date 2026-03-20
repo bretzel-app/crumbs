@@ -124,6 +124,13 @@ sqlite.exec(`
 		updated_at INTEGER NOT NULL
 	);
 
+	CREATE TABLE IF NOT EXISTS shared_notes (
+		note_id TEXT PRIMARY KEY REFERENCES notes(id) ON DELETE CASCADE,
+		token TEXT NOT NULL UNIQUE,
+		created_at INTEGER NOT NULL,
+		expires_at INTEGER
+	);
+
 	CREATE TABLE IF NOT EXISTS note_versions (
 		id TEXT PRIMARY KEY,
 		note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
