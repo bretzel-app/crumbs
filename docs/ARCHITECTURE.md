@@ -103,6 +103,21 @@ Key tables:
 - `shared_notes` - Public share links (noteId → token, 1:1 with cascade delete)
 - `sync_log` - Sync operation history
 
+### Nested Checklist Serialization
+
+Checklist items are stored as plain text in the note `content` field, one item per line. Child items use a 2-space indent prefix:
+
+```
+- [ ] Parent item
+  - [ ] Child item
+  - [x] Checked child item
+- [x] Another parent
+```
+
+- A line starting with `  - [ ]` or `  - [x]` (2 spaces) is parsed as a child of the preceding top-level item.
+- The `parentId` field on `ChecklistItem` is **runtime-only** — it is derived from position during parsing and never stored explicitly.
+- This format is fully backward compatible: flat checklists (no indented lines) parse identically to before.
+
 ### Collaboration Access Control
 
 Notes support sharing with other users on the same instance:

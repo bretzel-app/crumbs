@@ -37,6 +37,11 @@
 - Check/uncheck items with checkboxes
 - Checked items get strikethrough styling
 - Enter key adds new item, Backspace removes empty items
+- **Nested checklists**: single-level nesting for sub-tasks
+  - Tab / Shift+Tab to indent or outdent an item (keyboard)
+  - Drag handle horizontal swipe for mobile indentation
+  - Checking a parent item checks all its children
+  - Done section groups checked children under their parent label
 
 ### Image Attachments
 - Upload images via file picker or drag-and-drop
