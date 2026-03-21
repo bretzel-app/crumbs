@@ -6,6 +6,7 @@
 	interface ChecklistItem {
 		text: string;
 		checked: boolean;
+		indented: boolean;
 	}
 
 	const { data } = $props();
@@ -19,10 +20,14 @@
 		? data.content
 				.split('\n')
 				.filter((l: string) => l.trim())
-				.map((line: string) => ({
-					text: line.replace(/^- \[[ x]\] /, ''),
-					checked: line.startsWith('- [x] ')
-				}))
+				.map((line: string) => {
+					const indented = line.startsWith('  - [');
+					return {
+						text: line.replace(/^ {0,2}- \[[ x]\] /, ''),
+						checked: line.includes('[x]'),
+						indented
+					};
+				})
 		: [];
 
 	const activeChecklistItems = checklistItems.filter((i) => !i.checked);
@@ -64,9 +69,10 @@
 				<ul class="space-y-2" data-testid="shared-note-checklist">
 					{#each sortedChecklistItems as item}
 						<li
-							class="flex items-start gap-2 text-sm {item.checked
+							class="flex items-start gap-2 text-sm {item.indented ? 'pl-4 ' : ''}{item.checked
 								? 'text-[var(--text-muted)] line-through'
 								: 'text-[var(--text)]'}"
+							data-testid={item.indented ? 'shared-checklist-child' : undefined}
 						>
 							<input
 								type="checkbox"

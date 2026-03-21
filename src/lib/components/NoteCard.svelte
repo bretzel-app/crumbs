@@ -16,6 +16,7 @@
 	interface ChecklistItem {
 		text: string;
 		checked: boolean;
+		indented: boolean;
 	}
 
 	interface Props {
@@ -38,10 +39,14 @@
 
 	const checklistItems = $derived<ChecklistItem[]>(
 		note.checklistMode
-			? note.content.split('\n').filter(l => l.trim()).map(line => ({
-					text: line.replace(/^- \[[ x]\] /, ''),
-					checked: line.startsWith('- [x] ')
-				}))
+			? note.content.split('\n').filter(l => l.trim()).map(line => {
+					const indented = line.startsWith('  - [');
+					return {
+						text: line.replace(/^ {0,2}- \[[ x]\] /, ''),
+						checked: line.includes('[x]'),
+						indented
+					};
+				})
 			: []
 	);
 
@@ -127,7 +132,8 @@
 	{#if note.checklistMode && checklistItems.length > 0}
 		<ul class="space-y-2 mb-6" data-testid="note-checklist-preview">
 			{#each sortedChecklistItems.slice(0, 8) as item}
-				<li class="flex items-start gap-2 text-sm {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}">
+				<li class="flex items-start gap-2 text-sm {item.indented ? 'pl-4 ' : ''}{item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
+					data-testid={item.indented ? 'card-checklist-child' : undefined}>
 					<input
 						type="checkbox"
 						checked={item.checked}
