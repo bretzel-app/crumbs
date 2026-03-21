@@ -73,6 +73,41 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
 	});
 
+	test('Scenario: Enter key focuses the newly created item', async ({ authenticatedPage: page }) => {
+		// Given a checklist with one item
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('checklist-toggle').click();
+		await page.getByTestId('checklist-input').first().fill('First item');
+
+		// When the user presses Enter
+		await page.getByTestId('checklist-input').first().press('Enter');
+
+		// Then focus moves to the new (second) item
+		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+	});
+
+	test('Scenario: Enter key focuses new item when done items exist', async ({ authenticatedPage: page }) => {
+		// Given a checklist with a completed item and an active item
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('checklist-toggle').click();
+		await page.getByTestId('checklist-input').first().fill('Done task');
+		await page.getByTestId('checklist-input').first().press('Enter');
+		await page.getByTestId('checklist-input').nth(1).fill('Active task');
+
+		// And the first item is checked (moves to done section)
+		await page.getByTestId('checklist-checkbox').first().click();
+		await expect(page.getByTestId('checklist-input')).toHaveCount(1);
+		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Active task');
+
+		// When the user presses Enter on the remaining active item
+		await page.getByTestId('checklist-input').first().press('Enter');
+
+		// Then focus moves to the new item (not lost or stuck)
+		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+	});
+
 	test('Scenario: Backspace on empty item removes it from the list', async ({ authenticatedPage: page }) => {
 		// Given a checklist with two items where the second is empty
 		await page.getByTestId('new-note-btn').click();
