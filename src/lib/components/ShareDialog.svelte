@@ -43,19 +43,23 @@
 		try {
 			if (publicShareToken) {
 				const res = await fetch(`/api/notes/${noteId}/share`, { method: 'DELETE' });
-				if (res.ok) {
-					publicShareToken = null;
-					onShareUpdate(null);
-					showToast('Public link removed', 'success');
+				if (!res.ok) {
+					showToast('Failed to remove share link', 'error');
+					return;
 				}
+				publicShareToken = null;
+				onShareUpdate(null);
+				showToast('Public link removed', 'success');
 			} else {
 				const res = await fetch(`/api/notes/${noteId}/share`, { method: 'POST' });
-				if (res.ok) {
-					const data = await res.json();
-					publicShareToken = data.token;
-					onShareUpdate(data.token);
-					showToast('Public link created', 'success');
+				if (!res.ok) {
+					showToast('Failed to create share link', 'error');
+					return;
 				}
+				const data = await res.json();
+				publicShareToken = data.token;
+				onShareUpdate(data.token);
+				showToast('Public link created', 'success');
 			}
 		} catch {
 			showToast('Failed to update share link', 'error');

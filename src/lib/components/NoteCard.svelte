@@ -4,7 +4,6 @@
 	import { renderMarkdown } from '$lib/utils/markdown.js';
 	import { togglePin, trashNote, archiveNote, unarchiveNote, restoreNote, deleteNote, leaveNote, currentFilter } from '$lib/stores/notes.js';
 	import ImageLightbox from './ImageLightbox.svelte';
-	import CollaboratorPopover from './CollaboratorPopover.svelte';
 	import SharingIndicator from './SharingIndicator.svelte';
 	import type { Note } from '$lib/types/index.js';
 	import Undo2 from 'lucide-svelte/icons/undo-2';

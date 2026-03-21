@@ -26,12 +26,16 @@ export const GET: RequestHandler = async ({ params, url, getClientAddress }) => 
 	const filePath = wantThumb && attachment.thumbnailPath ? attachment.thumbnailPath : attachment.path;
 	const mimeType = wantThumb && attachment.thumbnailPath ? 'image/webp' : attachment.mimeType;
 
-	const buffer = await readFile(filePath);
-	return new Response(buffer, {
-		headers: {
-			'Content-Type': mimeType,
-			'Content-Disposition': `inline; filename="${attachment.filename}"`,
-			'Cache-Control': 'public, max-age=3600'
-		}
-	});
+	try {
+		const buffer = await readFile(filePath);
+		return new Response(buffer, {
+			headers: {
+				'Content-Type': mimeType,
+				'Content-Disposition': `inline; filename="${attachment.filename}"`,
+				'Cache-Control': 'public, max-age=3600'
+			}
+		});
+	} catch {
+		throw error(404, 'Attachment not found');
+	}
 };

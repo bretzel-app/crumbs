@@ -11,6 +11,7 @@ export default defineConfig({
 	test: {
 		include: ['src/**/*.test.ts'],
 		environment: 'node',
+		setupFiles: ['src/lib/__mocks__/svelte-runes.ts'],
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'html', 'lcov', 'json-summary'],

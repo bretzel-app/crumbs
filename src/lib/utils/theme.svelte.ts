@@ -3,7 +3,7 @@ import { browser } from '$app/environment';
 const LIGHT_THEME_COLOR = '#f0e6d3';
 const DARK_THEME_COLOR = '#1a1715';
 
-let darkMode = false;
+let darkMode = $state(false);
 
 export function getIsDarkMode(): boolean {
 	return darkMode;
