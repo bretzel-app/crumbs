@@ -53,12 +53,27 @@ function isNetworkError(err: unknown): boolean {
 	return err instanceof TypeError;
 }
 
+/**
+ * Merge incoming notes with current store, keeping the higher-version note
+ * when a conflict exists. This prevents a stale loadNotes response from
+ * overwriting a just-saved note (race between sync interval and updateNote).
+ */
+export function mergeNotesByVersion(current: Note[], incoming: Note[]): Note[] {
+	const currentMap = new Map(current.map((n) => [n.id, n]));
+	const merged = incoming.map((incomingNote) => {
+		const local = currentMap.get(incomingNote.id);
+		if (local && local.version > incomingNote.version) return local;
+		return incomingNote;
+	});
+	return merged;
+}
+
 export async function loadNotes(filter: NoteFilter = 'all') {
 	// Load from IDB first for instant display
 	try {
 		const cached = await getAllNotes();
 		if (cached.length > 0) {
-			notes.set(cached);
+			notes.update((current) => current.length > 0 ? mergeNotesByVersion(current, cached) : cached);
 		}
 	} catch {
 		// IDB unavailable — continue with server fetch
@@ -71,7 +86,7 @@ export async function loadNotes(filter: NoteFilter = 'all') {
 		const res = await fetch(`/api/notes?filter=${filter}`);
 		if (res.ok) {
 			const data: Note[] = await res.json();
-			notes.set(data);
+			notes.update((current) => mergeNotesByVersion(current, data));
 			currentFilter.set(filter);
 
 			// Update IDB with server state

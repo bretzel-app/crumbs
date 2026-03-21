@@ -60,6 +60,26 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-done-checkbox').first()).toBeChecked();
 	});
 
+	test('Scenario: Multiple checked items persist after closing and reopening', async ({ authenticatedPage: page }) => {
+		// Given a checklist note with three items exists
+		await createChecklistNote(page, 'Groceries', ['Milk', 'Eggs', 'Bread']);
+
+		// When the user reopens and checks two items
+		await noteCard(page, 'Groceries').click();
+		await page.getByTestId('checklist-checkbox').nth(0).click(); // Milk → done
+		await page.getByTestId('checklist-checkbox').nth(0).click(); // Eggs (now first) → done
+
+		// Then the done section shows two checked items
+		await expect(page.getByTestId('checklist-toggle-done')).toContainText('2 done');
+		await page.getByTestId('close-editor-btn').click();
+
+		// And the checked state persists after reopening
+		await noteCard(page, 'Groceries').click();
+		await expect(page.getByTestId('checklist-toggle-done')).toContainText('2 done');
+		await expect(page.getByTestId('checklist-input')).toHaveCount(1); // Only Bread remains active
+		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Bread');
+	});
+
 	test('Scenario: Enter key adds a new checklist item', async ({ authenticatedPage: page }) => {
 		// Given a checklist with one item
 		await page.getByTestId('new-note-btn').click();

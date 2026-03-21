@@ -24,6 +24,18 @@
 	let doneExpanded = $state(true);
 	const flipDurationMs = 150;
 
+	// Track the last content we emitted so we can distinguish self-originated
+	// changes from external ones (sync, history restore, etc.)
+	let lastEmitted = content;
+
+	// Re-parse items when content changes externally (not from our own emitChange)
+	$effect(() => {
+		if (content !== lastEmitted) {
+			items = parseChecklist(content);
+			lastEmitted = content;
+		}
+	});
+
 	let activeItems = $derived(items.filter((i) => !i.checked));
 	let doneItems = $derived(items.filter((i) => i.checked));
 	let doneCount = $derived(doneItems.length);
@@ -49,7 +61,9 @@
 	}
 
 	function emitChange() {
-		onChange(serializeChecklist(items));
+		const serialized = serializeChecklist(items);
+		lastEmitted = serialized;
+		onChange(serialized);
 	}
 
 	function toggleItem(id: string) {
