@@ -73,20 +73,21 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
 	});
 
-	test('Scenario: Enter key focuses new item on reopened note with interleaved checked items', async ({ authenticatedPage: page }) => {
-		// Given a saved checklist note with interleaved checked/unchecked items
-		// (this is the state when reopening an existing note — checked items
-		// are scattered in the content, not grouped at the end)
-		await createChecklistNote(page, 'Shopping', ['Milk', 'Eggs', 'Bread', 'Butter']);
+	test('Scenario: Enter key focuses new item on reopened note with checked items before active ones', async ({ authenticatedPage: page }) => {
+		// Given a saved checklist note where checked items precede active items
+		// (this happens when reopening a note — parseChecklist preserves the
+		// saved order rather than grouping active items first)
+		await createChecklistNote(page, 'Groceries', ['Milk', 'Eggs', 'Bread', 'Butter']);
 
-		// Reopen and check items 1 and 2 so content becomes interleaved
-		await noteCard(page, 'Shopping').click();
+		// Reopen and check items 1 and 2 so saved content has checked items first
+		await noteCard(page, 'Groceries').click();
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Milk → done
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Eggs (now first active) → done
 		await page.getByTestId('close-editor-btn').click();
 
-		// Reopen — parseChecklist restores interleaved order: [x]Milk, [x]Eggs, [ ]Bread, [ ]Butter
-		await noteCard(page, 'Shopping').click();
+		// Reopen — parseChecklist restores saved order: [x]Milk, [x]Eggs, [ ]Bread, [ ]Butter
+		// The checked items precede active ones in items[], but only active ones render as inputs
+		await noteCard(page, 'Groceries').click();
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2); // Bread, Butter active
 
 		// When the user presses Enter on the first active item (Bread)
