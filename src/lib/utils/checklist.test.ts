@@ -112,6 +112,21 @@ describe('toggleItemWithCascade', () => {
 		expect(result[0].checked).toBe(false);
 		expect(result[0].parentId).toBeNull();
 	});
+
+	it('unchecking a child repositions it after its parent and siblings', () => {
+		// Simulates: parent + 2 children, one child checked (at end of array as done item)
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Parent', checked: false, parentId: null },
+			{ id: '3', text: 'Child B', checked: false, parentId: '1' },
+			{ id: '4', text: 'Other', checked: false, parentId: null },
+			{ id: '2', text: 'Child A', checked: true, parentId: '1' }  // done, at end
+		];
+		const result = toggleItemWithCascade('2', items);
+		// Child A should be repositioned after Child B (last sibling), not stay at end
+		const ids = result.map(i => i.id);
+		expect(ids).toEqual(['1', '3', '2', '4']);
+		expect(result.find(i => i.id === '2')!.checked).toBe(false);
+	});
 });
 
 describe('indentItem', () => {

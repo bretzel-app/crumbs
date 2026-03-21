@@ -31,11 +31,29 @@ export function toggleItemWithCascade(id: string, items: ChecklistItem[]): Check
 		return item;
 	});
 
-	// When unchecking a child from done: if parent no longer exists, orphan it
+	// When unchecking a child: reposition it after its parent/siblings in the array
+	// (otherwise it stays at the end of the array where done items live)
 	if (!newChecked && target.parentId) {
 		const parentExists = result.some((i) => i.id === target.parentId);
 		if (!parentExists) {
+			// Parent deleted — orphan it
 			result = result.map((i) => (i.id === id ? { ...i, parentId: null } : i));
+		} else {
+			// Remove the item from its current position
+			const uncheckedItem = result.find((i) => i.id === id)!;
+			result = result.filter((i) => i.id !== id);
+			// Find the last sibling or the parent, insert after it
+			let insertAfter = -1;
+			for (let i = 0; i < result.length; i++) {
+				if (result[i].id === target.parentId || result[i].parentId === target.parentId) {
+					insertAfter = i;
+				}
+			}
+			if (insertAfter >= 0) {
+				result.splice(insertAfter + 1, 0, uncheckedItem);
+			} else {
+				result.push(uncheckedItem);
+			}
 		}
 	}
 
