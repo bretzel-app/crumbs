@@ -60,11 +60,19 @@ function isNetworkError(err: unknown): boolean {
  */
 export function mergeNotesByVersion(current: Note[], incoming: Note[]): Note[] {
 	const currentMap = new Map(current.map((n) => [n.id, n]));
+	const incomingIds = new Set<string>();
 	const merged = incoming.map((incomingNote) => {
+		incomingIds.add(incomingNote.id);
 		const local = currentMap.get(incomingNote.id);
 		if (local && local.version > incomingNote.version) return local;
 		return incomingNote;
 	});
+	// Preserve local-only notes (e.g. just created, not yet in server/IDB response)
+	for (const local of current) {
+		if (!incomingIds.has(local.id)) {
+			merged.push(local);
+		}
+	}
 	return merged;
 }
 

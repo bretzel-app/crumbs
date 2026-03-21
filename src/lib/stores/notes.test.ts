@@ -67,6 +67,17 @@ describe('mergeNotesByVersion', () => {
 		expect(result[0].id).toBe('n2');
 	});
 
+	it('preserves local-only notes not present in the incoming data', () => {
+		const localOnly = makeNote({ id: 'n1', version: 1, content: 'just created' });
+		const serverNote = makeNote({ id: 'n2', version: 1, content: 'from server' });
+
+		const result = mergeNotesByVersion([localOnly], [serverNote]);
+
+		expect(result).toHaveLength(2);
+		expect(result.find((n) => n.id === 'n1')?.content).toBe('just created');
+		expect(result.find((n) => n.id === 'n2')?.content).toBe('from server');
+	});
+
 	it('preserves multiple notes correctly during a race condition', () => {
 		const localNotes = [
 			makeNote({ id: 'n1', version: 5, content: '- [x] Just saved' }),
