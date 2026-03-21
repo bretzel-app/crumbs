@@ -43,7 +43,7 @@
 					const indented = line.startsWith('  - [');
 					return {
 						text: line.replace(/^ {0,2}- \[[ x]\] /, ''),
-						checked: line.includes('[x]'),
+						checked: /^ {0,2}- \[x\] /.test(line),
 						indented
 					};
 				})

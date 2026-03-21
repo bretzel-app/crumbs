@@ -136,6 +136,29 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-done-section')).toContainText('Done task');
 	});
 
+	test('Scenario: Arrow keys navigate between checklist items', async ({ authenticatedPage: page }) => {
+		// Given a checklist with three items
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('checklist-toggle').click();
+		await page.getByTestId('checklist-input').first().fill('First');
+		await page.getByTestId('checklist-input').first().press('Enter');
+		await page.getByTestId('checklist-input').nth(1).fill('Second');
+		await page.getByTestId('checklist-input').nth(1).press('Enter');
+		await page.getByTestId('checklist-input').nth(2).fill('Third');
+
+		// When the user presses ArrowUp from the third item
+		await page.getByTestId('checklist-input').nth(2).press('ArrowUp');
+
+		// Then focus moves to the second item
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+
+		// When the user presses ArrowDown
+		await page.getByTestId('checklist-input').nth(1).press('ArrowDown');
+
+		// Then focus moves back to the third item
+		await expect(page.getByTestId('checklist-input').nth(2)).toBeFocused();
+	});
+
 	test('Scenario: Tab indents an item and Shift+Tab outdents it', async ({ authenticatedPage: page }) => {
 		// Given a checklist with two top-level items
 		await page.getByTestId('new-note-btn').click();
@@ -249,13 +272,14 @@ test.describe('Checklist', () => {
 
 	test('Scenario: NoteCard preview shows indentation for nested items', async ({ authenticatedPage: page }) => {
 		// Given a checklist note with nested items
-		await createChecklistNote(page, 'Preview Indent', ['Parent', 'Child']);
-		await noteCard(page, 'Preview Indent').click();
+		await createChecklistNote(page, 'Indent Preview Note', ['Parent', 'Child']);
+		await noteCard(page, 'Indent Preview Note').click();
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
 		await page.getByTestId('close-editor-btn').click();
 
-		// Then the NoteCard preview shows the child indented
-		await expect(page.getByTestId('card-checklist-child')).toHaveCount(1);
+		// Then the NoteCard preview shows the child indented (scoped to this card)
+		const card = noteCard(page, 'Indent Preview Note');
+		await expect(card.getByTestId('card-checklist-child')).toHaveCount(1);
 	});
 
 	test('Scenario: Disabling checklist mode restores the rich text editor', async ({ authenticatedPage: page }) => {

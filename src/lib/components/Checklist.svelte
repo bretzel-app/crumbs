@@ -3,7 +3,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import GripVertical from 'lucide-svelte/icons/grip-vertical';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import { onDestroy, flushSync } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem } from '$lib/utils/checklist.js';
@@ -113,6 +113,8 @@
 	function removeItem(id: string) {
 		if (items.length <= 1) {
 			if (items[0].parentId) items[0].parentId = null;
+			items = [...items];
+			emitChange();
 			return;
 		}
 		items = items.map((i) => (i.parentId === id ? { ...i, parentId: null } : i));
@@ -262,8 +264,6 @@
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div use:dragHandle
 					aria-label="drag handle"
-					role="button"
-					tabindex="-1"
 					onpointerdown={(e) => handleDragPointerDown(e, item.id)}
 					class="drag-handle cursor-grab max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150 touch-none outline-none"
 					data-testid="checklist-drag-handle">
