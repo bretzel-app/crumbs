@@ -67,6 +67,7 @@ test.describe('Checklist', () => {
 		// When the user reopens and checks two items
 		await noteCard(page, 'Weekly Shop').click();
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Milk → done
+		await expect(page.getByTestId('checklist-toggle-done')).toContainText('1 done');
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Eggs (now first) → done
 
 		// Then the done section shows two checked items
@@ -97,17 +98,19 @@ test.describe('Checklist', () => {
 		// Given a saved checklist note where checked items precede active items
 		// (this happens when reopening a note — parseChecklist preserves the
 		// saved order rather than grouping active items first)
-		await createChecklistNote(page, 'Groceries', ['Milk', 'Eggs', 'Bread', 'Butter']);
+		await createChecklistNote(page, 'Focus Test List', ['Milk', 'Eggs', 'Bread', 'Butter']);
 
 		// Reopen and check items 1 and 2 so saved content has checked items first
-		await noteCard(page, 'Groceries').click();
+		await noteCard(page, 'Focus Test List').click();
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Milk → done
+		await expect(page.getByTestId('checklist-toggle-done')).toContainText('1 done');
 		await page.getByTestId('checklist-checkbox').nth(0).click(); // Eggs (now first active) → done
+		await expect(page.getByTestId('checklist-toggle-done')).toContainText('2 done');
 		await page.getByTestId('close-editor-btn').click();
 
 		// Reopen — parseChecklist restores saved order: [x]Milk, [x]Eggs, [ ]Bread, [ ]Butter
 		// The checked items precede active ones in items[], but only active ones render as inputs
-		await noteCard(page, 'Groceries').click();
+		await noteCard(page, 'Focus Test List').click();
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2); // Bread, Butter active
 
 		// When the user presses Enter on the first active item (Bread)
