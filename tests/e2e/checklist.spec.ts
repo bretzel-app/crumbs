@@ -99,6 +99,36 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-input').nth(1)).toHaveValue('');
 	});
 
+	test('Scenario: Arrow keys navigate between checklist items', async ({ authenticatedPage: page }) => {
+		// Given a checklist with three items
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('checklist-toggle').click();
+		await page.getByTestId('checklist-input').first().fill('First');
+		await page.getByTestId('checklist-input').first().press('Enter');
+		await page.getByTestId('checklist-input').nth(1).fill('Second');
+		await page.getByTestId('checklist-input').nth(1).press('Enter');
+		await page.getByTestId('checklist-input').nth(2).fill('Third');
+
+		// When the user presses ArrowUp from the third item
+		await page.getByTestId('checklist-input').nth(2).press('ArrowUp');
+
+		// Then focus moves to the second item
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+
+		// When the user presses ArrowDown
+		await page.getByTestId('checklist-input').nth(1).press('ArrowDown');
+
+		// Then focus moves back to the third item
+		await expect(page.getByTestId('checklist-input').nth(2)).toBeFocused();
+
+		// When the user presses ArrowUp from the first item
+		await page.getByTestId('checklist-input').nth(0).focus();
+		await page.getByTestId('checklist-input').nth(0).press('ArrowUp');
+
+		// Then focus stays on the first item (no wrap)
+		await expect(page.getByTestId('checklist-input').nth(0)).toBeFocused();
+	});
+
 	test('Scenario: Backspace on empty item removes it from the list', async ({ authenticatedPage: page }) => {
 		// Given a checklist with two items where the second is empty
 		await page.getByTestId('new-note-btn').click();

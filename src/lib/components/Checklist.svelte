@@ -102,6 +102,14 @@
 				const inputs = document.querySelectorAll<HTMLInputElement>('[data-testid="checklist-input"]');
 				inputs[Math.max(0, index - 1)]?.focus();
 			}, 0);
+		} else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+			const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-testid="checklist-input"]'));
+			const current = inputs.findIndex((el) => el.dataset.itemId === id);
+			const target = e.key === 'ArrowUp' ? current - 1 : current + 1;
+			if (target >= 0 && target < inputs.length) {
+				e.preventDefault();
+				inputs[target].focus();
+			}
 		}
 	}
 
