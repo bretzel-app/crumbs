@@ -73,6 +73,31 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
 	});
 
+	test('Scenario: Enter key focuses new item on reopened note with interleaved checked items', async ({ authenticatedPage: page }) => {
+		// Given a saved checklist note with interleaved checked/unchecked items
+		// (this is the state when reopening an existing note — checked items
+		// are scattered in the content, not grouped at the end)
+		await createChecklistNote(page, 'Shopping', ['Milk', 'Eggs', 'Bread', 'Butter']);
+
+		// Reopen and check items 1 and 2 so content becomes interleaved
+		await noteCard(page, 'Shopping').click();
+		await page.getByTestId('checklist-checkbox').nth(0).click(); // Milk → done
+		await page.getByTestId('checklist-checkbox').nth(0).click(); // Eggs (now first active) → done
+		await page.getByTestId('close-editor-btn').click();
+
+		// Reopen — parseChecklist restores interleaved order: [x]Milk, [x]Eggs, [ ]Bread, [ ]Butter
+		await noteCard(page, 'Shopping').click();
+		await expect(page.getByTestId('checklist-input')).toHaveCount(2); // Bread, Butter active
+
+		// When the user presses Enter on the first active item (Bread)
+		await page.getByTestId('checklist-input').first().press('Enter');
+
+		// Then focus moves to the newly created empty item
+		await expect(page.getByTestId('checklist-input')).toHaveCount(3);
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+		await expect(page.getByTestId('checklist-input').nth(1)).toHaveValue('');
+	});
+
 	test('Scenario: Backspace on empty item removes it from the list', async ({ authenticatedPage: page }) => {
 		// Given a checklist with two items where the second is empty
 		await page.getByTestId('new-note-btn').click();

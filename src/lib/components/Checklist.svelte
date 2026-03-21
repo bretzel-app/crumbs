@@ -73,9 +73,12 @@
 		items.splice(afterIndex + 1, 0, newItem);
 		items = [...items];
 		emitChange();
+		// Focus by unique ID — positional indexing breaks when checked items
+		// are interleaved in items[] (e.g. reopened notes) because the DOM
+		// only renders active items as inputs
+		const newId = newItem.id;
 		setTimeout(() => {
-			const inputs = document.querySelectorAll<HTMLInputElement>('[data-testid="checklist-input"]');
-			inputs[afterIndex + 1]?.focus();
+			document.querySelector<HTMLInputElement>(`[data-item-id="${newId}"]`)?.focus();
 		}, 0);
 	}
 
@@ -140,6 +143,7 @@
 					class="flex-1 min-w-0 bg-transparent text-sm outline-none {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					placeholder="List item"
 					data-testid="checklist-input"
+					data-item-id={item.id}
 				/>
 				<button
 					onclick={() => removeItem(item.id)}
