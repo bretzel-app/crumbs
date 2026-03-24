@@ -71,6 +71,9 @@
 	let isSaving = false;
 	let savingPromise: Promise<void> | null = null;
 	let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
+	// TiptapEditor fires onUpdate on init with round-tripped markdown that may differ
+	// from the original. Track whether auto-save should be active yet.
+	let autoSaveReady = isNew;
 
 	function hasUnsavedChanges(): boolean {
 		return (
@@ -125,6 +128,13 @@
 		const _c = content;
 		const _col = color;
 		const _cm = checklistMode;
+
+		if (!autoSaveReady) {
+			// Absorb TiptapEditor's initial content normalization as the baseline
+			lastSavedContent = _c;
+			autoSaveReady = true;
+			return;
+		}
 
 		if (_t === lastSavedTitle && _c === lastSavedContent && _col === lastSavedColor && _cm === lastSavedChecklistMode) return;
 		if (!_t.trim() && !_c.trim()) return;
@@ -272,7 +282,13 @@
 	});
 
 	function handleAttachmentUpload(attachment: Attachment) {
-		attachmentsList = [...attachmentsList, attachment];
+		const updated = [...attachmentsList, attachment];
+		attachmentsList = updated;
+		if (noteId) {
+			notes.update((list) =>
+				list.map((n) => (n.id === noteId ? { ...n, attachments: updated } : n))
+			);
+		}
 	}
 
 	async function handleToggleFeatured(attachmentId: string, featured: boolean) {
@@ -284,8 +300,13 @@
 				body: JSON.stringify({ featured })
 			});
 			if (res.ok) {
-				attachmentsList = attachmentsList.map((a) =>
+				const updated = attachmentsList.map((a) =>
 					a.id === attachmentId ? { ...a, featured } : a
+				);
+				attachmentsList = updated;
+				// Keep the notes store in sync so the card reflects featured state
+				notes.update((list) =>
+					list.map((n) => (n.id === noteId ? { ...n, attachments: updated } : n))
 				);
 			}
 		} catch (err) {
@@ -299,7 +320,11 @@
 			await fetch(`/api/notes/${noteId}/attachments?attachmentId=${attachmentId}`, {
 				method: 'DELETE'
 			});
-			attachmentsList = attachmentsList.filter((a) => a.id !== attachmentId);
+			const updated = attachmentsList.filter((a) => a.id !== attachmentId);
+			attachmentsList = updated;
+			notes.update((list) =>
+				list.map((n) => (n.id === noteId ? { ...n, attachments: updated } : n))
+			);
 		} catch (err) {
 			console.error('Failed to remove attachment:', err);
 		}
