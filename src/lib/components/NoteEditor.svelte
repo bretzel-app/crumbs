@@ -83,24 +83,37 @@
 
 	async function performSave() {
 		if (isSaving) return;
-		if (!title.trim() && !content.trim()) return;
-		if (!hasUnsavedChanges()) return;
+		// Snapshot current fields to avoid races with user edits during await
+		const snap = { title, content, color, checklistMode };
+		if (!snap.title.trim() && !snap.content.trim()) return;
+		if (
+			snap.title === lastSavedTitle &&
+			snap.content === lastSavedContent &&
+			snap.color === lastSavedColor &&
+			snap.checklistMode === lastSavedChecklistMode
+		) return;
 
 		isSaving = true;
 		try {
 			if (currentlyNew) {
-				const created = await createNote({ title, content, color, checklistMode });
+				const created = await createNote(snap);
 				if (created) {
 					noteId = created.id;
 					currentlyNew = false;
+					lastSavedTitle = snap.title;
+					lastSavedContent = snap.content;
+					lastSavedColor = snap.color;
+					lastSavedChecklistMode = snap.checklistMode;
 				}
 			} else if (noteId) {
-				await updateNote(noteId, { title, content, color, checklistMode });
+				const updated = await updateNote(noteId, snap);
+				if (updated) {
+					lastSavedTitle = snap.title;
+					lastSavedContent = snap.content;
+					lastSavedColor = snap.color;
+					lastSavedChecklistMode = snap.checklistMode;
+				}
 			}
-			lastSavedTitle = title;
-			lastSavedContent = content;
-			lastSavedColor = color;
-			lastSavedChecklistMode = checklistMode;
 		} finally {
 			isSaving = false;
 		}
@@ -335,10 +348,8 @@
 		clearTimeout(autoSaveTimer);
 		if (savingPromise) await savingPromise;
 		// For feature-triggered saves (image upload, share), use 'Untitled' fallback
-		const prevTitle = title;
 		if (!title.trim()) title = 'Untitled';
 		await performSave();
-		if (!prevTitle.trim()) title = prevTitle;
 		return noteId;
 	}
 

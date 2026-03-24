@@ -41,20 +41,20 @@ test.describe('Auto-save', () => {
 	});
 
 	test('Scenario: Empty note is not auto-saved', async ({ authenticatedPage: page }) => {
+		// Given the current number of notes
+		const noteCards = page.locator('[data-testid="note-card"]');
+		const countBefore = await noteCards.count();
+
 		// When the user opens a new note but leaves it empty
 		await page.getByTestId('new-note-btn').click();
 
 		// And waits longer than the auto-save delay
 		await page.waitForTimeout(3000);
 
-		// Then no note card appears in the list
-		const noteCards = page.locator('[data-testid="note-card"]');
-		const countBefore = await noteCards.count();
-
-		// Close the empty editor
+		// And closes the empty editor
 		await page.getByTestId('close-editor-btn').click();
 
-		// And no new note was created
+		// Then no new note was created
 		const countAfter = await noteCards.count();
 		expect(countAfter).toBe(countBefore);
 	});
