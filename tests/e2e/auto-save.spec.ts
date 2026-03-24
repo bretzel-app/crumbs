@@ -62,7 +62,7 @@ test.describe('Auto-save', () => {
 	test('Scenario: Auto-save persists note across page reload', async ({ authenticatedPage: page }) => {
 		// When the user creates a note and waits for auto-save
 		await page.getByTestId('new-note-btn').click();
-		await page.getByTestId('note-title-input').fill('Survive Reload');
+		await page.getByTestId('note-title-input').fill('Auto-save Survives Reload');
 		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
 		await editor.click();
 		await editor.pressSequentially('Content that survives');
@@ -78,6 +78,6 @@ test.describe('Auto-save', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Then the note is still visible
-		await expect(noteCard(page, 'Survive Reload')).toBeVisible();
+		await expect(noteCard(page, 'Auto-save Survives Reload')).toBeVisible();
 	});
 });
