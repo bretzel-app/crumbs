@@ -63,6 +63,77 @@
 	// svelte-ignore state_referenced_locally
 	let currentlyNew = $state(isNew);
 
+	// Auto-save: track last-saved state to detect real changes
+	let lastSavedTitle = note?.title ?? '';
+	let lastSavedContent = note?.content ?? '';
+	let lastSavedColor: NoteColor = note?.color ?? prefs.defaultNoteColor;
+	let lastSavedChecklistMode = note?.checklistMode ?? initialChecklistMode;
+	let isSaving = false;
+	let savingPromise: Promise<void> | null = null;
+	let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function hasUnsavedChanges(): boolean {
+		return (
+			title !== lastSavedTitle ||
+			content !== lastSavedContent ||
+			color !== lastSavedColor ||
+			checklistMode !== lastSavedChecklistMode
+		);
+	}
+
+	async function performSave() {
+		if (isSaving) return;
+		if (!title.trim() && !content.trim()) return;
+		if (!hasUnsavedChanges()) return;
+
+		isSaving = true;
+		try {
+			if (currentlyNew) {
+				const created = await createNote({ title, content, color, checklistMode });
+				if (created) {
+					noteId = created.id;
+					currentlyNew = false;
+				}
+			} else if (noteId) {
+				await updateNote(noteId, { title, content, color, checklistMode });
+			}
+			lastSavedTitle = title;
+			lastSavedContent = content;
+			lastSavedColor = color;
+			lastSavedChecklistMode = checklistMode;
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	// Debounced auto-save: triggers 2s after the user stops editing
+	$effect(() => {
+		const _t = title;
+		const _c = content;
+		const _col = color;
+		const _cm = checklistMode;
+
+		if (_t === lastSavedTitle && _c === lastSavedContent && _col === lastSavedColor && _cm === lastSavedChecklistMode) return;
+		if (!_t.trim() && !_c.trim()) return;
+
+		autoSaveTimer = setTimeout(() => {
+			savingPromise = performSave();
+		}, 2000);
+
+		return () => clearTimeout(autoSaveTimer);
+	});
+
+	// Safety net: save on tab close / navigation
+	$effect(() => {
+		function handleBeforeUnload() {
+			if (hasUnsavedChanges() && (title.trim() || content.trim())) {
+				performSave();
+			}
+		}
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	});
+
 	// svelte-ignore state_referenced_locally
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
 
@@ -242,15 +313,18 @@
 	}
 
 	async function saveAndClose() {
+		clearTimeout(autoSaveTimer);
+		// Wait for any in-flight auto-save to finish
+		if (savingPromise) await savingPromise;
+
 		if (!title.trim() && !content.trim()) {
 			onClose();
 			return;
 		}
 
-		if (currentlyNew) {
-			await createNote({ title, content, color, checklistMode });
-		} else if (noteId) {
-			await updateNote(noteId, { title, content, color, checklistMode });
+		// Final save if auto-save hasn't caught up yet
+		if (hasUnsavedChanges()) {
+			await performSave();
 		}
 		onClose();
 	}
@@ -258,18 +332,14 @@
 	/** Auto-save a new note without closing, returns the new note ID */
 	async function autoSave(): Promise<string | null> {
 		if (!currentlyNew) return noteId;
-		const created = await createNote({
-			title: title || 'Untitled',
-			content,
-			color,
-			checklistMode
-		});
-		if (created) {
-			noteId = created.id;
-			currentlyNew = false;
-			return created.id;
-		}
-		return null;
+		clearTimeout(autoSaveTimer);
+		if (savingPromise) await savingPromise;
+		// For feature-triggered saves (image upload, share), use 'Untitled' fallback
+		const prevTitle = title;
+		if (!title.trim()) title = 'Untitled';
+		await performSave();
+		if (!prevTitle.trim()) title = prevTitle;
+		return noteId;
 	}
 
 	async function toggleImageUpload() {
