@@ -335,11 +335,11 @@
 		bgStyle = `background-color: ${getNoteColor(color, getIsDarkMode())}`;
 	});
 
-	// Use pointer events to detect backdrop clicks. Unlike mouse events,
-	// pointer events are never synthetically re-dispatched from touch, so
-	// the tap that opened the editor on mobile cannot ghost-click the overlay.
-	// Both pointerdown and pointerup must target the overlay itself to close.
+	// Close on backdrop tap/click. On close, a transparent shield stays in the DOM
+	// for 400ms to absorb the browser's delayed synthetic click that would otherwise
+	// pass through to NoteCards underneath (ghost click).
 	let pointerdownOnOverlay = false;
+	let closing = $state(false);
 
 	function handleOverlayPointerdown(e: PointerEvent) {
 		pointerdownOnOverlay = e.target === e.currentTarget;
@@ -350,13 +350,18 @@
 		pointerdownOnOverlay = false;
 	}
 
+	function dismissOverlay() {
+		closing = true;
+		setTimeout(() => onClose(), 400);
+	}
+
 	async function saveAndClose() {
 		clearTimeout(autoSaveTimer);
 		// Wait for any in-flight auto-save to finish
 		if (savingPromise) await savingPromise;
 
 		if (!title.trim() && !content.trim()) {
-			onClose();
+			dismissOverlay();
 			return;
 		}
 
@@ -364,7 +369,7 @@
 		if (hasUnsavedChanges()) {
 			await performSave();
 		}
-		onClose();
+		dismissOverlay();
 	}
 
 	/** Auto-save a new note without closing, returns the new note ID */
@@ -408,7 +413,7 @@
 		showOverflowMenu = false;
 		if (noteId) {
 			await archiveNote(noteId);
-			onClose();
+			dismissOverlay();
 		}
 	}
 
@@ -416,7 +421,7 @@
 		showOverflowMenu = false;
 		if (noteId) {
 			await trashNote(noteId);
-			onClose();
+			dismissOverlay();
 		}
 	}
 
@@ -435,12 +440,13 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 pt-20 pb-10 animate-[fade-in_150ms_ease-out]"
+	class="fixed inset-0 z-40 {closing ? '' : 'flex items-start justify-center overflow-y-auto bg-black/50 pt-20 pb-10 animate-[fade-in_150ms_ease-out]'}"
 	onpointerdown={handleOverlayPointerdown}
 	onpointerup={handleOverlayPointerup}
 	onkeydown={handleKeydown}
 	data-testid="note-editor-overlay"
 >
+	{#if !closing}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="mx-4 flex w-full max-w-xl md:max-w-2xl flex-col overflow-hidden rounded-sm border border-[var(--border)] shadow-[var(--card-shadow)] animate-[pop-in_150ms_ease-out]"
@@ -689,6 +695,7 @@
 				</button>
 			{/if}
 		</div>
+	{/if}
 	{/if}
 </div>
 
