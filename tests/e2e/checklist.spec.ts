@@ -13,7 +13,8 @@ async function createChecklistNote(page: Page, title: string, items: string[]) {
 	await page.getByTestId('note-title-input').fill(title);
 	await toggleChecklistMode(page);
 	for (let i = 0; i < items.length; i++) {
-		await page.getByTestId('checklist-input').nth(i).fill(items[i]);
+		await page.getByTestId('checklist-input').nth(i).focus();
+		await page.keyboard.type(items[i]);
 		if (i < items.length - 1) {
 			await page.getByTestId('checklist-input').nth(i).press('Enter');
 		}
@@ -46,7 +47,7 @@ test.describe('Checklist', () => {
 
 		// Then the checklist is displayed with the saved item
 		await expect(page.getByTestId('checklist')).toBeVisible();
-		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Buy milk');
+		await expect(page.getByTestId('checklist-input').first()).toHaveText('Buy milk');
 	});
 
 	test('Scenario: Checked item moves to the done section', async ({ authenticatedPage: page }) => {
@@ -88,14 +89,15 @@ test.describe('Checklist', () => {
 		// Then the unchecked state also persists (not reverted by 3-way merge)
 		await noteCard(page, 'Tasks2').click();
 		await expect(page.getByTestId('checklist-checkbox')).toHaveCount(1);
-		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Buy milk');
+		await expect(page.getByTestId('checklist-input').first()).toHaveText('Buy milk');
 	});
 
 	test('Scenario: Enter key adds a new checklist item', async ({ authenticatedPage: page }) => {
 		// Given a checklist with one item
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('First item');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('First item');
 
 		// When the user presses Enter
 		await page.getByTestId('checklist-input').first().press('Enter');
@@ -127,14 +129,15 @@ test.describe('Checklist', () => {
 		// Then focus moves to the newly created empty item
 		await expect(page.getByTestId('checklist-input')).toHaveCount(3);
 		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
-		await expect(page.getByTestId('checklist-input').nth(1)).toHaveValue('');
+		await expect(page.getByTestId('checklist-input').nth(1)).toHaveText('');
 	});
 
 	test('Scenario: Backspace on empty item removes it from the list', async ({ authenticatedPage: page }) => {
 		// Given a checklist with two items where the second is empty
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('First item');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('First item');
 		await page.getByTestId('checklist-input').first().press('Enter');
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
 
@@ -150,16 +153,18 @@ test.describe('Checklist', () => {
 		await page.getByTestId('new-note-btn').click();
 		await page.getByTestId('note-title-input').fill('Hide Done Test');
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Done task');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Done task');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Pending task');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Pending task');
 
 		// When the user completes the first item
 		await page.getByTestId('checklist-checkbox').first().click();
 
 		// Then only the pending item remains in the active list
 		await expect(page.getByTestId('checklist-input')).toHaveCount(1);
-		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Pending task');
+		await expect(page.getByTestId('checklist-input').first()).toHaveText('Pending task');
 
 		// And the done section shows the completed item
 		await expect(page.getByTestId('checklist-toggle-done')).toContainText('1 done');
@@ -171,11 +176,14 @@ test.describe('Checklist', () => {
 		// Given a checklist with three items
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('First');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('First');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Second');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Second');
 		await page.getByTestId('checklist-input').nth(1).press('Enter');
-		await page.getByTestId('checklist-input').nth(2).fill('Third');
+		await page.getByTestId('checklist-input').nth(2).focus();
+		await page.keyboard.type('Third');
 
 		// When the user presses ArrowUp from the third item
 		await page.getByTestId('checklist-input').nth(2).press('ArrowUp');
@@ -194,9 +202,11 @@ test.describe('Checklist', () => {
 		// Given a checklist with two top-level items
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Parent');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Parent');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Child');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Child');
 
 		// When the user presses Tab on the second item
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
@@ -215,12 +225,15 @@ test.describe('Checklist', () => {
 		// Given a checklist with a parent and two children
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Buy groceries');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Buy groceries');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Milk');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Milk');
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
 		await page.getByTestId('checklist-input').nth(1).press('Enter');
-		await page.getByTestId('checklist-input').nth(2).fill('Eggs');
+		await page.getByTestId('checklist-input').nth(2).focus();
+		await page.keyboard.type('Eggs');
 
 		// When the user checks the parent
 		await page.getByTestId('checklist-checkbox').first().click();
@@ -234,9 +247,11 @@ test.describe('Checklist', () => {
 		// Given a checklist with a parent and a child
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Groceries');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Groceries');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Milk');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Milk');
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
 
 		// When the user checks only the child
@@ -252,9 +267,11 @@ test.describe('Checklist', () => {
 		// Given a checklist with a parent and child, all checked
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Shopping');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Shopping');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Milk');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Milk');
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
 		await page.getByTestId('checklist-checkbox').first().click();
 		await expect(page.getByTestId('checklist-toggle-done')).toContainText('2 done');
@@ -288,9 +305,11 @@ test.describe('Checklist', () => {
 		// Given a checklist with a parent and a child
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
-		await page.getByTestId('checklist-input').first().fill('Parent');
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Parent');
 		await page.getByTestId('checklist-input').first().press('Enter');
-		await page.getByTestId('checklist-input').nth(1).fill('Child 1');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Child 1');
 		await page.getByTestId('checklist-input').nth(1).press('Tab');
 
 		// When the user presses Enter on the child
@@ -341,7 +360,7 @@ test.describe('Checklist', () => {
 
 		// Then only the unchecked item remains
 		await expect(page.getByTestId('checklist-input')).toHaveCount(1);
-		await expect(page.getByTestId('checklist-input').first()).toHaveValue('Keep me');
+		await expect(page.getByTestId('checklist-input').first()).toHaveText('Keep me');
 		await expect(page.getByTestId('checklist-toggle-done')).not.toBeVisible();
 	});
 
