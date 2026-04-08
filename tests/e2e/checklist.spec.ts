@@ -380,4 +380,77 @@ test.describe('Checklist', () => {
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
 		await expect(page.getByTestId('checklist-toggle-done')).not.toBeVisible();
 	});
+
+	test('Scenario: URL typed in a checklist item becomes a clickable link', async ({ authenticatedPage: page }) => {
+		// Given a new checklist note
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+
+		// When the user types a URL
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('check https://example.com today');
+
+		// Then the URL is rendered as a link
+		const link = page.getByTestId('checklist-input').first().locator('a');
+		await expect(link).toBeVisible();
+		await expect(link).toHaveAttribute('href', 'https://example.com');
+	});
+
+	test('Scenario: Clicking a link in a checklist item shows the link popover', async ({ authenticatedPage: page }) => {
+		// Given a checklist item with a URL
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('https://example.com');
+
+		// When the user clicks the link
+		await page.getByTestId('checklist-input').first().locator('a').click();
+
+		// Then the link popover appears with an Open button
+		await expect(page.getByTestId('link-popover')).toBeVisible();
+		await expect(page.getByTestId('link-popover-open')).toBeVisible();
+	});
+
+	test('Scenario: Link popover dismisses on Escape', async ({ authenticatedPage: page }) => {
+		// Given a link popover is open
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('https://example.com');
+		await page.getByTestId('checklist-input').first().locator('a').click();
+		await expect(page.getByTestId('link-popover')).toBeVisible();
+
+		// When the user presses Escape
+		await page.keyboard.press('Escape');
+
+		// Then the popover is dismissed
+		await expect(page.getByTestId('link-popover')).not.toBeVisible();
+	});
+
+	test('Scenario: Links in done section are clickable', async ({ authenticatedPage: page }) => {
+		// Given a checklist item with a URL is checked
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('https://example.com');
+		await page.getByTestId('checklist-checkbox').first().click();
+
+		// Then the done section shows the URL as a link
+		await expect(page.getByTestId('checklist-done-section').locator('a.checklist-link')).toBeVisible();
+	});
+
+	test('Scenario: Links in NoteCard preview are rendered', async ({ authenticatedPage: page }) => {
+		// Given a checklist note with a URL
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('note-title-input').fill('Link Note');
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('visit https://example.com');
+		await page.getByTestId('close-editor-btn').click();
+
+		// Then the NoteCard preview shows the URL as a link
+		const card = noteCard(page, 'Link Note');
+		await expect(card.locator('a.checklist-link')).toBeVisible();
+		await expect(card.locator('a.checklist-link')).toHaveAttribute('href', 'https://example.com');
+	});
 });
