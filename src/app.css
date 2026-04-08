@@ -206,6 +206,23 @@ body::before {
 	margin: 0;
 }
 
+/* Checklist link styles */
+.checklist-link {
+	color: var(--primary);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.checklist-link:hover {
+	color: var(--primary-hover);
+}
+
+[data-placeholder]:empty::before {
+	content: attr(data-placeholder);
+	color: var(--text-muted);
+	pointer-events: none;
+}
+
 /* Custom tooltips */
 .tooltip-popup {
 	position: fixed;
