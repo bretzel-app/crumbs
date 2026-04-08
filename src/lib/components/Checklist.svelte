@@ -6,7 +6,8 @@
 	import { onDestroy } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
-	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem } from '$lib/utils/checklist.js';
+	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
+import LinkPopover from './LinkPopover.svelte';
 
 	interface Props {
 		content: string;
@@ -19,6 +20,7 @@
 	let items = $state<ChecklistItem[]>(parseChecklist(content));
 	let doneExpanded = $state(true);
 	const flipDurationMs = 150;
+let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
 
 	// Track the last content we emitted so we can distinguish self-originated
 	// changes from external ones (sync, history restore, etc.)
@@ -85,10 +87,10 @@
 		emitChange();
 	}
 
-	function updateText(id: string, text: string) {
+	function updateText(id: string, innerHTML: string) {
 		const item = items.find((i) => i.id === id);
 		if (item) {
-			item.text = text;
+			item.text = unlinkifyHtml(innerHTML);
 			emitChange();
 		}
 	}
@@ -106,7 +108,7 @@
 		emitChange();
 		const newId = newItem.id;
 		setTimeout(() => {
-			document.querySelector<HTMLInputElement>(`[data-item-id="${newId}"]`)?.focus();
+			document.querySelector<HTMLElement>(`[data-item-id="${newId}"]`)?.focus();
 		}, 0);
 	}
 
@@ -133,11 +135,11 @@
 			e.preventDefault();
 			removeItem(id);
 			setTimeout(() => {
-				const inputs = document.querySelectorAll<HTMLInputElement>('[data-testid="checklist-input"]');
+				const inputs = document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]');
 				inputs[Math.max(0, index - 1)]?.focus();
 			}, 0);
 		} else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-			const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-testid="checklist-input"]'));
+			const inputs = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]'));
 			const current = inputs.findIndex((el) => el.dataset.itemId === id);
 			const target = e.key === 'ArrowUp' ? current - 1 : current + 1;
 			if (target >= 0 && target < inputs.length) {
@@ -153,6 +155,30 @@
 			items = outdentItem(id, items);
 			emitChange();
 		}
+	}
+
+	function handleLinkClick(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		const anchor = target.closest('a');
+		if (anchor) {
+			e.preventDefault();
+			e.stopPropagation();
+			linkPopover = { url: anchor.href, anchor: anchor.getBoundingClientRect() };
+		}
+	}
+
+	function handlePaste(e: ClipboardEvent) {
+		e.preventDefault();
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		const selection = window.getSelection();
+		if (!selection?.rangeCount) return;
+		const range = selection.getRangeAt(0);
+		range.deleteContents();
+		range.insertNode(document.createTextNode(text));
+		range.collapse(false);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		(e.target as HTMLElement).dispatchEvent(new Event('input', { bubbles: true }));
 	}
 
 	// --- Directional lock drag handle ---
@@ -276,16 +302,20 @@
 					class="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--primary)] focus:ring-[var(--primary)]"
 					data-testid="checklist-checkbox"
 				/>
-				<input
-					type="text"
-					value={item.text}
-					oninput={(e) => updateText(item.id, (e.target as HTMLInputElement).value)}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					contenteditable="true"
+					oninput={(e) => updateText(item.id, (e.target as HTMLElement).innerHTML)}
 					onkeydown={(e) => handleKeydown(e, item.id)}
-					class="flex-1 min-w-0 bg-transparent text-sm outline-none {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
-					placeholder="List item"
+					onclick={handleLinkClick}
+					onpaste={handlePaste}
+					class="flex-1 min-w-0 bg-transparent text-sm outline-none break-words {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
+					data-placeholder="List item"
 					data-testid="checklist-input"
 					data-item-id={item.id}
-				/>
+					role="textbox"
+				tabindex="0"
+				>{@html linkifyText(item.text)}</div>
 				<button
 					onclick={() => removeItem(item.id)}
 					class="max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
@@ -353,4 +383,8 @@
 		</div>
 	{/if}
 </div>
+
+{#if linkPopover}
+	<LinkPopover url={linkPopover.url} anchor={linkPopover.anchor} onClose={() => (linkPopover = null)} />
+{/if}
 
