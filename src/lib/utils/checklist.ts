@@ -150,3 +150,44 @@ export function serializeChecklist(items: ChecklistItem[]): string {
 	}
 	return lines.join('\n');
 }
+
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;');
+}
+
+const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<]+[^\s<.,;:!?)'"}\]]/g;
+
+export function linkifyText(text: string): string {
+	if (!text) return '';
+
+	const matches: { index: number; match: string; href: string }[] = [];
+	let m: RegExpExecArray | null;
+	const regex = new RegExp(URL_REGEX.source, 'g');
+
+	while ((m = regex.exec(text)) !== null) {
+		const match = m[0];
+		const href = match.startsWith('www.') ? `https://${match}` : match;
+		matches.push({ index: m.index, match, href });
+	}
+
+	if (matches.length === 0) return escapeHtml(text);
+
+	let result = '';
+	let lastIndex = 0;
+	for (const { index, match, href } of matches) {
+		result += escapeHtml(text.slice(lastIndex, index));
+		result += `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" class="checklist-link">${escapeHtml(match)}</a>`;
+		lastIndex = index + match.length;
+	}
+	result += escapeHtml(text.slice(lastIndex));
+	return result;
+}
+
+export function unlinkifyHtml(html: string): string {
+	if (!html) return '';
+	return html.replace(/<[^>]*>/g, '');
+}

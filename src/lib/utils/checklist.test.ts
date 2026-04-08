@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, type ChecklistItem } from '$lib/utils/checklist.js';
+import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml, type ChecklistItem } from '$lib/utils/checklist.js';
 
 describe('parseChecklist', () => {
 	it('parses flat checklist items', () => {
@@ -218,5 +218,98 @@ describe('outdentItem', () => {
 		expect(result.find((i) => i.id === '2')!.parentId).toBeNull();
 		expect(result.find((i) => i.id === '5')!.parentId).toBeNull();
 		expect(result.find((i) => i.id === '3')!.parentId).toBe('1');
+	});
+});
+
+describe('linkifyText', () => {
+	it('converts https URLs to anchor tags', () => {
+		expect(linkifyText('visit https://example.com today')).toBe(
+			'visit <a href="https://example.com" target="_blank" rel="noopener" class="checklist-link">https://example.com</a> today'
+		);
+	});
+
+	it('converts http URLs to anchor tags', () => {
+		expect(linkifyText('go to http://example.com')).toBe(
+			'go to <a href="http://example.com" target="_blank" rel="noopener" class="checklist-link">http://example.com</a>'
+		);
+	});
+
+	it('converts bare www URLs with https href', () => {
+		expect(linkifyText('check www.example.com')).toBe(
+			'check <a href="https://www.example.com" target="_blank" rel="noopener" class="checklist-link">www.example.com</a>'
+		);
+	});
+
+	it('handles multiple URLs in one string', () => {
+		const result = linkifyText('see https://a.com and https://b.com');
+		expect(result).toContain('href="https://a.com"');
+		expect(result).toContain('href="https://b.com"');
+	});
+
+	it('returns plain text unchanged when no URLs present', () => {
+		expect(linkifyText('just some text')).toBe('just some text');
+	});
+
+	it('HTML-escapes user content to prevent XSS', () => {
+		expect(linkifyText('<script>alert("xss")</script>')).toBe(
+			'&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+		);
+	});
+
+	it('HTML-escapes text around URLs', () => {
+		expect(linkifyText('<b>bold</b> https://example.com')).toContain('&lt;b&gt;bold&lt;/b&gt;');
+		expect(linkifyText('<b>bold</b> https://example.com')).toContain('href="https://example.com"');
+	});
+
+	it('handles URL at start of string', () => {
+		expect(linkifyText('https://example.com is great')).toContain('href="https://example.com"');
+	});
+
+	it('handles URL at end of string', () => {
+		expect(linkifyText('visit https://example.com')).toContain('href="https://example.com"');
+	});
+
+	it('does not linkify partial matches without protocol or www', () => {
+		expect(linkifyText('example.com is not linked')).toBe('example.com is not linked');
+	});
+
+	it('handles URLs with paths and query strings', () => {
+		const url = 'https://example.com/path?q=1&b=2';
+		const result = linkifyText(url);
+		expect(result).toContain('href="https://example.com/path?q=1&amp;b=2"');
+	});
+
+	it('strips trailing punctuation from URLs', () => {
+		expect(linkifyText('see https://example.com.')).toBe(
+			'see <a href="https://example.com" target="_blank" rel="noopener" class="checklist-link">https://example.com</a>.'
+		);
+	});
+
+	it('returns empty string for empty input', () => {
+		expect(linkifyText('')).toBe('');
+	});
+});
+
+describe('unlinkifyHtml', () => {
+	it('strips anchor tags and returns text content', () => {
+		expect(unlinkifyHtml('visit <a href="https://example.com">https://example.com</a> today'))
+			.toBe('visit https://example.com today');
+	});
+
+	it('returns plain text unchanged', () => {
+		expect(unlinkifyHtml('just text')).toBe('just text');
+	});
+
+	it('handles multiple anchor tags', () => {
+		expect(unlinkifyHtml('<a href="https://a.com">https://a.com</a> and <a href="https://b.com">https://b.com</a>'))
+			.toBe('https://a.com and https://b.com');
+	});
+
+	it('returns empty string for empty input', () => {
+		expect(unlinkifyHtml('')).toBe('');
+	});
+
+	it('handles div and br tags from contenteditable', () => {
+		expect(unlinkifyHtml('line1<br>line2')).toBe('line1line2');
 	});
 });
