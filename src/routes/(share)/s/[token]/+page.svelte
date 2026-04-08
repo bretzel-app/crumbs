@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { NOTE_COLORS } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
+	import { linkifyText } from '$lib/utils/checklist.js';
 	import type { NoteColor, PublicAttachment } from '$lib/types/index.js';
 
 	interface ChecklistItem {
@@ -80,7 +81,7 @@
 								disabled
 								class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)]"
 							/>
-							<span class="break-words min-w-0">{item.text}</span>
+							<span class="break-words min-w-0">{@html linkifyText(item.text)}</span>
 						</li>
 					{/each}
 				</ul>
