@@ -13,6 +13,7 @@
 	import ArchiveRestore from 'lucide-svelte/icons/archive-restore';
 	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { linkifyText } from '$lib/utils/checklist.js';
 
 	interface ChecklistItem {
 		text: string;
@@ -131,7 +132,9 @@
 	{/if}
 
 	{#if note.checklistMode && checklistItems.length > 0}
-		<ul class="space-y-2 mb-6" data-testid="note-checklist-preview">
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<ul class="space-y-2 mb-6" data-testid="note-checklist-preview"
+			onclick={(e) => { if ((e.target as HTMLElement).closest('a')) e.stopPropagation(); }}>
 			{#each sortedChecklistItems.slice(0, 8) as item}
 				<li class="flex items-start gap-2 text-sm {item.indented ? 'pl-4 ' : ''}{item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-testid={item.indented ? 'card-checklist-child' : undefined}>
@@ -142,7 +145,7 @@
 						class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)] text-[var(--primary)]"
 						data-testid="card-checklist-checkbox"
 					/>
-					<span class="break-words min-w-0">{item.text}</span>
+					<span class="break-words min-w-0">{@html linkifyText(item.text)}</span>
 				</li>
 			{/each}
 			{#if checklistItems.length > 8}
