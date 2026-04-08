@@ -157,6 +157,20 @@
 		}
 	}
 
+	// Svelte action: sets innerHTML on mount and syncs from external changes only.
+	// While the user is typing (element is focused), we don't re-render — that would
+	// destroy the cursor. Linkification happens on blur via the onblur handler.
+	function editableContent(node: HTMLElement, text: string) {
+		node.innerHTML = linkifyText(text);
+		return {
+			update(newText: string) {
+				if (document.activeElement !== node) {
+					node.innerHTML = linkifyText(newText);
+				}
+			}
+		};
+	}
+
 	function handleLinkClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		const anchor = target.closest('a');
@@ -305,17 +319,19 @@
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					contenteditable="true"
+					use:editableContent={item.text}
 					oninput={(e) => updateText(item.id, (e.target as HTMLElement).innerHTML)}
 					onkeydown={(e) => handleKeydown(e, item.id)}
 					onclick={handleLinkClick}
 					onpaste={handlePaste}
+					onblur={(e) => { (e.target as HTMLElement).innerHTML = linkifyText(item.text); }}
 					class="flex-1 min-w-0 bg-transparent text-sm outline-none break-words {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-placeholder="List item"
 					data-testid="checklist-input"
 					data-item-id={item.id}
 					role="textbox"
 					tabindex="0"
-				>{@html linkifyText(item.text)}</div>
+				></div>
 				<button
 					onclick={() => removeItem(item.id)}
 					class="max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"

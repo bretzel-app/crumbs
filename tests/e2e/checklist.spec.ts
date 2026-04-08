@@ -386,9 +386,10 @@ test.describe('Checklist', () => {
 		await page.getByTestId('new-note-btn').click();
 		await toggleChecklistMode(page);
 
-		// When the user types a URL
+		// When the user types a URL and leaves the field
 		await page.getByTestId('checklist-input').first().focus();
 		await page.keyboard.type('check https://example.com today');
+		await page.getByTestId('note-title-input').focus();
 
 		// Then the URL is rendered as a link
 		const link = page.getByTestId('checklist-input').first().locator('a');
@@ -402,6 +403,7 @@ test.describe('Checklist', () => {
 		await toggleChecklistMode(page);
 		await page.getByTestId('checklist-input').first().focus();
 		await page.keyboard.type('https://example.com');
+		await page.getByTestId('note-title-input').focus();
 
 		// When the user clicks the link
 		await page.getByTestId('checklist-input').first().locator('a').click();
@@ -417,6 +419,7 @@ test.describe('Checklist', () => {
 		await toggleChecklistMode(page);
 		await page.getByTestId('checklist-input').first().focus();
 		await page.keyboard.type('https://example.com');
+		await page.getByTestId('note-title-input').focus();
 		await page.getByTestId('checklist-input').first().locator('a').click();
 		await expect(page.getByTestId('link-popover')).toBeVisible();
 
