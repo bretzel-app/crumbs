@@ -180,7 +180,7 @@ export function linkifyText(text: string): string {
 	let lastIndex = 0;
 	for (const { index, match, href } of matches) {
 		result += escapeHtml(text.slice(lastIndex, index));
-		result += `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" class="checklist-link">${escapeHtml(match)}</a>`;
+		result += `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="checklist-link">${escapeHtml(match)}</a>`;
 		lastIndex = index + match.length;
 	}
 	result += escapeHtml(text.slice(lastIndex));

@@ -183,7 +183,7 @@
 
 	function handlePaste(e: ClipboardEvent) {
 		e.preventDefault();
-		const text = e.clipboardData?.getData('text/plain') ?? '';
+		const text = (e.clipboardData?.getData('text/plain') ?? '').replace(/[\r\n]+/g, ' ');
 		const selection = window.getSelection();
 		if (!selection?.rangeCount) return;
 		const range = selection.getRangeAt(0);
@@ -327,6 +327,7 @@
 					onblur={(e) => { (e.target as HTMLElement).innerHTML = linkifyText(item.text); }}
 					class="flex-1 min-w-0 bg-transparent text-sm outline-none break-words {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-placeholder="List item"
+					aria-placeholder="List item"
 					data-testid="checklist-input"
 					data-item-id={item.id}
 					role="textbox"

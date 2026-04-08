@@ -52,7 +52,7 @@
 	}
 </script>
 
-<svelte:window onclick={handleClickOutside} onkeydown={handleKeydown} />
+<svelte:window onclick={handleClickOutside} onkeydown={handleKeydown} onscroll={onClose} onresize={onClose} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div

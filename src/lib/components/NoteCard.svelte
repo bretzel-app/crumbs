@@ -134,7 +134,8 @@
 	{#if note.checklistMode && checklistItems.length > 0}
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<ul class="space-y-2 mb-6" data-testid="note-checklist-preview"
-			onclick={(e) => { if ((e.target as HTMLElement).closest('a')) e.stopPropagation(); }}>
+			onclick={(e) => { if ((e.target as HTMLElement).closest('a')) e.stopPropagation(); }}
+			onkeydown={(e) => { if ((e.target as HTMLElement).closest('a')) e.stopPropagation(); }}>
 			{#each sortedChecklistItems.slice(0, 8) as item}
 				<li class="flex items-start gap-2 text-sm {item.indented ? 'pl-4 ' : ''}{item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-testid={item.indented ? 'card-checklist-child' : undefined}>

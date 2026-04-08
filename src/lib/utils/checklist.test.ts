@@ -224,19 +224,19 @@ describe('outdentItem', () => {
 describe('linkifyText', () => {
 	it('converts https URLs to anchor tags', () => {
 		expect(linkifyText('visit https://example.com today')).toBe(
-			'visit <a href="https://example.com" target="_blank" rel="noopener" class="checklist-link">https://example.com</a> today'
+			'visit <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="checklist-link">https://example.com</a> today'
 		);
 	});
 
 	it('converts http URLs to anchor tags', () => {
 		expect(linkifyText('go to http://example.com')).toBe(
-			'go to <a href="http://example.com" target="_blank" rel="noopener" class="checklist-link">http://example.com</a>'
+			'go to <a href="http://example.com" target="_blank" rel="noopener noreferrer" class="checklist-link">http://example.com</a>'
 		);
 	});
 
 	it('converts bare www URLs with https href', () => {
 		expect(linkifyText('check www.example.com')).toBe(
-			'check <a href="https://www.example.com" target="_blank" rel="noopener" class="checklist-link">www.example.com</a>'
+			'check <a href="https://www.example.com" target="_blank" rel="noopener noreferrer" class="checklist-link">www.example.com</a>'
 		);
 	});
 
@@ -281,7 +281,7 @@ describe('linkifyText', () => {
 
 	it('strips trailing punctuation from URLs', () => {
 		expect(linkifyText('see https://example.com.')).toBe(
-			'see <a href="https://example.com" target="_blank" rel="noopener" class="checklist-link">https://example.com</a>.'
+			'see <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="checklist-link">https://example.com</a>.'
 		);
 	});
 
