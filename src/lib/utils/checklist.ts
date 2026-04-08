@@ -189,5 +189,10 @@ export function linkifyText(text: string): string {
 
 export function unlinkifyHtml(html: string): string {
 	if (!html) return '';
-	return html.replace(/<[^>]*>/g, '');
+	return html
+		.replace(/<[^>]*>/g, '')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"');
 }

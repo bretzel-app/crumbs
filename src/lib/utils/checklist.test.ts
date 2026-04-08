@@ -312,4 +312,10 @@ describe('unlinkifyHtml', () => {
 	it('handles div and br tags from contenteditable', () => {
 		expect(unlinkifyHtml('line1<br>line2')).toBe('line1line2');
 	});
+
+	it('decodes HTML entities after stripping tags', () => {
+		expect(unlinkifyHtml('Tom &amp; Jerry')).toBe('Tom & Jerry');
+		expect(unlinkifyHtml('&lt;b&gt;bold&lt;/b&gt;')).toBe('<b>bold</b>');
+		expect(unlinkifyHtml('say &quot;hello&quot;')).toBe('say "hello"');
+	});
 });

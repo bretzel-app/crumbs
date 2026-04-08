@@ -7,7 +7,7 @@
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
-import LinkPopover from './LinkPopover.svelte';
+	import LinkPopover from './LinkPopover.svelte';
 
 	interface Props {
 		content: string;
@@ -20,7 +20,7 @@ import LinkPopover from './LinkPopover.svelte';
 	let items = $state<ChecklistItem[]>(parseChecklist(content));
 	let doneExpanded = $state(true);
 	const flipDurationMs = 150;
-let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
+	let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
 
 	// Track the last content we emitted so we can distinguish self-originated
 	// changes from external ones (sync, history restore, etc.)
@@ -314,7 +314,7 @@ let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
 					data-testid="checklist-input"
 					data-item-id={item.id}
 					role="textbox"
-				tabindex="0"
+					tabindex="0"
 				>{@html linkifyText(item.text)}</div>
 				<button
 					onclick={() => removeItem(item.id)}
@@ -382,9 +382,9 @@ let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
 			{/if}
 		</div>
 	{/if}
-</div>
 
-{#if linkPopover}
-	<LinkPopover url={linkPopover.url} anchor={linkPopover.anchor} onClose={() => (linkPopover = null)} />
-{/if}
+	{#if linkPopover}
+		<LinkPopover url={linkPopover.url} anchor={linkPopover.anchor} onClose={() => (linkPopover = null)} />
+	{/if}
+</div>
 
