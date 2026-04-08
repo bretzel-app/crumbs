@@ -354,7 +354,7 @@
 						{#if group.parentLabel}
 							<div class="flex items-center gap-2 py-1.5 pl-5" data-testid="checklist-done-parent-label">
 								<input type="checkbox" disabled class="h-4 w-4 rounded border-[var(--border-subtle)] opacity-50" />
-								<span class="text-sm text-[var(--text-muted)]">{group.parentLabel.text}</span>
+								<span class="text-sm text-[var(--text-muted)] break-words min-w-0">{@html linkifyText(group.parentLabel.text)}</span>
 							</div>
 						{/if}
 						{#each group.children as item (item.id)}
@@ -366,7 +366,7 @@
 									class="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--primary)] focus:ring-[var(--primary)]"
 									data-testid="checklist-done-checkbox"
 								/>
-								<span class="flex-1 text-sm text-[var(--text-muted)] line-through">{item.text}</span>
+								<span class="flex-1 text-sm text-[var(--text-muted)] line-through break-words min-w-0">{@html linkifyText(item.text)}</span>
 								<button
 									onclick={() => removeItem(item.id)}
 									class="max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
