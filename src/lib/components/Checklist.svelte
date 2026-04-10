@@ -325,9 +325,9 @@
 					onclick={handleLinkClick}
 					onpaste={handlePaste}
 					onblur={(e) => {
-						const el = e.target as HTMLElement;
+						const el = e.currentTarget as HTMLElement;
 						requestAnimationFrame(() => {
-							if (el.isConnected && document.activeElement !== el) {
+							if (el.isConnected && !el.contains(document.activeElement)) {
 								el.innerHTML = linkifyText(item.text);
 							}
 						});
