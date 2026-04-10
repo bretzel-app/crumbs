@@ -324,7 +324,14 @@
 					onkeydown={(e) => handleKeydown(e, item.id)}
 					onclick={handleLinkClick}
 					onpaste={handlePaste}
-					onblur={(e) => { (e.target as HTMLElement).innerHTML = linkifyText(item.text); }}
+					onblur={(e) => {
+						const el = e.target as HTMLElement;
+						requestAnimationFrame(() => {
+							if (el.isConnected && document.activeElement !== el) {
+								el.innerHTML = linkifyText(item.text);
+							}
+						});
+					}}
 					class="flex-1 min-w-0 bg-transparent text-sm outline-none break-words {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-placeholder="List item"
 					aria-placeholder="List item"
