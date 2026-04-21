@@ -70,9 +70,16 @@
 			const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
 			if (res.ok) {
 				users = users.filter((u) => u.id !== userId);
+				createMsg = 'User deleted';
+				createError = false;
+			} else {
+				const d = await res.json().catch(() => ({}));
+				createMsg = d.message || 'Failed to delete user';
+				createError = true;
 			}
 		} catch {
-			// ignore
+			createMsg = 'Connection error';
+			createError = true;
 		}
 	}
 
@@ -167,7 +174,10 @@
 
 		<div class="space-y-3">
 			{#each users as user (user.id)}
-				<div class="flex flex-col gap-2 rounded-sm border border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between">
+				<div
+					class="flex flex-col gap-2 rounded-sm border border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between"
+					data-testid="user-row-{user.id}"
+				>
 					<div class="min-w-0">
 						<p class="truncate font-medium text-[var(--text)]">
 							{user.displayName || user.email}
@@ -195,6 +205,7 @@
 							</button>
 							<button
 								onclick={() => deleteUser(user.id)}
+								data-testid="delete-user-btn-{user.id}"
 								class="rounded-sm px-3 py-1 text-xs text-[var(--destructive)] hover:bg-[var(--error-bg)]"
 							>
 								Delete

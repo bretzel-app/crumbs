@@ -227,29 +227,53 @@ export function getUser(userId: number): User | null {
 }
 
 export async function deleteUser(userId: number): Promise<void> {
-	// Cascade: delete user's data in dependency order
-	sqlite.prepare('DELETE FROM user_preferences WHERE user_id = ?').run(userId);
-	sqlite.prepare('DELETE FROM api_keys WHERE user_id = ?').run(userId);
-	sqlite.prepare('DELETE FROM note_user_state WHERE user_id = ?').run(userId);
-	sqlite
-		.prepare('DELETE FROM note_collaborators WHERE user_id = ? OR added_by = ?')
-		.run(userId, userId);
-	sqlite.prepare('DELETE FROM sync_log WHERE user_id = ?').run(userId);
-	sqlite.prepare('DELETE FROM attachments WHERE user_id = ?').run(userId);
-	sqlite
-		.prepare(
-			'DELETE FROM shared_notes WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
-		)
-		.run(userId);
-	sqlite
-		.prepare(
-			'DELETE FROM note_tags WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
-		)
-		.run(userId);
-	sqlite.prepare('DELETE FROM notes WHERE user_id = ?').run(userId);
-	sqlite.prepare('DELETE FROM tags WHERE user_id = ?').run(userId);
-	sqlite.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
-	db.delete(users).where(eq(users.id, userId)).run();
+	// Atomic cascade: all-or-nothing. Also clear rows from other users that
+	// reference the deleted user's notes (e.g. sync_log, note_user_state,
+	// note_collaborators) so foreign-key checks don't block the final delete.
+	const tx = sqlite.transaction((uid: number) => {
+		sqlite.prepare('DELETE FROM user_preferences WHERE user_id = ?').run(uid);
+		sqlite.prepare('DELETE FROM api_keys WHERE user_id = ?').run(uid);
+		sqlite
+			.prepare(
+				'DELETE FROM note_user_state WHERE user_id = ? OR note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid, uid);
+		sqlite
+			.prepare(
+				'DELETE FROM note_collaborators WHERE user_id = ? OR added_by = ? OR note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid, uid, uid);
+		sqlite
+			.prepare(
+				'DELETE FROM sync_log WHERE user_id = ? OR note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid, uid);
+		sqlite
+			.prepare(
+				'DELETE FROM attachments WHERE user_id = ? OR note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid, uid);
+		sqlite
+			.prepare(
+				'DELETE FROM shared_notes WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid);
+		sqlite
+			.prepare(
+				'DELETE FROM note_tags WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid);
+		sqlite
+			.prepare(
+				'DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)'
+			)
+			.run(uid);
+		sqlite.prepare('DELETE FROM notes WHERE user_id = ?').run(uid);
+		sqlite.prepare('DELETE FROM tags WHERE user_id = ?').run(uid);
+		sqlite.prepare('DELETE FROM sessions WHERE user_id = ?').run(uid);
+		sqlite.prepare('DELETE FROM users WHERE id = ?').run(uid);
+	});
+	tx(userId);
 }
 
 export async function changePassword(
