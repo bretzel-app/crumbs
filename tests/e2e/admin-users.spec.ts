@@ -1,8 +1,13 @@
 import { test, expect } from './helpers/fixtures.js';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { TEST_CREDENTIALS_FILE } from './global-setup';
 
 const { userPassword } = JSON.parse(readFileSync(TEST_CREDENTIALS_FILE, 'utf-8'));
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_IMAGE_PATH = join(__dirname, 'helpers', 'test-image.png');
 
 /** Create a victim user via the admin API, returning the user's id. */
 async function createVictim(
@@ -95,6 +100,25 @@ test.describe.serial('Admin — User Deletion', () => {
 			data: { title: 'Victim Note #todo', content: 'content #work' }
 		});
 		expect(noteRes.ok()).toBe(true);
+		const note = await noteRes.json();
+
+		// Upload an attachment on the note. Use a browser-context fetch so the
+		// Origin header is set correctly for SvelteKit's CSRF check.
+		const imageBase64 = readFileSync(TEST_IMAGE_PATH).toString('base64');
+		const attachmentStatus = await victimPage.evaluate(
+			async ({ noteId, base64 }) => {
+				const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+				const form = new FormData();
+				form.append('file', new Blob([bytes], { type: 'image/png' }), 'test-image.png');
+				const r = await fetch(`/api/notes/${noteId}/attachments`, {
+					method: 'POST',
+					body: form
+				});
+				return r.status;
+			},
+			{ noteId: note.id, base64: imageBase64 }
+		);
+		expect(attachmentStatus).toBe(201);
 
 		// Write a preference and create an API key to exercise every table
 		await victimPage.request.put('/api/preferences', {
