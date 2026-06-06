@@ -28,6 +28,7 @@
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import ListX from 'lucide-svelte/icons/list-x';
 	import Archive from 'lucide-svelte/icons/archive';
+	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import { parseChecklist, serializeChecklist } from '$lib/utils/checklist.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
@@ -160,19 +161,64 @@
 	// svelte-ignore state_referenced_locally
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
 
+	let viewportHeight = $state('100dvh');
+	let viewportTop = $state('0px');
+
 	// Guard against mobile ghost clicks: on touch devices, a tap on the note card
 	// can produce a synthetic click that lands on editor buttons rendered at the same
 	// coordinates. Suppress pointer events on toolbar controls until mount completes.
 	let toolbarInteractive = $state(false);
 	onMount(() => {
+		function updateViewport() {
+			if (window.visualViewport) {
+				viewportHeight = `${window.visualViewport.height}px`;
+				viewportTop = `${window.visualViewport.offsetTop}px`;
+			} else {
+				viewportHeight = `${window.innerHeight}px`;
+				viewportTop = '0px';
+			}
+		}
+
+		updateViewport();
+		const handleVisualViewportChange = () => {
+			requestAnimationFrame(updateViewport);
+		};
+
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', handleVisualViewportChange);
+			window.visualViewport.addEventListener('scroll', handleVisualViewportChange);
+		} else {
+			window.addEventListener('resize', handleVisualViewportChange);
+		}
+
 		const timer = setTimeout(() => { toolbarInteractive = true; }, 150);
-		return () => clearTimeout(timer);
+		
+		return () => {
+			clearTimeout(timer);
+			if (window.visualViewport) {
+				window.visualViewport.removeEventListener('resize', handleVisualViewportChange);
+				window.visualViewport.removeEventListener('scroll', handleVisualViewportChange);
+			} else {
+				window.removeEventListener('resize', handleVisualViewportChange);
+			}
+		};
+	});
+
+	// Lock body scroll while editor is open
+	$effect(() => {
+		const originalOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = originalOverflow;
+		};
 	});
 
 	let showShareDialog = $state(false);
 	let showHistory = $state(false);
 	let showOverflowMenu = $state(false);
-	let overflowBtnEl: HTMLButtonElement | undefined = $state();
+	let desktopOverflowBtnEl: HTMLButtonElement | undefined = $state();
+	let mobileOverflowBtnEl: HTMLButtonElement | undefined = $state();
+	let overflowAnchorEl: HTMLButtonElement | undefined = $state();
 	let overflowMenuEl: HTMLDivElement | undefined = $state();
 
 	// Close overflow menu when clicking outside
@@ -180,7 +226,7 @@
 		if (!showOverflowMenu) return;
 		function handleClickOutside(e: MouseEvent) {
 			const target = e.target as Node;
-			if (overflowBtnEl?.contains(target) || overflowMenuEl?.contains(target)) return;
+			if (overflowAnchorEl?.contains(target) || overflowMenuEl?.contains(target)) return;
 			showOverflowMenu = false;
 		}
 		// Use setTimeout to avoid the current click from closing the menu
@@ -440,7 +486,8 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="fixed inset-0 z-40 {closing ? '' : 'flex items-start justify-center overflow-y-auto bg-black/50 pt-20 pb-10 animate-[fade-in_150ms_ease-out]'}"
+	class="fixed left-0 w-full z-40 {closing ? '' : 'flex md:items-start justify-center md:overflow-y-auto md:bg-black/50 md:pt-20 md:pb-10 animate-[fade-in_150ms_ease-out]'}"
+	style="top: {viewportTop}; height: {viewportHeight};"
 	onpointerdown={handleOverlayPointerdown}
 	onpointerup={handleOverlayPointerup}
 	onkeydown={handleKeydown}
@@ -449,29 +496,52 @@
 	{#if !closing}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="mx-4 flex w-full max-w-xl md:max-w-2xl flex-col overflow-hidden rounded-sm border border-[var(--border)] shadow-[var(--card-shadow)] animate-[pop-in_150ms_ease-out]"
+		class="relative flex h-full w-full flex-col md:overflow-hidden border-0 md:h-auto md:max-w-xl md:mx-4 lg:max-w-2xl md:rounded-sm md:border md:border-[var(--border)] md:shadow-[var(--card-shadow)] animate-[slide-up_250ms_ease-out] md:animate-[pop-in_150ms_ease-out]"
 		style={bgStyle}
 		onkeydown={(e) => { e.stopPropagation(); handleKeydown(e); }}
 		data-testid="note-editor"
 	>
-		<!-- Title -->
-		<input
-			type="text"
-			placeholder="Title"
-			bind:value={title}
-			class="w-full bg-transparent px-4 pt-4 text-lg font-semibold text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
-			data-testid="note-title-input"
-			onkeydown={(e) => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					if (textareaEl) textareaEl.focus();
-					else if (tiptapEditor) tiptapEditor.commands.focus('start');
-				}
-			}}
-		/>
+		<!-- Gap filler to hide iOS Safari keyboard animation/viewport lag -->
+		<div class="absolute top-full left-0 w-full h-[50vh] md:hidden" style={bgStyle}></div>
+		<!-- Header (Mobile: Back + Title, Desktop: just Title) -->
+		<div class="flex items-center gap-2 border-b md:border-b-0 border-[var(--border-subtle)] px-2 py-2 md:px-4 md:pt-4 md:pb-0 shrink-0 touch-none">
+			<!-- Mobile Back Button -->
+			<button
+				onclick={saveAndClose}
+				class="md:hidden rounded-sm p-2 text-[var(--text)] hover:bg-[var(--border)]/10 flex items-center shrink-0"
+				aria-label="Back"
+			>
+				<ArrowLeft class="h-6 w-6" />
+			</button>
+			<!-- Title -->
+			<input
+				type="text"
+				placeholder="Title"
+				bind:value={title}
+				class="flex-1 min-w-0 bg-transparent px-2 md:px-0 text-lg font-semibold text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+				data-testid="note-title-input"
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						if (textareaEl) textareaEl.focus();
+						else if (tiptapEditor) tiptapEditor.commands.focus('start');
+					}
+				}}
+			/>
+			
+			<!-- Mobile Overflow Trigger -->
+			<button
+				bind:this={mobileOverflowBtnEl}
+				onclick={() => { showOverflowMenu = !showOverflowMenu; overflowAnchorEl = mobileOverflowBtnEl; }}
+				class="md:hidden rounded-sm p-2 hover:bg-[var(--border)]/10 text-[var(--text)] shrink-0"
+				data-testid="mobile-overflow-menu-btn"
+			>
+				<EllipsisVertical class="h-6 w-6" />
+			</button>
+		</div>
 
 		<!-- Content -->
-		<div class="max-h-[60vh] overflow-y-auto">
+		<div class="flex-1 overflow-y-auto overscroll-contain md:max-h-[60vh] md:flex-none">
 			{#if checklistMode}
 				<div class="px-4 py-2">
 					<Checklist {content} onChange={(c) => (content = c)} />
@@ -498,7 +568,7 @@
 
 		<!-- Image attachments -->
 		{#if noteId && (showImageUpload || attachmentsList.length > 0)}
-			<div class="border-t border-[var(--border-subtle)] px-4 py-2">
+			<div class="border-t border-[var(--border-subtle)] px-4 py-2 shrink-0">
 				<ImageUpload
 					noteId={noteId}
 					attachments={attachmentsList}
@@ -512,14 +582,14 @@
 
 		<!-- Formatting toolbar -->
 		{#if !rawMarkdownMode && !checklistMode}
-			<div style={toolbarInteractive ? '' : 'pointer-events: none'}>
+			<div class="shrink-0 touch-none" style={toolbarInteractive ? '' : 'pointer-events: none'}>
 				<FormattingToolbar editor={tiptapEditor} tick={editorTick} />
 			</div>
 		{/if}
 
-		<!-- Toolbar -->
+		<!-- Toolbar (Desktop only) -->
 		<div
-			class="flex items-center justify-between border-t border-[var(--border-subtle)] px-2 py-2"
+			class="hidden md:flex shrink-0 items-center justify-between border-t border-[var(--border-subtle)] px-2 py-2 touch-none"
 			style={toolbarInteractive ? '' : 'pointer-events: none'}
 		>
 			<div class="flex items-center gap-1">
@@ -586,8 +656,8 @@
 
 				<!-- Overflow menu trigger -->
 				<button
-					bind:this={overflowBtnEl}
-					onclick={() => (showOverflowMenu = !showOverflowMenu)}
+					bind:this={desktopOverflowBtnEl}
+					onclick={() => { showOverflowMenu = !showOverflowMenu; overflowAnchorEl = desktopOverflowBtnEl; }}
 					class="rounded-sm p-2 hover:bg-[var(--border)]/10"
 					use:tooltip={"More"}
 					data-testid="overflow-menu-btn"
@@ -598,7 +668,7 @@
 
 			<button
 				onclick={saveAndClose}
-				class="rounded-sm px-4 py-1 text-sm font-medium text-[var(--text)] hover:bg-[var(--border)]/10"
+				class="hidden md:block rounded-sm px-4 py-1 text-sm font-medium text-[var(--text)] hover:bg-[var(--border)]/10"
 				data-testid="close-editor-btn"
 			>
 				Close
@@ -607,14 +677,67 @@
 	</div>
 
 	<!-- Overflow menu dropdown (rendered outside the card to escape overflow-hidden) -->
-	{#if showOverflowMenu && overflowBtnEl}
-		{@const rect = overflowBtnEl.getBoundingClientRect()}
+	{#if showOverflowMenu && overflowAnchorEl}
+		{@const rect = overflowAnchorEl.getBoundingClientRect()}
+		{@const isMobileTrigger = overflowAnchorEl === mobileOverflowBtnEl}
 		<div
 			bind:this={overflowMenuEl}
 			class="fixed z-50 w-max whitespace-nowrap rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] py-1 shadow-[var(--card-shadow)]"
-			style="bottom: {window.innerHeight - rect.top + 4}px; right: {window.innerWidth - rect.right}px;"
+			style={isMobileTrigger ? `top: ${rect.bottom + 4}px; right: ${window.innerWidth - rect.right}px;` : `bottom: ${window.innerHeight - rect.top + 4}px; right: ${window.innerWidth - rect.right}px;`}
 			data-testid="overflow-menu"
 		>
+			<!-- Mobile-only actions -->
+			{#if isMobileTrigger}
+				<!-- Color picker -->
+				<div class="px-3 py-2 w-56 whitespace-normal">
+					<span class="mb-2 block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Color</span>
+					<ColorPicker selected={color} onSelect={(c) => { handleColorSelect(c); showOverflowMenu = false; }} />
+				</div>
+
+				<!-- Attachments -->
+				<button
+					onclick={() => { toggleImageUpload(); showOverflowMenu = false; }}
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+				>
+					<ImageIcon class="h-4 w-4 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
+					Attachments
+				</button>
+
+				<!-- Share -->
+				{#if isOwner}
+					<button
+						onclick={() => { toggleShareDialog(); showOverflowMenu = false; }}
+						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					>
+						{#if hasPublicLink}
+							<Globe class="h-4 w-4 text-[var(--primary)]" />
+						{:else if isShared}
+							<Users class="h-4 w-4 text-[var(--primary)]" />
+						{:else}
+							<UserPlus class="h-4 w-4" />
+						{/if}
+						Share
+					</button>
+				{:else if isShared}
+					<div class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-muted)]">
+						<Users class="h-4 w-4" />
+						Shared note
+					</div>
+				{/if}
+
+				<!-- Archive -->
+				{#if !currentlyNew}
+					<button
+						onclick={handleArchive}
+						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					>
+						<Archive class="h-4 w-4" />
+						Archive
+					</button>
+				{/if}
+
+				<div class="my-1 border-t border-[var(--border-subtle)]"></div>
+			{/if}
 			<!-- Checklist mode toggle -->
 			<button
 				onclick={() => { checklistMode = !checklistMode; showOverflowMenu = false; }}

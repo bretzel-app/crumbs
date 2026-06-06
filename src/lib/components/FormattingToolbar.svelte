@@ -44,24 +44,31 @@
 	function getAttrs(type: string) { void tick; return editor?.getAttributes(type) ?? {}; }
 
 	let openDropdown: string | null = $state(null);
+	let dropdownAnchorEl: HTMLElement | null = $state(null);
 	let linkUrl: string = $state('');
 	let linkInput: HTMLInputElement | undefined = $state();
 
-	function toggleDropdown(name: string) {
+	function toggleDropdown(name: string, e: MouseEvent) {
 		if (openDropdown === name) {
-			openDropdown = null;
+			closeDropdowns();
+			editor?.commands.focus();
 		} else {
 			openDropdown = name;
+			dropdownAnchorEl = e.currentTarget as HTMLElement;
 			if (name === 'link') {
 				linkUrl = editor?.getAttributes('link').href ?? '';
 				// Focus input after Svelte renders the popover
 				requestAnimationFrame(() => linkInput?.focus());
+			} else {
+				// Keep keyboard open on mobile
+				editor?.commands.focus();
 			}
 		}
 	}
 
 	function closeDropdowns() {
 		openDropdown = null;
+		dropdownAnchorEl = null;
 	}
 
 	function applyLink() {
@@ -117,9 +124,15 @@
 <svelte:document onpointerdown={handlePointerDown} onkeydown={handleKeydown} />
 
 <div
-	class="flex flex-wrap items-center gap-0.5 border-b border-[var(--border-subtle)] px-2 py-1"
+	class="flex overflow-x-auto md:flex-wrap items-center gap-0.5 border-b border-[var(--border-subtle)] px-2 py-1 scrollbar-hide"
+	style="scrollbar-width: none; -ms-overflow-style: none;"
 	data-testid="formatting-toolbar"
 >
+	<style>
+		[data-testid="formatting-toolbar"]::-webkit-scrollbar {
+			display: none;
+		}
+	</style>
 	<!-- Undo/Redo -->
 	<button
 		onclick={() => editor?.chain().focus().undo().run()}
@@ -179,9 +192,9 @@
 	<div class="mx-1 h-4 w-px shrink-0 bg-[var(--border-subtle)]"></div>
 
 	<!-- Heading dropdown -->
-	<div class="relative" data-dropdown="heading">
+	<div data-dropdown="heading">
 		<button
-			onclick={() => toggleDropdown('heading')}
+			onclick={(e) => toggleDropdown('heading', e)}
 			class={dropdownBtnClass(isActive('heading'))}
 			title="Heading"
 			data-testid="format-heading"
@@ -189,40 +202,12 @@
 			<Heading size={iconSize} />
 			<ChevronDown size={chevronSize} />
 		</button>
-		{#if openDropdown === 'heading'}
-			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[150px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
-				<button
-					onclick={() => { editor?.chain().focus().toggleHeading({ level: 1 }).run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('heading', { level: 1 }))}
-					data-testid="format-h1"
-				>
-					<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H1</span>
-					<span class="font-semibold">Heading 1</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().toggleHeading({ level: 2 }).run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('heading', { level: 2 }))}
-					data-testid="format-h2"
-				>
-					<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H2</span>
-					<span>Heading 2</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().toggleHeading({ level: 3 }).run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('heading', { level: 3 }))}
-					data-testid="format-h3"
-				>
-					<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H3</span>
-					<span>Heading 3</span>
-				</button>
-			</div>
-		{/if}
 	</div>
 
 	<!-- List dropdown -->
-	<div class="relative" data-dropdown="list">
+	<div data-dropdown="list">
 		<button
-			onclick={() => toggleDropdown('list')}
+			onclick={(e) => toggleDropdown('list', e)}
 			class={dropdownBtnClass(isActive('bulletList') || isActive('orderedList') || isActive('taskList'))}
 			title="Lists"
 			data-testid="format-list"
@@ -230,98 +215,24 @@
 			<List size={iconSize} />
 			<ChevronDown size={chevronSize} />
 		</button>
-		{#if openDropdown === 'list'}
-			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[170px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
-				<button
-					onclick={() => { editor?.chain().focus().toggleBulletList().run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('bulletList'))}
-					data-testid="format-bullet-list"
-				>
-					<List size={iconSize} />
-					<span>Bullet list</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().toggleOrderedList().run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('orderedList'))}
-					data-testid="format-ordered-list"
-				>
-					<ListOrdered size={iconSize} />
-					<span>Ordered list</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().toggleTaskList().run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive('taskList'))}
-					data-testid="format-task-list"
-				>
-					<ListChecks size={iconSize} />
-					<span>Task list</span>
-				</button>
-			</div>
-		{/if}
 	</div>
 
 	<!-- Link popover -->
-	<div class="relative" data-dropdown="link">
+	<div data-dropdown="link">
 		<button
-			onclick={() => toggleDropdown('link')}
+			onclick={(e) => toggleDropdown('link', e)}
 			class={btnClass(isActive('link'))}
 			title="Insert link (Ctrl+K)"
 			data-testid="format-link"
 		>
 			<Link size={iconSize} />
 		</button>
-		{#if openDropdown === 'link'}
-			<div class="absolute left-1/2 bottom-full z-50 mb-1 -translate-x-1/2 rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] px-2 py-1.5">
-				<form
-					class="flex items-center gap-1"
-					onsubmit={(e) => { e.preventDefault(); applyLink(); }}
-				>
-					<input
-						bind:this={linkInput}
-						bind:value={linkUrl}
-						type="url"
-						placeholder="Paste a link..."
-						class="w-44 bg-transparent px-1.5 py-1 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
-						data-testid="format-link-input"
-					/>
-					<button
-						type="submit"
-						class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)]"
-						title="Apply link"
-						data-testid="format-link-apply"
-					>
-						<CornerDownLeft size={16} />
-					</button>
-					<div class="mx-0.5 h-4 w-px bg-[var(--border-subtle)]"></div>
-					<button
-						type="button"
-						onclick={openLink}
-						disabled={!getAttrs('link').href}
-						class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)] disabled:opacity-30"
-						title="Open link"
-						data-testid="format-link-open"
-					>
-						<ExternalLink size={16} />
-					</button>
-					<button
-						type="button"
-						onclick={removeLink}
-						disabled={!isActive('link')}
-						class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-red-500 disabled:opacity-30"
-						title="Remove link"
-						data-testid="format-unlink"
-					>
-						<Trash2 size={16} />
-					</button>
-				</form>
-			</div>
-		{/if}
 	</div>
 
 	<!-- Table dropdown -->
-	<div class="relative" data-dropdown="table">
+	<div data-dropdown="table">
 		<button
-			onclick={() => toggleDropdown('table')}
+			onclick={(e) => toggleDropdown('table', e)}
 			class={dropdownBtnClass(isActive('table'))}
 			title="Table"
 			data-testid="format-table"
@@ -329,68 +240,12 @@
 			<Table2 size={iconSize} />
 			<ChevronDown size={chevronSize} />
 		</button>
-		{#if openDropdown === 'table'}
-			<div class="absolute left-0 bottom-full z-50 mb-1 min-w-[190px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
-				<button
-					onclick={() => { editor?.chain().focus().insertTable({ rows: 3, cols: 3 }).run(); closeDropdowns(); }}
-					class={dropdownItemClass()}
-					data-testid="format-table-insert"
-				>
-					<Table2 size={iconSize} />
-					<span>Insert table</span>
-				</button>
-				{#if isActive('table')}
-					<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
-					<button
-						onclick={() => { editor?.chain().focus().addRowAfter().run(); closeDropdowns(); }}
-						class={dropdownItemClass()}
-						data-testid="format-table-add-row"
-					>
-						<BetweenHorizontalEnd size={iconSize} />
-						<span>Add row</span>
-					</button>
-					<button
-						onclick={() => { editor?.chain().focus().addColumnAfter().run(); closeDropdowns(); }}
-						class={dropdownItemClass()}
-						data-testid="format-table-add-col"
-					>
-						<BetweenVerticalEnd size={iconSize} />
-						<span>Add column</span>
-					</button>
-					<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
-					<button
-						onclick={() => { editor?.chain().focus().deleteRow().run(); closeDropdowns(); }}
-						class={dropdownItemClass()}
-						data-testid="format-table-delete-row"
-					>
-						<Minus size={iconSize} />
-						<span>Delete row</span>
-					</button>
-					<button
-						onclick={() => { editor?.chain().focus().deleteColumn().run(); closeDropdowns(); }}
-						class={dropdownItemClass()}
-						data-testid="format-table-delete-col"
-					>
-						<Minus size={iconSize} />
-						<span>Delete column</span>
-					</button>
-					<button
-						onclick={() => { editor?.chain().focus().deleteTable().run(); closeDropdowns(); }}
-						class={`${dropdownItemClass()} text-[var(--destructive)]`}
-						data-testid="format-table-delete"
-					>
-						<RemoveFormatting size={iconSize} />
-						<span>Delete table</span>
-					</button>
-				{/if}
-			</div>
-		{/if}
 	</div>
 
 	<!-- Alignment dropdown -->
-	<div class="relative" data-dropdown="align">
+	<div data-dropdown="align">
 		<button
-			onclick={() => toggleDropdown('align')}
+			onclick={(e) => toggleDropdown('align', e)}
 			class={dropdownBtnClass(isActive({ textAlign: 'center' }) || isActive({ textAlign: 'right' }) || isActive({ textAlign: 'justify' }))}
 			title="Text alignment"
 			data-testid="format-align"
@@ -406,42 +261,6 @@
 			{/if}
 			<ChevronDown size={chevronSize} />
 		</button>
-		{#if openDropdown === 'align'}
-			<div class="absolute right-0 bottom-full z-50 mb-1 min-w-[160px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1">
-				<button
-					onclick={() => { editor?.chain().focus().setTextAlign('left').run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive({ textAlign: 'left' }))}
-					data-testid="format-align-left"
-				>
-					<AlignLeft size={iconSize} />
-					<span>Left</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().setTextAlign('center').run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive({ textAlign: 'center' }))}
-					data-testid="format-align-center"
-				>
-					<AlignCenter size={iconSize} />
-					<span>Center</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().setTextAlign('right').run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive({ textAlign: 'right' }))}
-					data-testid="format-align-right"
-				>
-					<AlignRight size={iconSize} />
-					<span>Right</span>
-				</button>
-				<button
-					onclick={() => { editor?.chain().focus().setTextAlign('justify').run(); closeDropdowns(); }}
-					class={dropdownItemClass(isActive({ textAlign: 'justify' }))}
-					data-testid="format-align-justify"
-				>
-					<AlignJustify size={iconSize} />
-					<span>Justify</span>
-				</button>
-			</div>
-		{/if}
 	</div>
 
 	<div class="mx-1 h-4 w-px shrink-0 bg-[var(--border-subtle)]"></div>
@@ -480,3 +299,199 @@
 		<Minus size={iconSize} />
 	</button>
 </div>
+
+<!-- Render dropdown menus in a fixed portal so they aren't clipped by overflow-x-auto -->
+{#if openDropdown && dropdownAnchorEl}
+	{@const rect = dropdownAnchorEl.getBoundingClientRect()}
+	
+	{#if openDropdown === 'heading'}
+		<div
+			class="fixed z-50 mb-1 min-w-[150px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
+			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 170))}px;"
+			data-dropdown="true"
+		>
+			<button
+				onclick={() => { editor?.chain().focus().toggleHeading({ level: 1 }).run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('heading', { level: 1 }))}
+			>
+				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H1</span>
+				<span class="font-semibold">Heading 1</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().toggleHeading({ level: 2 }).run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('heading', { level: 2 }))}
+			>
+				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H2</span>
+				<span>Heading 2</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().toggleHeading({ level: 3 }).run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('heading', { level: 3 }))}
+			>
+				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H3</span>
+				<span>Heading 3</span>
+			</button>
+		</div>
+	{:else if openDropdown === 'list'}
+		<div
+			class="fixed z-50 mb-1 min-w-[170px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
+			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 190))}px;"
+			data-dropdown="true"
+		>
+			<button
+				onclick={() => { editor?.chain().focus().toggleBulletList().run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('bulletList'))}
+			>
+				<List size={iconSize} />
+				<span>Bullet list</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().toggleOrderedList().run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('orderedList'))}
+			>
+				<ListOrdered size={iconSize} />
+				<span>Ordered list</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().toggleTaskList().run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive('taskList'))}
+			>
+				<ListChecks size={iconSize} />
+				<span>Task list</span>
+			</button>
+		</div>
+	{:else if openDropdown === 'link'}
+		<div
+			class="fixed z-50 mb-1 min-w-[200px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] px-2 py-1.5"
+			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 220))}px;"
+			data-dropdown="true"
+		>
+			<form
+				class="flex items-center gap-1"
+				onsubmit={(e) => { e.preventDefault(); applyLink(); }}
+			>
+				<input
+					bind:this={linkInput}
+					bind:value={linkUrl}
+					type="url"
+					placeholder="Paste a link..."
+					class="w-44 bg-transparent px-1.5 py-1 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+				/>
+				<button
+					type="submit"
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)]"
+					title="Apply link"
+				>
+					<CornerDownLeft size={16} />
+				</button>
+				<div class="mx-0.5 h-4 w-px bg-[var(--border-subtle)]"></div>
+				<button
+					type="button"
+					onclick={openLink}
+					disabled={!getAttrs('link').href}
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)] disabled:opacity-30"
+					title="Open link"
+				>
+					<ExternalLink size={16} />
+				</button>
+				<button
+					type="button"
+					onclick={removeLink}
+					disabled={!isActive('link')}
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-red-500 disabled:opacity-30"
+					title="Remove link"
+				>
+					<Trash2 size={16} />
+				</button>
+			</form>
+		</div>
+	{:else if openDropdown === 'table'}
+		<div
+			class="fixed z-50 mb-1 min-w-[190px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
+			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 210))}px;"
+			data-dropdown="true"
+		>
+			<button
+				onclick={() => { editor?.chain().focus().insertTable({ rows: 3, cols: 3 }).run(); closeDropdowns(); }}
+				class={dropdownItemClass()}
+			>
+				<Table2 size={iconSize} />
+				<span>Insert table</span>
+			</button>
+			{#if isActive('table')}
+				<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
+				<button
+					onclick={() => { editor?.chain().focus().addRowAfter().run(); closeDropdowns(); }}
+					class={dropdownItemClass()}
+				>
+					<BetweenHorizontalEnd size={iconSize} />
+					<span>Add row</span>
+				</button>
+				<button
+					onclick={() => { editor?.chain().focus().addColumnAfter().run(); closeDropdowns(); }}
+					class={dropdownItemClass()}
+				>
+					<BetweenVerticalEnd size={iconSize} />
+					<span>Add column</span>
+				</button>
+				<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
+				<button
+					onclick={() => { editor?.chain().focus().deleteRow().run(); closeDropdowns(); }}
+					class={dropdownItemClass()}
+				>
+					<Minus size={iconSize} />
+					<span>Delete row</span>
+				</button>
+				<button
+					onclick={() => { editor?.chain().focus().deleteColumn().run(); closeDropdowns(); }}
+					class={dropdownItemClass()}
+				>
+					<Minus size={iconSize} />
+					<span>Delete column</span>
+				</button>
+				<button
+					onclick={() => { editor?.chain().focus().deleteTable().run(); closeDropdowns(); }}
+					class={`${dropdownItemClass()} text-[var(--destructive)]`}
+				>
+					<RemoveFormatting size={iconSize} />
+					<span>Delete table</span>
+				</button>
+			{/if}
+		</div>
+	{:else if openDropdown === 'align'}
+		<div
+			class="fixed z-50 mb-1 min-w-[160px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
+			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 180))}px;"
+			data-dropdown="true"
+		>
+			<button
+				onclick={() => { editor?.chain().focus().setTextAlign('left').run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive({ textAlign: 'left' }))}
+			>
+				<AlignLeft size={iconSize} />
+				<span>Left</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().setTextAlign('center').run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive({ textAlign: 'center' }))}
+			>
+				<AlignCenter size={iconSize} />
+				<span>Center</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().setTextAlign('right').run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive({ textAlign: 'right' }))}
+			>
+				<AlignRight size={iconSize} />
+				<span>Right</span>
+			</button>
+			<button
+				onclick={() => { editor?.chain().focus().setTextAlign('justify').run(); closeDropdowns(); }}
+				class={dropdownItemClass(isActive({ textAlign: 'justify' }))}
+			>
+				<AlignJustify size={iconSize} />
+				<span>Justify</span>
+			</button>
+		</div>
+	{/if}
+{/if}

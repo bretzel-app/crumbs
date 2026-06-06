@@ -41,9 +41,10 @@
 	--grid-dot: #e8dcc8;
 }
 
-body {
+html, body {
 	font-family: 'JetBrains Mono', monospace;
 	accent-color: var(--primary);
+	overscroll-behavior-y: none;
 }
 
 body::before {
@@ -66,6 +67,11 @@ body::before {
 @keyframes pop-in {
 	from { opacity: 0; transform: scale(0.95) translateY(8px); }
 	to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-up {
+	from { transform: translateY(100%); }
+	to { transform: translateY(0); }
 }
 
 /* Prose overrides for parchment theme */
