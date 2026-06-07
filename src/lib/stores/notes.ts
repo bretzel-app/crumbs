@@ -8,11 +8,29 @@ export const notes = writable<Note[]>([]);
 export const currentFilter = writable<NoteFilter>('all');
 export const selectedTag = writable<string | null>(null);
 export const notesLoaded = writable(false);
+export const searchQuery = writable<string>('');
+export const searchResults = writable<Note[]>([]);
+
+export function reconcileSearchResults(canonicalNotes: Note[], results: Note[]): Note[] {
+	const notesMap = new Map(canonicalNotes.map((note) => [note.id, note]));
+	return results.flatMap((result) => {
+		const updated = notesMap.get(result.id);
+		return updated && !updated.trashed ? [updated] : [];
+	});
+}
+
+// Keep searchResults in sync with note updates/deletions in notes store
+notes.subscribe(($notes) => {
+	searchResults.update(($results) => {
+		if ($results.length === 0) return $results;
+		return reconcileSearchResults($notes, $results);
+	});
+});
 
 export const filteredNotes = derived(
-	[notes, selectedTag, currentFilter],
-	([$notes, $selectedTag, $filter]) => {
-		let result = $notes;
+	[notes, selectedTag, currentFilter, searchQuery, searchResults],
+	([$notes, $selectedTag, $filter, $searchQuery, $searchResults]) => {
+		let result = $searchQuery.trim() ? $searchResults : $notes;
 		if ($filter === 'all') {
 			result = result.filter((n) => !n.trashed && !n.archived);
 		} else if ($filter === 'archived') {
@@ -218,6 +236,7 @@ export async function deleteNote(id: string): Promise<boolean> {
 		const res = await fetch(`/api/notes/${id}`, { method: 'DELETE' });
 		if (res.ok) {
 			notes.update((list) => list.filter((n) => n.id !== id));
+			searchResults.update((list) => list.filter((n) => n.id !== id));
 			await deleteNoteFromIdb(id);
 			return true;
 		}
@@ -225,6 +244,7 @@ export async function deleteNote(id: string): Promise<boolean> {
 	} catch (err) {
 		if (isNetworkError(err)) {
 			notes.update((list) => list.filter((n) => n.id !== id));
+			searchResults.update((list) => list.filter((n) => n.id !== id));
 			await deleteNoteFromIdb(id);
 			await addToSyncQueue({ noteId: id, operation: 'delete', timestamp: Date.now() });
 			showToast('Saved offline — will sync when reconnected', 'info');
@@ -263,6 +283,7 @@ export async function leaveNote(id: string): Promise<boolean> {
 		const res = await fetch(`/api/notes/${id}/collaborators?userId=self`, { method: 'DELETE' });
 		if (res.ok) {
 			notes.update((list) => list.filter((n) => n.id !== id));
+			searchResults.update((list) => list.filter((n) => n.id !== id));
 			await deleteNoteFromIdb(id);
 			return true;
 		}

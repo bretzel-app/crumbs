@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeNotesByVersion } from './notes.js';
+import { mergeNotesByVersion, reconcileSearchResults } from './notes.js';
 import type { Note } from '$lib/types/index.js';
 
 function makeNote(overrides: Partial<Note> = {}): Note {
@@ -95,5 +95,19 @@ describe('mergeNotesByVersion', () => {
 		expect(result[0].content).toBe('- [x] Just saved');
 		// n2: local version 1 < incoming version 2 → use incoming
 		expect(result[1].content).toBe('updated on server');
+	});
+});
+
+describe('reconcileSearchResults', () => {
+	it('updates existing results and removes notes absent from canonical state', () => {
+		const updated = makeNote({ id: 'n1', title: 'Updated', version: 2 });
+		const removed = makeNote({ id: 'n2', title: 'Removed' });
+
+		const result = reconcileSearchResults([updated], [
+			makeNote({ id: 'n1', title: 'Stale', version: 1 }),
+			removed
+		]);
+
+		expect(result).toEqual([updated]);
 	});
 });

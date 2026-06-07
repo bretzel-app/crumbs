@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { notes, loadNotes, currentFilter } from '$lib/stores/notes.js';
+	import { searchQuery, searchResults } from '$lib/stores/notes.js';
 	import type { Note } from '$lib/types/index.js';
 	import Search from 'lucide-svelte/icons/search';
 	import X from 'lucide-svelte/icons/x';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+	import { onDestroy } from 'svelte';
 
 	interface Props {
 		onClose?: () => void;
@@ -12,41 +13,58 @@
 	let { onClose }: Props = $props();
 
 	let query = $state('');
-	let originalNotes: Note[] = [];
-	let isSearching = $state(false);
 	let inputEl: HTMLInputElement | undefined = $state();
+	let searchController: AbortController | undefined;
 
 	$effect(() => {
 		if (onClose) inputEl?.focus();
 	});
 
+	onDestroy(() => {
+		searchController?.abort();
+		searchQuery.set('');
+		searchResults.set([]);
+	});
+
 	async function handleSearch() {
-		if (!query.trim()) {
-			if (isSearching) {
-				notes.set(originalNotes);
-				isSearching = false;
-			}
+		searchController?.abort();
+		searchController = undefined;
+
+		const trimmedQuery = query.trim();
+		searchQuery.set(trimmedQuery);
+
+		if (!trimmedQuery) {
+			searchResults.set([]);
 			return;
 		}
 
-		if (!isSearching) {
-			notes.subscribe((n) => (originalNotes = n))();
-			isSearching = true;
-		}
+		const controller = new AbortController();
+		searchController = controller;
 
-		const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-		if (res.ok) {
-			const results = await res.json();
-			notes.set(results);
+		try {
+			const res = await fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}`, {
+				signal: controller.signal
+			});
+			if (res.ok) {
+				const results: Note[] = await res.json();
+				if (searchController !== controller || query.trim() !== trimmedQuery) return;
+				searchResults.set(results);
+			}
+		} catch (error) {
+			if (!(error instanceof DOMException && error.name === 'AbortError')) {
+				console.error('Search failed:', error);
+			}
+		} finally {
+			if (searchController === controller) searchController = undefined;
 		}
 	}
 
 	function clearSearch() {
+		searchController?.abort();
+		searchController = undefined;
 		query = '';
-		if (isSearching) {
-			notes.set(originalNotes);
-			isSearching = false;
-		}
+		searchQuery.set('');
+		searchResults.set([]);
 	}
 
 	function close() {
