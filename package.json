@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.28.3",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "license": "MIT",
   "author": "Bretzel (https://bretzel.app)",
   "homepage": "https://crumbs.bretzel.app",
