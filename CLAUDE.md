@@ -146,7 +146,7 @@ A `Makefile` wraps all common tasks for tool-agnostic usage. Run `make help` to 
 
 GitHub Actions with two workflows:
 
-**CI** (`.github/workflows/ci.yml`) — runs on push to `main`/`claude/**` and PRs to `main`:
+**CI** (`.github/workflows/ci.yml`) — runs on push to `main` and PRs to `main` (branch work is validated once via the PR event, avoiding duplicate push+PR runs):
 1. **Lint & Type Check** — `pnpm check`
 2. **Unit Tests** — `pnpm test:unit`
 3. **Build** — `pnpm build` (depends on steps 1+2)
