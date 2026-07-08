@@ -47,6 +47,10 @@ html, body {
 	overscroll-behavior-y: none;
 }
 
+body.editor-scroll-locked {
+	overflow: hidden;
+}
+
 body::before {
 	content: '';
 	position: fixed;

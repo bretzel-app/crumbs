@@ -47,28 +47,55 @@
 	let dropdownAnchorEl: HTMLElement | null = $state(null);
 	let linkUrl: string = $state('');
 	let linkInput: HTMLInputElement | undefined = $state();
+	let ignorePositionInvalidationUntil = 0;
 
-	function toggleDropdown(name: string, e: MouseEvent) {
+	const dropdownGap = 4;
+	const viewportMargin = 10;
+
+	function toggleDropdown(name: string, anchorEl: HTMLElement) {
 		if (openDropdown === name) {
 			closeDropdowns();
-			editor?.commands.focus();
 		} else {
+			ignorePositionInvalidationUntil = performance.now() + 600;
 			openDropdown = name;
-			dropdownAnchorEl = e.currentTarget as HTMLElement;
+			dropdownAnchorEl = anchorEl;
 			if (name === 'link') {
 				linkUrl = editor?.getAttributes('link').href ?? '';
-				// Focus input after Svelte renders the popover
 				requestAnimationFrame(() => linkInput?.focus());
-			} else {
-				// Keep keyboard open on mobile
-				editor?.commands.focus();
 			}
 		}
+	}
+
+	function handleDropdownClick(name: string, event: MouseEvent) {
+		toggleDropdown(name, event.currentTarget as HTMLElement);
+	}
+
+	function preventToolbarMouseFocus(event: MouseEvent) {
+		if (event.button === 0) event.preventDefault();
+	}
+
+	function handleCommandClick(command: () => void) {
+		command();
 	}
 
 	function closeDropdowns() {
 		openDropdown = null;
 		dropdownAnchorEl = null;
+	}
+
+	function closeDropdownsAfterPositionChange() {
+		if (!openDropdown || performance.now() < ignorePositionInvalidationUntil) return;
+		closeDropdowns();
+	}
+
+	function getViewportHeight(): number {
+		return window.visualViewport?.height ?? window.innerHeight;
+	}
+
+	function getDropdownStyle(rect: DOMRect, width: number): string {
+		const left = Math.max(viewportMargin, Math.min(rect.left, window.innerWidth - width - viewportMargin));
+		const bottom = getViewportHeight() - rect.top + dropdownGap;
+		return `bottom: ${bottom}px; left: ${left}px;`;
 	}
 
 	function applyLink() {
@@ -119,23 +146,32 @@
 			closeDropdowns();
 		}
 	}
+
+	$effect(() => {
+		if (!openDropdown || !window.visualViewport) return;
+
+		window.visualViewport.addEventListener('resize', closeDropdownsAfterPositionChange);
+		window.visualViewport.addEventListener('scroll', closeDropdownsAfterPositionChange);
+		return () => {
+			window.visualViewport?.removeEventListener('resize', closeDropdownsAfterPositionChange);
+			window.visualViewport?.removeEventListener('scroll', closeDropdownsAfterPositionChange);
+		};
+	});
 </script>
 
 <svelte:document onpointerdown={handlePointerDown} onkeydown={handleKeydown} />
+<svelte:window onscroll={closeDropdownsAfterPositionChange} onresize={closeDropdownsAfterPositionChange} />
 
 <div
 	class="flex overflow-x-auto md:flex-wrap items-center gap-0.5 border-b border-[var(--border-subtle)] px-2 py-1 scrollbar-hide"
 	style="scrollbar-width: none; -ms-overflow-style: none;"
 	data-testid="formatting-toolbar"
+	onscroll={closeDropdownsAfterPositionChange}
 >
-	<style>
-		[data-testid="formatting-toolbar"]::-webkit-scrollbar {
-			display: none;
-		}
-	</style>
 	<!-- Undo/Redo -->
 	<button
-		onclick={() => editor?.chain().focus().undo().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().undo().run())}
 		disabled={!canUndo()}
 		class={btnClass(false, !canUndo())}
 		title="Undo"
@@ -144,7 +180,8 @@
 		<Undo2 size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().redo().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().redo().run())}
 		disabled={!canRedo()}
 		class={btnClass(false, !canRedo())}
 		title="Redo"
@@ -157,7 +194,8 @@
 
 	<!-- Inline -->
 	<button
-		onclick={() => editor?.chain().focus().toggleBold().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleBold().run())}
 		class={btnClass(isActive('bold'))}
 		title="Bold (Ctrl+B)"
 		data-testid="format-bold"
@@ -165,7 +203,8 @@
 		<Bold size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().toggleItalic().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleItalic().run())}
 		class={btnClass(isActive('italic'))}
 		title="Italic (Ctrl+I)"
 		data-testid="format-italic"
@@ -173,7 +212,8 @@
 		<Italic size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().toggleStrike().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleStrike().run())}
 		class={btnClass(isActive('strike'))}
 		title="Strikethrough (Ctrl+Shift+X)"
 		data-testid="format-strikethrough"
@@ -181,7 +221,8 @@
 		<Strikethrough size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().toggleUnderline().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleUnderline().run())}
 		class={btnClass(isActive('underline'))}
 		title="Underline (Ctrl+U)"
 		data-testid="format-underline"
@@ -194,7 +235,8 @@
 	<!-- Heading dropdown -->
 	<div data-dropdown="heading">
 		<button
-			onclick={(e) => toggleDropdown('heading', e)}
+			onmousedown={preventToolbarMouseFocus}
+			onclick={(e) => handleDropdownClick('heading', e)}
 			class={dropdownBtnClass(isActive('heading'))}
 			title="Heading"
 			data-testid="format-heading"
@@ -207,7 +249,8 @@
 	<!-- List dropdown -->
 	<div data-dropdown="list">
 		<button
-			onclick={(e) => toggleDropdown('list', e)}
+			onmousedown={preventToolbarMouseFocus}
+			onclick={(e) => handleDropdownClick('list', e)}
 			class={dropdownBtnClass(isActive('bulletList') || isActive('orderedList') || isActive('taskList'))}
 			title="Lists"
 			data-testid="format-list"
@@ -220,7 +263,8 @@
 	<!-- Link popover -->
 	<div data-dropdown="link">
 		<button
-			onclick={(e) => toggleDropdown('link', e)}
+			onmousedown={preventToolbarMouseFocus}
+			onclick={(e) => handleDropdownClick('link', e)}
 			class={btnClass(isActive('link'))}
 			title="Insert link (Ctrl+K)"
 			data-testid="format-link"
@@ -232,7 +276,8 @@
 	<!-- Table dropdown -->
 	<div data-dropdown="table">
 		<button
-			onclick={(e) => toggleDropdown('table', e)}
+			onmousedown={preventToolbarMouseFocus}
+			onclick={(e) => handleDropdownClick('table', e)}
 			class={dropdownBtnClass(isActive('table'))}
 			title="Table"
 			data-testid="format-table"
@@ -245,7 +290,8 @@
 	<!-- Alignment dropdown -->
 	<div data-dropdown="align">
 		<button
-			onclick={(e) => toggleDropdown('align', e)}
+			onmousedown={preventToolbarMouseFocus}
+			onclick={(e) => handleDropdownClick('align', e)}
 			class={dropdownBtnClass(isActive({ textAlign: 'center' }) || isActive({ textAlign: 'right' }) || isActive({ textAlign: 'justify' }))}
 			title="Text alignment"
 			data-testid="format-align"
@@ -267,7 +313,8 @@
 
 	<!-- Block-level formatting -->
 	<button
-		onclick={() => editor?.chain().focus().toggleCode().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleCode().run())}
 		class={btnClass(isActive('code'))}
 		title="Inline code"
 		data-testid="format-code"
@@ -275,7 +322,8 @@
 		<Code size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().toggleBlockquote().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleBlockquote().run())}
 		class={btnClass(isActive('blockquote'))}
 		title="Blockquote"
 		data-testid="format-blockquote"
@@ -283,7 +331,8 @@
 		<TextQuote size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().toggleCodeBlock().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().toggleCodeBlock().run())}
 		class={btnClass(isActive('codeBlock'))}
 		title="Code block"
 		data-testid="format-code-block"
@@ -291,7 +340,8 @@
 		<CodeXml size={iconSize} />
 	</button>
 	<button
-		onclick={() => editor?.chain().focus().setHorizontalRule().run()}
+		onmousedown={preventToolbarMouseFocus}
+		onclick={() => handleCommandClick(() => editor?.chain().focus().setHorizontalRule().run())}
 		class={btnClass()}
 		title="Divider"
 		data-testid="format-hr"
@@ -307,26 +357,32 @@
 	{#if openDropdown === 'heading'}
 		<div
 			class="fixed z-50 mb-1 min-w-[150px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
-			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 170))}px;"
+			style={getDropdownStyle(rect, 170)}
 			data-dropdown="true"
 		>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleHeading({ level: 1 }).run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('heading', { level: 1 }))}
+				data-testid="format-h1"
 			>
 				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H1</span>
 				<span class="font-semibold">Heading 1</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleHeading({ level: 2 }).run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('heading', { level: 2 }))}
+				data-testid="format-h2"
 			>
 				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H2</span>
 				<span>Heading 2</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleHeading({ level: 3 }).run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('heading', { level: 3 }))}
+				data-testid="format-h3"
 			>
 				<span class="w-6 text-xs font-semibold text-[var(--text-muted)]">H3</span>
 				<span>Heading 3</span>
@@ -335,26 +391,32 @@
 	{:else if openDropdown === 'list'}
 		<div
 			class="fixed z-50 mb-1 min-w-[170px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
-			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 190))}px;"
+			style={getDropdownStyle(rect, 190)}
 			data-dropdown="true"
 		>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleBulletList().run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('bulletList'))}
+				data-testid="format-bullet-list"
 			>
 				<List size={iconSize} />
 				<span>Bullet list</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleOrderedList().run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('orderedList'))}
+				data-testid="format-ordered-list"
 			>
 				<ListOrdered size={iconSize} />
 				<span>Ordered list</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().toggleTaskList().run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive('taskList'))}
+				data-testid="format-task-list"
 			>
 				<ListChecks size={iconSize} />
 				<span>Task list</span>
@@ -363,7 +425,7 @@
 	{:else if openDropdown === 'link'}
 		<div
 			class="fixed z-50 mb-1 min-w-[200px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] px-2 py-1.5"
-			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 220))}px;"
+			style={getDropdownStyle(rect, 220)}
 			data-dropdown="true"
 		>
 			<form
@@ -375,31 +437,38 @@
 					bind:value={linkUrl}
 					type="url"
 					placeholder="Paste a link..."
-					class="w-44 bg-transparent px-1.5 py-1 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+					class="w-44 bg-transparent px-1.5 py-1 text-base md:text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+					data-testid="format-link-input"
 				/>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					type="submit"
 					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)]"
 					title="Apply link"
+					data-testid="format-link-apply"
 				>
 					<CornerDownLeft size={16} />
 				</button>
 				<div class="mx-0.5 h-4 w-px bg-[var(--border-subtle)]"></div>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					type="button"
 					onclick={openLink}
 					disabled={!getAttrs('link').href}
 					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)] disabled:opacity-30"
 					title="Open link"
+					data-testid="format-link-open"
 				>
 					<ExternalLink size={16} />
 				</button>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					type="button"
 					onclick={removeLink}
 					disabled={!isActive('link')}
-					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-red-500 disabled:opacity-30"
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--destructive)] disabled:opacity-30"
 					title="Remove link"
+					data-testid="format-link-remove"
 				>
 					<Trash2 size={16} />
 				</button>
@@ -408,12 +477,14 @@
 	{:else if openDropdown === 'table'}
 		<div
 			class="fixed z-50 mb-1 min-w-[190px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
-			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 210))}px;"
+			style={getDropdownStyle(rect, 210)}
 			data-dropdown="true"
 		>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().insertTable({ rows: 3, cols: 3 }).run(); closeDropdowns(); }}
 				class={dropdownItemClass()}
+				data-testid="format-insert-table"
 			>
 				<Table2 size={iconSize} />
 				<span>Insert table</span>
@@ -421,37 +492,47 @@
 			{#if isActive('table')}
 				<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					onclick={() => { editor?.chain().focus().addRowAfter().run(); closeDropdowns(); }}
 					class={dropdownItemClass()}
+					data-testid="format-add-row"
 				>
 					<BetweenHorizontalEnd size={iconSize} />
 					<span>Add row</span>
 				</button>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					onclick={() => { editor?.chain().focus().addColumnAfter().run(); closeDropdowns(); }}
 					class={dropdownItemClass()}
+					data-testid="format-add-column"
 				>
 					<BetweenVerticalEnd size={iconSize} />
 					<span>Add column</span>
 				</button>
 				<div class="my-1 h-px bg-[var(--border-subtle)]"></div>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					onclick={() => { editor?.chain().focus().deleteRow().run(); closeDropdowns(); }}
 					class={dropdownItemClass()}
+					data-testid="format-delete-row"
 				>
 					<Minus size={iconSize} />
 					<span>Delete row</span>
 				</button>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					onclick={() => { editor?.chain().focus().deleteColumn().run(); closeDropdowns(); }}
 					class={dropdownItemClass()}
+					data-testid="format-delete-column"
 				>
 					<Minus size={iconSize} />
 					<span>Delete column</span>
 				</button>
 				<button
+					onmousedown={preventToolbarMouseFocus}
 					onclick={() => { editor?.chain().focus().deleteTable().run(); closeDropdowns(); }}
 					class={`${dropdownItemClass()} text-[var(--destructive)]`}
+					data-testid="format-delete-table"
 				>
 					<RemoveFormatting size={iconSize} />
 					<span>Delete table</span>
@@ -461,33 +542,41 @@
 	{:else if openDropdown === 'align'}
 		<div
 			class="fixed z-50 mb-1 min-w-[160px] rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] py-1"
-			style="bottom: {window.innerHeight - rect.top + 4}px; left: {Math.max(10, Math.min(rect.left, window.innerWidth - 180))}px;"
+			style={getDropdownStyle(rect, 180)}
 			data-dropdown="true"
 		>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().setTextAlign('left').run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive({ textAlign: 'left' }))}
+				data-testid="format-align-left"
 			>
 				<AlignLeft size={iconSize} />
 				<span>Left</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().setTextAlign('center').run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive({ textAlign: 'center' }))}
+				data-testid="format-align-center"
 			>
 				<AlignCenter size={iconSize} />
 				<span>Center</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().setTextAlign('right').run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive({ textAlign: 'right' }))}
+				data-testid="format-align-right"
 			>
 				<AlignRight size={iconSize} />
 				<span>Right</span>
 			</button>
 			<button
+				onmousedown={preventToolbarMouseFocus}
 				onclick={() => { editor?.chain().focus().setTextAlign('justify').run(); closeDropdowns(); }}
 				class={dropdownItemClass(isActive({ textAlign: 'justify' }))}
+				data-testid="format-align-justify"
 			>
 				<AlignJustify size={iconSize} />
 				<span>Justify</span>
@@ -495,3 +584,9 @@
 		</div>
 	{/if}
 {/if}
+
+<style>
+	[data-testid="formatting-toolbar"]::-webkit-scrollbar {
+		display: none;
+	}
+</style>

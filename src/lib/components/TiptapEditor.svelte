@@ -72,7 +72,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
 	bind:this={element}
-	class="tiptap-wrapper prose prose-sm flex min-h-[300px] max-w-none flex-col px-4 py-2 text-[var(--text)]"
+	class="tiptap-wrapper prose md:prose-sm flex min-h-[300px] max-w-none flex-col px-4 py-2 text-[var(--text)]"
 	data-testid="tiptap-editor"
 	role="textbox"
 	aria-multiline="true"

@@ -1,3 +1,7 @@
+<script module lang="ts">
+	let bodyScrollLockCount = 0;
+</script>
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ColorPicker from './ColorPicker.svelte';
@@ -204,12 +208,16 @@
 		};
 	});
 
-	// Lock body scroll while editor is open
+	// Lock body scroll while editor is open. Multiple editor instances can overlap during
+	// the ghost-click grace period, so keep the class until the last instance unmounts.
 	$effect(() => {
-		const originalOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
+		bodyScrollLockCount += 1;
+		document.body.classList.add('editor-scroll-locked');
 		return () => {
-			document.body.style.overflow = originalOverflow;
+			bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+			if (bodyScrollLockCount === 0) {
+				document.body.classList.remove('editor-scroll-locked');
+			}
 		};
 	});
 
@@ -496,7 +504,7 @@
 	{#if !closing}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="relative flex h-full w-full flex-col md:overflow-hidden border-0 md:h-auto md:max-w-xl md:mx-4 lg:max-w-2xl md:rounded-sm md:border md:border-[var(--border)] md:shadow-[var(--card-shadow)] animate-[slide-up_250ms_ease-out] md:animate-[pop-in_150ms_ease-out]"
+		class="relative flex h-full w-full flex-col md:overflow-hidden border-0 md:h-auto md:max-w-xl md:mx-4 lg:max-w-2xl md:rounded-sm md:border md:border-[var(--border)] md:shadow-[var(--card-shadow)] animate-[slide-up_150ms_ease-out] md:animate-[pop-in_150ms_ease-out]"
 		style={bgStyle}
 		onkeydown={(e) => { e.stopPropagation(); handleKeydown(e); }}
 		data-testid="note-editor"
@@ -551,7 +559,7 @@
 					bind:this={textareaEl}
 					placeholder="Add a crumb..."
 					bind:value={content}
-					class="min-h-[300px] w-full resize-none bg-transparent px-4 py-2 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+					class="min-h-[300px] w-full resize-none bg-transparent px-4 py-2 text-base md:text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
 					rows="12"
 					data-testid="note-content-input"
 				></textarea>
@@ -582,7 +590,7 @@
 
 		<!-- Formatting toolbar -->
 		{#if !rawMarkdownMode && !checklistMode}
-			<div class="shrink-0 touch-none" style={toolbarInteractive ? '' : 'pointer-events: none'}>
+			<div class="shrink-0 touch-pan-x" style={toolbarInteractive ? '' : 'pointer-events: none'}>
 				<FormattingToolbar editor={tiptapEditor} tick={editorTick} />
 			</div>
 		{/if}
