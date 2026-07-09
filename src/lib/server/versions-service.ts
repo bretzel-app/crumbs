@@ -7,12 +7,15 @@ import type { NoteVersion, NoteVersionSummary, NoteColor } from '$lib/types/inde
 const MAX_VERSIONS_PER_NOTE = 50;
 const CONTENT_PREVIEW_LENGTH = 80;
 
+type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0];
+type SnapshotDb = Db | Transaction;
+
 /**
  * Create a snapshot of a note's current state.
  * Only called when content actually changed. Prunes snapshots beyond MAX_VERSIONS_PER_NOTE.
  */
 export function createSnapshot(
-db: Db,
+db: SnapshotDb,
 noteId: string,
 snapshot: {
 version: number;

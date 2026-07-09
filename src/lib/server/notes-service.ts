@@ -9,7 +9,7 @@ import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { fetchSharesForNotes } from './shares-service.js';
 import { canAccessNote } from './api-utils.js';
 import { createSnapshot } from './versions-service.js';
-import { mergeContent } from '$lib/utils/content-merge.js';
+import { mergeContentUpdate } from '$lib/utils/content-merge.js';
 import type { NoteFilter } from '$lib/types/index.js';
 
 interface NoteRow {
@@ -215,6 +215,19 @@ export interface UpdateNoteInput {
 /** Per-user fields that go to noteUserState for collaborators */
 const PER_USER_FIELDS = ['pinned', 'archived', 'sortOrder'] as const;
 
+function getBaseContent(db: Db, noteId: string, baseVersion: number | undefined): string | null {
+	if (baseVersion === undefined) return null;
+
+	const snapshot = db.select({ content: noteVersions.content })
+		.from(noteVersions)
+		.where(and(eq(noteVersions.noteId, noteId), lte(noteVersions.version, baseVersion)))
+		.orderBy(desc(noteVersions.version))
+		.limit(1)
+		.get();
+
+	return snapshot?.content ?? null;
+}
+
 export function updateNote(db: Db, userId: number, id: string, input: UpdateNoteInput) {
 	const { canAccess, isOwner } = canAccessNote(db, id, userId);
 	if (!canAccess) return null;
@@ -238,29 +251,18 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 
 	if (input.title !== undefined) { sharedUpdates.title = input.title; hasSharedUpdates = true; }
 	if (input.content !== undefined) {
-		// 3-way merge to preserve concurrent edits from other users.
-		// Only attempt merge when there's a concurrent edit: the client's
-		// baseVersion is behind the current version, meaning someone else
-		// saved between the client's load and this save.
+		// Preserve concurrent edits at line/block granularity when the client
+		// saved from an older note version.
 		const hasConcurrentEdit = input.baseVersion !== undefined
 			&& input.baseVersion < existing.version;
 
-		if (hasConcurrentEdit && input.content !== existing.content) {
-			const baseSnapshot = db.select({ content: noteVersions.content })
-				.from(noteVersions)
-				.where(and(eq(noteVersions.noteId, id), lte(noteVersions.version, input.baseVersion!)))
-				.orderBy(desc(noteVersions.version))
-				.limit(1)
-				.get();
-
-			if (baseSnapshot && baseSnapshot.content !== existing.content) {
-				sharedUpdates.content = mergeContent(baseSnapshot.content, input.content, existing.content);
-			} else {
-				sharedUpdates.content = input.content;
-			}
-		} else {
-			sharedUpdates.content = input.content;
-		}
+		sharedUpdates.content = hasConcurrentEdit
+			? mergeContentUpdate({
+				baseContent: getBaseContent(db, id, input.baseVersion),
+				incomingContent: input.content,
+				currentContent: existing.content
+			})
+			: input.content;
 		hasSharedUpdates = true;
 	}
 	if (input.color !== undefined) { sharedUpdates.color = input.color; hasSharedUpdates = true; }
@@ -276,6 +278,22 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 			hasSharedUpdates = true;
 		}
 		if (input.sortOrder !== undefined) { sharedUpdates.sortOrder = input.sortOrder; hasSharedUpdates = true; }
+	}
+
+	const hasActualContentChange =
+		(input.title !== undefined && input.title !== existing.title) ||
+		(sharedUpdates.content !== undefined && sharedUpdates.content !== existing.content) ||
+		(input.color !== undefined && input.color !== existing.color) ||
+		(input.checklistMode !== undefined && input.checklistMode !== existing.checklistMode);
+
+	if (hasActualContentChange) {
+		createSnapshot(db, id, {
+			version: existing.version,
+			title: existing.title,
+			content: existing.content,
+			checklistMode: existing.checklistMode,
+			color: existing.color
+		});
 	}
 
 	if (hasSharedUpdates || isOwner) {
@@ -322,23 +340,6 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 			const extractedTags = extractTags(content);
 			syncNoteTags(db, id, extractedTags, existing.userId);
 		}
-	}
-
-	// Create a version snapshot only when at least one content field actually changed
-	const hasActualContentChange =
-		(input.title !== undefined && input.title !== existing.title) ||
-		(input.content !== undefined && input.content !== existing.content) ||
-		(input.color !== undefined && input.color !== existing.color) ||
-		(input.checklistMode !== undefined && input.checklistMode !== existing.checklistMode);
-
-	if (hasActualContentChange) {
-		createSnapshot(db, id, {
-			version: existing.version,
-			title: existing.title,
-			content: existing.content,
-			checklistMode: existing.checklistMode,
-			color: existing.color
-		});
 	}
 
 	return getNote(db, userId, id);

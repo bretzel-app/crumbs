@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeContent, mergeContentTwoWay } from './content-merge.js';
+import { mergeContent, mergeContentTwoWay, mergeContentUpdate } from './content-merge.js';
 
 describe('mergeContent (3-way)', () => {
 	it('should return remote when local is unchanged', () => {
@@ -94,12 +94,37 @@ describe('mergeContentTwoWay', () => {
 		expect(mergeContentTwoWay('hello', 'hello')).toBe('hello');
 	});
 
-	it('should attempt merge when contents differ', () => {
+	it('should preserve the current server document when contents differ', () => {
 		const local = '- [x] Milk\n- [ ] Bread';
 		const remote = '- [ ] Milk\n- [ ] Bread\n- [ ] Eggs';
 
-		const result = mergeContentTwoWay(local, remote);
-		// Without a base, conflict resolution prefers remote
-		expect(result).toContain('- [ ] Bread');
+		expect(mergeContentTwoWay(local, remote)).toBe(remote);
+	});
+
+	it('should not resurrect content deleted from the current document', () => {
+		expect(mergeContentTwoWay('deleted content', '')).toBe('');
+	});
+});
+
+
+describe('mergeContentUpdate', () => {
+	it('should merge an incoming update against current content when a base is available', () => {
+		const result = mergeContentUpdate({
+			baseContent: '- [ ] Milk\n- [ ] Bread',
+			incomingContent: '- [x] Milk\n- [ ] Bread',
+			currentContent: '- [ ] Milk\n- [x] Bread'
+		});
+
+		expect(result).toBe('- [x] Milk\n- [x] Bread');
+	});
+
+	it('should preserve current content when the base is missing', () => {
+		const result = mergeContentUpdate({
+			baseContent: null,
+			incomingContent: '- [x] Milk',
+			currentContent: '- [ ] Bread'
+		});
+
+		expect(result).toBe('- [ ] Bread');
 	});
 });

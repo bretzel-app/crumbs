@@ -79,10 +79,31 @@ export function mergeContent(base: string, local: string, remote: string): strin
 
 /**
  * 2-way merge fallback when no base is available.
- * Uses an empty string as the base, so all lines from both sides appear
- * as additions. For conflicts (same region), prefers remote.
+ * Without a common ancestor, edits and deletions cannot be distinguished from
+ * concurrent changes. Preserve the current server document rather than
+ * fabricating content by combining two complete snapshots.
  */
 export function mergeContentTwoWay(local: string, remote: string): string {
-	if (local === remote) return remote;
-	return mergeContent('', local, remote);
+	return remote;
+}
+
+/**
+ * Merge an incoming content snapshot into the current server content.
+ * Uses 3-way merge when a base is available; otherwise falls back to a
+ * conservative 2-way merge instead of replacing the whole document.
+ */
+export function mergeContentUpdate(input: {
+	baseContent: string | null;
+	incomingContent: string;
+	currentContent: string;
+}): string {
+	const { baseContent, incomingContent, currentContent } = input;
+
+	if (incomingContent === currentContent) return currentContent;
+	if (baseContent === incomingContent) return currentContent;
+	if (baseContent === currentContent) return incomingContent;
+
+	return baseContent === null
+		? mergeContentTwoWay(incomingContent, currentContent)
+		: mergeContent(baseContent, incomingContent, currentContent);
 }

@@ -263,6 +263,31 @@ describe('updateNote', () => {
 		const updated = updateNote(db, OWNER_ID, 'n1', { title: 'Now with #newtag' });
 		expect(updated!.tags).toContain('newtag');
 	});
+
+	it('should merge concurrent content edits using the snapshot created by the first update', () => {
+		seedNote('n1', {
+			title: 'Shopping',
+			content: '- [ ] Milk\n- [ ] Bread',
+			checklistMode: true,
+			version: 1
+		});
+		shareNote('n1');
+
+		const ownerUpdate = updateNote(db, OWNER_ID, 'n1', {
+			content: '- [ ] Milk\n- [x] Bread',
+			baseVersion: 1
+		});
+		expect(ownerUpdate!.version).toBe(2);
+
+		const collabUpdate = updateNote(db, COLLAB_ID, 'n1', {
+			content: '- [x] Milk\n- [ ] Bread',
+			baseVersion: 1
+		});
+
+		expect(collabUpdate!.content).toBe('- [x] Milk\n- [x] Bread');
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots.some((snapshot) => snapshot.version === 1)).toBe(true);
+	});
 });
 
 describe('deleteNote', () => {

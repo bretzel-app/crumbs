@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestDb } from '../server/db/test-helpers.js';
-import { notes, noteCollaborators, noteUserState, users, syncLog } from '../server/db/schema.js';
+import { notes, noteCollaborators, noteUserState, users, syncLog, noteVersions } from '../server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../server/db/schema.js';
@@ -287,6 +287,64 @@ describe('processSyncPush — shared notes', () => {
 		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
 		// Both changes should be merged: Milk checked by collab, Bread checked by owner
 		expect(note.content).toBe('- [x] Milk\n- [x] Bread');
+	});
+
+	it('should create a base snapshot during sync so later queued edits can merge', async () => {
+		const t1 = new Date('2024-01-01T00:00:00Z');
+		seedSharedNote('n1', {
+			updatedAt: t1,
+			createdAt: t1,
+			content: '- [ ] Milk\n- [ ] Bread',
+			checklistMode: true,
+			version: 1
+		});
+
+		await processSyncPush(db, [{
+			noteId: 'n1',
+			operation: 'update',
+			timestamp: t1.getTime() + 1000,
+			data: { content: '- [ ] Milk\n- [x] Bread' },
+			baseVersion: 1
+		}], OWNER_ID);
+
+		await processSyncPush(db, [{
+			noteId: 'n1',
+			operation: 'update',
+			timestamp: t1.getTime() + 2000,
+			data: { content: '- [x] Milk\n- [ ] Bread' },
+			baseVersion: 1
+		}], COLLAB_ID);
+
+		const note = db.select().from(notes).where(eq(notes.id, 'n1')).get()!;
+		expect(note.content).toBe('- [x] Milk\n- [x] Bread');
+
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots.some((snapshot) => snapshot.version === 1)).toBe(true);
+	});
+
+	it('should retain at most 50 snapshots created by sync updates', async () => {
+		const createdAt = new Date('2024-01-01T00:00:00Z');
+		seedSharedNote('n1', {
+			updatedAt: createdAt,
+			createdAt,
+			content: 'version 1',
+			version: 1
+		});
+
+		for (let version = 2; version <= 52; version++) {
+			await processSyncPush(db, [{
+				noteId: 'n1',
+				operation: 'update',
+				timestamp: createdAt.getTime() + version,
+				data: { content: `version ${version}` },
+				baseVersion: version - 1
+			}], OWNER_ID);
+		}
+
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots).toHaveLength(50);
+		expect(snapshots.some((snapshot) => snapshot.version === 1)).toBe(false);
+		expect(snapshots.some((snapshot) => snapshot.version === 51)).toBe(true);
 	});
 
 	it('should not allow non-collaborator to update the note', async () => {

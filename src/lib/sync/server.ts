@@ -1,10 +1,10 @@
 import type { Db } from '$lib/server/db/index.js';
 import { notes, noteCollaborators, noteUserState, noteVersions, syncLog } from '$lib/server/db/schema.js';
-import { eq, gt, and, or, sql, desc, lte } from 'drizzle-orm';
+import { eq, gt, and, sql, desc, lte } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
-import { canAccessNote } from '$lib/server/api-utils.js';
-import { mergeContent } from '$lib/utils/content-merge.js';
+import { createSnapshot } from '$lib/server/versions-service.js';
+import { mergeContentUpdate } from '$lib/utils/content-merge.js';
 import type { SyncQueueItem } from './idb.js';
 
 /**
@@ -69,16 +69,17 @@ export async function processSyncPush(db: Db, changes: SyncQueueItem[], userId: 
 						if (change.data.color !== undefined) sharedData.color = change.data.color;
 						if (change.data.checklistMode !== undefined) sharedData.checklistMode = change.data.checklistMode;
 
-						// Content: 3-way merge to preserve concurrent edits from other users
+						// Content: merge only when the client saved from an older note version.
 						if (change.data.content !== undefined && change.data.content !== note.content) {
-							const baseContent = getBaseContent(tx, change.noteId, change.baseVersion);
-							if (baseContent !== null && baseContent !== note.content) {
-								// 3-way merge: base, incoming (local), server current (remote)
-								sharedData.content = mergeContent(baseContent, change.data.content, note.content);
-							} else {
-								// No base or base matches server — take incoming content
-								sharedData.content = change.data.content;
-							}
+							const hasConcurrentEdit = change.baseVersion !== undefined
+								&& change.baseVersion < note.version;
+							sharedData.content = hasConcurrentEdit
+								? mergeContentUpdate({
+									baseContent: getBaseContent(tx, change.noteId, change.baseVersion),
+									incomingContent: change.data.content,
+									currentContent: note.content
+								})
+								: change.data.content;
 						}
 
 						if (isOwner) {
@@ -90,6 +91,22 @@ export async function processSyncPush(db: Db, changes: SyncQueueItem[], userId: 
 								sharedData.trashedAt = change.data.trashed ? new Date(change.timestamp) : null;
 							}
 							if (change.data.sortOrder !== undefined) sharedData.sortOrder = change.data.sortOrder;
+						}
+
+						const hasActualContentChange =
+							(change.data.title !== undefined && change.data.title !== note.title) ||
+							(sharedData.content !== undefined && sharedData.content !== note.content) ||
+							(change.data.color !== undefined && change.data.color !== note.color) ||
+							(change.data.checklistMode !== undefined && change.data.checklistMode !== note.checklistMode);
+
+						if (hasActualContentChange) {
+							createSnapshot(tx, change.noteId, {
+								version: note.version,
+								title: note.title,
+								content: note.content,
+								checklistMode: note.checklistMode,
+								color: note.color
+							});
 						}
 
 						tx.update(notes)
