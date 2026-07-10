@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- interactive-widget=resizes-content: on Android the keyboard shrinks the layout viewport via
+         the native inset path, so bottom-anchored UI (editor toolbar) lands exactly on the keyboard —
+         Chromium's visualViewport.height can under-report by the nav-bar height. iOS ignores this
+         attribute and relies on the visualViewport tracking in NoteEditor instead. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#f0e6d3" />
     <script>
       (function() {

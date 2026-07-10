@@ -88,13 +88,12 @@
 		closeDropdowns();
 	}
 
-	function getViewportHeight(): number {
-		return window.visualViewport?.height ?? window.innerHeight;
-	}
-
 	function getDropdownStyle(rect: DOMRect, width: number): string {
 		const left = Math.max(viewportMargin, Math.min(rect.left, window.innerWidth - width - viewportMargin));
-		const bottom = getViewportHeight() - rect.top + dropdownGap;
+		// CSS `bottom` on position:fixed and getBoundingClientRect() both use layout-viewport
+		// coordinates, so the reference height must be innerHeight — visualViewport.height is
+		// smaller while the keyboard is open and would push the dropdown behind the keyboard.
+		const bottom = window.innerHeight - rect.top + dropdownGap;
 		return `bottom: ${bottom}px; left: ${left}px;`;
 	}
 
