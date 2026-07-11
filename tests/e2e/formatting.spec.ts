@@ -1,5 +1,5 @@
 import { test, expect, noteCard } from './helpers/fixtures.js';
-import type { Page } from '@playwright/test';
+import { devices, type Page } from '@playwright/test';
 
 /** Run a TipTap command chain via the exposed editor instance on the DOM element */
 async function runTiptapCommand(page: Page, commandFn: string) {
@@ -107,5 +107,51 @@ test.describe('Rich text formatting', () => {
 		await expect(page.getByTestId('note-content-input')).toBeVisible();
 		await expect(page.getByTestId('tiptap-editor')).not.toBeVisible();
 		await expect(page.getByTestId('note-content-input')).toHaveValue('Hello **bold** world');
+	});
+});
+
+test.describe('Rich text formatting on mobile', () => {
+	const pixel7 = devices['Pixel 7'];
+	test.use({
+		viewport: pixel7.viewport,
+		userAgent: pixel7.userAgent,
+		deviceScaleFactor: pixel7.deviceScaleFactor,
+		isMobile: pixel7.isMobile,
+		hasTouch: pixel7.hasTouch
+	});
+
+	test('Scenario: Tapping a task-list checkbox does not focus the editor', async ({ authenticatedPage: page }) => {
+		// Given a regular text note contains a task list in the rich-text editor
+		await page.getByTestId('new-note-fab').click();
+		await page.getByTestId('mobile-overflow-menu-btn').click();
+		await page.getByTestId('markdown-toggle').click();
+		await page.getByTestId('note-content-input').fill('- [ ] Mobile task');
+		await page.getByTestId('mobile-overflow-menu-btn').click();
+		await page.getByTestId('markdown-toggle').click();
+
+		const richTextEditor = page.getByTestId('tiptap-editor').locator('.tiptap');
+		const checkbox = richTextEditor.locator('input[type="checkbox"]');
+		await expect(checkbox).not.toBeChecked();
+		await expect(richTextEditor).not.toBeFocused();
+		await richTextEditor.evaluate((element) => {
+			element.dataset.focusCount = '0';
+			element.addEventListener('focus', () => {
+				element.dataset.focusCount = String(Number(element.dataset.focusCount) + 1);
+			});
+		});
+
+		// When the checkbox is tapped, only its state changes and focus never enters the editor
+		await checkbox.tap();
+
+		await expect(checkbox).toBeChecked();
+		await expect(richTextEditor).not.toBeFocused();
+		await expect(richTextEditor).toHaveAttribute('data-focus-count', '0');
+
+		// And unchecking it also leaves the contenteditable editor unfocused
+		await checkbox.tap();
+
+		await expect(checkbox).not.toBeChecked();
+		await expect(richTextEditor).not.toBeFocused();
+		await expect(richTextEditor).toHaveAttribute('data-focus-count', '0');
 	});
 });

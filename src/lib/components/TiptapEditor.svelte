@@ -27,6 +27,54 @@
 	let element: HTMLDivElement | undefined = $state();
 	let editor: Editor | undefined = $state();
 
+	function isTaskCheckboxTarget(target: EventTarget | null): boolean {
+		if (target instanceof Element) {
+			const checkbox = target.matches('input[type="checkbox"]')
+				? target
+				: target.closest('label')?.querySelector('input[type="checkbox"]');
+			return checkbox !== null && checkbox !== undefined;
+		}
+		return false;
+	}
+
+	function isTouchDevice(): boolean {
+		return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+	}
+
+	function handleWrapperPointerDown(event: PointerEvent) {
+		if (event.pointerType === 'touch' && isTaskCheckboxTarget(event.target)) {
+			event.preventDefault();
+		}
+	}
+
+	function handleWrapperClick(event: MouseEvent) {
+		if (isTaskCheckboxTarget(event.target)) {
+			return;
+		}
+
+		editor?.commands.focus();
+	}
+
+	function handleWrapperChangeCapture(event: Event) {
+		if (!isTouchDevice() || !(event.target instanceof HTMLInputElement)) return;
+		if (event.target.type !== 'checkbox' || !editor) return;
+
+		const taskItem = event.target.closest('li[data-checked]');
+		if (!taskItem) return;
+
+		const taskItemPosition = editor.view.posAtDOM(taskItem, 0) - 1;
+		const taskItemNode = editor.state.doc.nodeAt(taskItemPosition);
+		if (taskItemNode?.type.name !== 'taskItem') return;
+
+		event.stopPropagation();
+		editor.view.dispatch(
+			editor.state.tr.setNodeMarkup(taskItemPosition, undefined, {
+				...taskItemNode.attrs,
+				checked: event.target.checked
+			})
+		);
+	}
+
 	onMount(() => {
 		editor = new Editor({
 			element: element!,
@@ -77,7 +125,9 @@
 	role="textbox"
 	aria-multiline="true"
 	tabindex="0"
-	onclick={() => editor?.commands.focus()}
+	onpointerdown={handleWrapperPointerDown}
+	onclick={handleWrapperClick}
+	onchangecapture={handleWrapperChangeCapture}
 ></div>
 
 <style>
