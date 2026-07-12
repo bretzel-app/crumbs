@@ -4,6 +4,7 @@
 	import TagFilter from '$lib/components/TagFilter.svelte';
 	import { pinnedNotes, unpinnedNotes, selectedTag, currentFilter, notes, notesLoaded, loadNotes, updateSortOrders } from '$lib/stores/notes.js';
 	import { onMount } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import type { Note, NoteFilter } from '$lib/types/index.js';
 	import Plus from 'lucide-svelte/icons/plus';
 	import SquareCheck from 'lucide-svelte/icons/square-check';
@@ -27,16 +28,19 @@
 		loadNotes(filter);
 	});
 
+	// Use SvelteKit's replaceState (not the raw history API) so the router keeps
+	// ownership of the entry — NoteEditor's close-on-back relies on popstate being
+	// handled by SvelteKit.
 	function openEditor(note: Note) {
 		editingNote = note;
-		history.replaceState(null, '', `#${note.id}`);
+		replaceState(`#${note.id}`, {});
 	}
 
 	function closeEditor() {
 		editingNote = null;
 		showNewNote = false;
 		newNoteChecklist = false;
-		history.replaceState(null, '', location.pathname);
+		replaceState(location.pathname, {});
 	}
 
 	function handleReorder(noteIds: string[]) {

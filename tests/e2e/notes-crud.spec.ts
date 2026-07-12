@@ -23,6 +23,40 @@ test.describe('Notes CRUD', () => {
 		await expect(page.getByText('Updated Title')).toBeVisible();
 	});
 
+	test('Scenario: Browser back closes the open editor instead of leaving the page', async ({ authenticatedPage: page }) => {
+		// Given a note titled "Back Closes Me" exists
+		await createNote(page, 'Back Closes Me', 'Some content');
+
+		// Given the note is open in the editor
+		await noteCard(page, 'Back Closes Me').click();
+		await expect(page.getByTestId('note-editor')).toBeVisible();
+
+		// When the user navigates back
+		await page.goBack();
+
+		// Then the editor is closed and the notes list is still shown
+		await expect(page.getByTestId('note-editor')).not.toBeVisible();
+		await expect(noteCard(page, 'Back Closes Me')).toBeVisible();
+	});
+
+	test('Scenario: Closing the editor leaves browser history clean', async ({ authenticatedPage: page }) => {
+		// Given a note titled "Clean History" exists
+		await createNote(page, 'Clean History');
+
+		// Given the user opened and closed the note
+		await noteCard(page, 'Clean History').click();
+		await expect(page.getByTestId('note-editor')).toBeVisible();
+		await page.getByTestId('close-editor-btn').click();
+		await expect(page.getByTestId('note-editor')).not.toBeVisible();
+
+		// When the user navigates back
+		await page.goBack();
+
+		// Then the editor does not reopen and the note's URL is gone from history
+		await expect(page.getByTestId('note-editor')).not.toBeVisible();
+		expect(page.url()).not.toContain('#');
+	});
+
 	test('Scenario: Trashed note disappears from the main view', async ({ authenticatedPage: page }) => {
 		// Given a note titled "Delete Me" exists
 		await createNote(page, 'Delete Me');

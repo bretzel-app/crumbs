@@ -4,6 +4,8 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	import ColorPicker from './ColorPicker.svelte';
 	import Checklist from './Checklist.svelte';
 	import FormattingToolbar from './FormattingToolbar.svelte';
@@ -404,8 +406,34 @@
 		pointerdownOnOverlay = false;
 	}
 
+	// Close on browser back — Android back button / iOS back swipe. The editor is
+	// fullscreen on mobile with no backdrop to tap, so back must dismiss it instead of
+	// leaving the page. On mount, push a shallow-routing history entry; navigating back
+	// pops it and closes the editor. UI closes pop the entry themselves via
+	// history.back() so no stale entry is left behind.
+	let historyEntryPushed = false;
+
+	onMount(() => {
+		// Reuse an existing entry (e.g. back-navigating to a note restored from the
+		// URL hash) instead of stacking a second one.
+		if (!page.state.noteEditorOpen) {
+			pushState('', { noteEditorOpen: true });
+		}
+		historyEntryPushed = true;
+	});
+
+	$effect(() => {
+		if (page.state.noteEditorOpen || !historyEntryPushed || closing) return;
+		historyEntryPushed = false;
+		saveAndClose();
+	});
+
 	function dismissOverlay() {
 		closing = true;
+		if (historyEntryPushed) {
+			historyEntryPushed = false;
+			history.back();
+		}
 		setTimeout(() => onClose(), 400);
 	}
 

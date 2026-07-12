@@ -15,7 +15,9 @@ declare global {
 			} | null;
 		}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			noteEditorOpen?: boolean;
+		}
 		// interface Platform {}
 	}
 }
