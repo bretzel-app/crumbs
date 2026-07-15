@@ -104,6 +104,11 @@ export async function createNote(page: Page, title: string, content?: string) {
 		await editor.pressSequentially(content);
 	}
 	await page.getByTestId('close-editor-btn').click();
+	// Wait for the editor to fully unmount, not just start closing. The close is
+	// animated and dismisses via an async history.back() (see NoteEditor); returning
+	// before it settles lets a following page.goto race that navigation and abort it
+	// (net::ERR_ABORTED). The outer overlay is removed only when the close completes.
+	await expect(page.getByTestId('note-editor-overlay')).toHaveCount(0);
 	await expect(noteCard(page, title)).toBeVisible();
 }
 
