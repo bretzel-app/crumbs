@@ -1,14 +1,39 @@
 import type { Db } from './db/index.js';
 import { noteVersions, notes } from './db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, lte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { NoteVersion, NoteVersionSummary, NoteColor } from '$lib/types/index.js';
 
 const MAX_VERSIONS_PER_NOTE = 50;
 const CONTENT_PREVIEW_LENGTH = 80;
 
-type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0];
-type SnapshotDb = Db | Transaction;
+export type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0];
+export type SnapshotDb = Db | Transaction;
+
+/**
+ * Resolve the 3-way merge base for a concurrent edit: the content of the snapshot
+ * at or before the client's base version. Returns null when the base version is
+ * unknown or no snapshot at/before it exists. Callers must NOT substitute a newer
+ * snapshot as the base — a base newer than what the client actually saw makes the
+ * merge treat other users' lines as deletions and silently drop them.
+ */
+export function getBaseContent(
+	db: SnapshotDb,
+	noteId: string,
+	baseVersion: number | undefined
+): string | null {
+	if (baseVersion === undefined) return null;
+
+	const snapshot = db
+		.select({ content: noteVersions.content })
+		.from(noteVersions)
+		.where(and(eq(noteVersions.noteId, noteId), lte(noteVersions.version, baseVersion)))
+		.orderBy(desc(noteVersions.version))
+		.limit(1)
+		.get();
+
+	return snapshot?.content ?? null;
+}
 
 /**
  * Create a snapshot of a note's current state.

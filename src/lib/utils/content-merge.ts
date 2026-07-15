@@ -78,19 +78,12 @@ export function mergeContent(base: string, local: string, remote: string): strin
 }
 
 /**
- * 2-way merge fallback when no base is available.
- * Without a common ancestor, edits and deletions cannot be distinguished from
- * concurrent changes. Preserve the current server document rather than
- * fabricating content by combining two complete snapshots.
- */
-export function mergeContentTwoWay(local: string, remote: string): string {
-	return remote;
-}
-
-/**
  * Merge an incoming content snapshot into the current server content.
- * Uses 3-way merge when a base is available; otherwise falls back to a
- * conservative 2-way merge instead of replacing the whole document.
+ *
+ * Uses a 3-way merge when a base (common ancestor) is available. Without a base —
+ * e.g. the base snapshot was pruned, or the version was bumped by a metadata-only
+ * change that created no snapshot — a 3-way merge is impossible, so keep the
+ * incoming edit rather than silently discarding the user's changes.
  */
 export function mergeContentUpdate(input: {
 	baseContent: string | null;
@@ -103,7 +96,10 @@ export function mergeContentUpdate(input: {
 	if (baseContent === incomingContent) return currentContent;
 	if (baseContent === currentContent) return incomingContent;
 
-	return baseContent === null
-		? mergeContentTwoWay(incomingContent, currentContent)
-		: mergeContent(baseContent, incomingContent, currentContent);
+	if (baseContent === null) {
+		console.warn('[content-merge] no base snapshot for concurrent edit; keeping incoming content');
+		return incomingContent;
+	}
+
+	return mergeContent(baseContent, incomingContent, currentContent);
 }

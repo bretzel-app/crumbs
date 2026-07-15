@@ -1,6 +1,6 @@
 import type { Db } from './db/index.js';
-import { notes, noteTags, tags, noteCollaborators, noteUserState, noteVersions } from './db/schema.js';
-import { eq, and, desc, like, or, inArray, sql, lte } from 'drizzle-orm';
+import { notes, noteTags, tags, noteCollaborators, noteUserState } from './db/schema.js';
+import { eq, and, like, or, inArray, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { extractTags } from '$lib/utils/tags.js';
 import { fetchTagsForNotes, syncNoteTags } from './tags.js';
@@ -8,7 +8,7 @@ import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { fetchSharesForNotes } from './shares-service.js';
 import { canAccessNote } from './api-utils.js';
-import { createSnapshot } from './versions-service.js';
+import { createSnapshot, getBaseContent } from './versions-service.js';
 import { mergeContentUpdate } from '$lib/utils/content-merge.js';
 import type { NoteFilter } from '$lib/types/index.js';
 
@@ -214,19 +214,6 @@ export interface UpdateNoteInput {
 
 /** Per-user fields that go to noteUserState for collaborators */
 const PER_USER_FIELDS = ['pinned', 'archived', 'sortOrder'] as const;
-
-function getBaseContent(db: Db, noteId: string, baseVersion: number | undefined): string | null {
-	if (baseVersion === undefined) return null;
-
-	const snapshot = db.select({ content: noteVersions.content })
-		.from(noteVersions)
-		.where(and(eq(noteVersions.noteId, noteId), lte(noteVersions.version, baseVersion)))
-		.orderBy(desc(noteVersions.version))
-		.limit(1)
-		.get();
-
-	return snapshot?.content ?? null;
-}
 
 export function updateNote(db: Db, userId: number, id: string, input: UpdateNoteInput) {
 	const { canAccess, isOwner } = canAccessNote(db, id, userId);

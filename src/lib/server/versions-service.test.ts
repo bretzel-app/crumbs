@@ -3,7 +3,7 @@ import { createTestDb } from './db/test-helpers.js';
 import { users, notes, noteVersions } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { Db } from './db/index.js';
-import { createSnapshot, listVersions, getVersion, snapshotCurrentNote } from './versions-service.js';
+import { createSnapshot, listVersions, getVersion, snapshotCurrentNote, getBaseContent } from './versions-service.js';
 
 let db: Db;
 
@@ -42,6 +42,32 @@ function seedNote(overrides: Partial<typeof notes.$inferInsert> = {}) {
 beforeEach(() => {
 	({ db } = createTestDb());
 	seedUser();
+});
+
+describe('getBaseContent', () => {
+	it('returns null when the base version is unknown', () => {
+		seedNote();
+		expect(getBaseContent(db, NOTE_ID, undefined)).toBeNull();
+	});
+
+	it('returns the snapshot content at or before the base version', () => {
+		seedNote();
+		createSnapshot(db, NOTE_ID, { version: 1, title: 'T', content: 'v1', checklistMode: false, color: 'default' });
+		createSnapshot(db, NOTE_ID, { version: 3, title: 'T', content: 'v3', checklistMode: false, color: 'default' });
+
+		expect(getBaseContent(db, NOTE_ID, 2)).toBe('v1');
+		expect(getBaseContent(db, NOTE_ID, 3)).toBe('v3');
+	});
+
+	it('returns null instead of a newer snapshot when none exists at or before the base version', () => {
+		seedNote();
+		// Only a snapshot NEWER than the requested base exists (e.g. the real base was
+		// pruned). Using it as the merge base would treat unseen lines as deletions,
+		// so getBaseContent must return null rather than fall back to it.
+		createSnapshot(db, NOTE_ID, { version: 5, title: 'T', content: 'v5', checklistMode: false, color: 'default' });
+
+		expect(getBaseContent(db, NOTE_ID, 2)).toBeNull();
+	});
 });
 
 describe('createSnapshot', () => {

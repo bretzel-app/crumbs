@@ -288,6 +288,21 @@ describe('updateNote', () => {
 		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
 		expect(snapshots.some((snapshot) => snapshot.version === 1)).toBe(true);
 	});
+
+	it('should keep the incoming edit when a metadata-only bump left no base snapshot', () => {
+		seedNote('n1', { title: 'Note', content: 'hello', version: 1 });
+
+		// A metadata-only change bumps the version but creates no snapshot.
+		updateNote(db, OWNER_ID, 'n1', { pinned: true });
+		const snapshots = db.select().from(noteVersions).where(eq(noteVersions.noteId, 'n1')).all();
+		expect(snapshots).toHaveLength(0);
+
+		// A later concurrent content edit based on the pre-bump version therefore has
+		// no base to merge against — the incoming edit must be preserved, not dropped.
+		const edited = updateNote(db, OWNER_ID, 'n1', { content: 'hello world', baseVersion: 1 });
+
+		expect(edited!.content).toBe('hello world');
+	});
 });
 
 describe('deleteNote', () => {

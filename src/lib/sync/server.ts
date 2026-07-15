@@ -1,36 +1,11 @@
 import type { Db } from '$lib/server/db/index.js';
-import { notes, noteCollaborators, noteUserState, noteVersions, syncLog } from '$lib/server/db/schema.js';
-import { eq, gt, and, sql, desc, lte } from 'drizzle-orm';
+import { notes, noteCollaborators, noteUserState, syncLog } from '$lib/server/db/schema.js';
+import { eq, gt, and, sql } from 'drizzle-orm';
 import { extractTags } from '$lib/utils/tags.js';
 import { syncNoteTags } from '$lib/server/tags.js';
-import { createSnapshot } from '$lib/server/versions-service.js';
+import { createSnapshot, getBaseContent } from '$lib/server/versions-service.js';
 import { mergeContentUpdate } from '$lib/utils/content-merge.js';
 import type { SyncQueueItem } from './idb.js';
-
-/**
- * Find the base content for 3-way merge from version snapshots.
- * Returns the content from the snapshot at or before the given version,
- * or the current note content if no snapshot is found.
- */
-function getBaseContent(tx: Parameters<Parameters<Db['transaction']>[0]>[0], noteId: string, baseVersion?: number): string | null {
-	if (baseVersion !== undefined) {
-		const snapshot = tx.select({ content: noteVersions.content })
-			.from(noteVersions)
-			.where(and(eq(noteVersions.noteId, noteId), lte(noteVersions.version, baseVersion)))
-			.orderBy(desc(noteVersions.version))
-			.limit(1)
-			.get();
-		if (snapshot) return snapshot.content;
-	}
-	// Fallback: get the most recent snapshot before the current version
-	const latest = tx.select({ content: noteVersions.content })
-		.from(noteVersions)
-		.where(eq(noteVersions.noteId, noteId))
-		.orderBy(desc(noteVersions.version))
-		.limit(1)
-		.get();
-	return latest?.content ?? null;
-}
 
 /**
  * Process incoming sync changes from client.

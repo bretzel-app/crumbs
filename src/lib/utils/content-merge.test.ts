@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeContent, mergeContentTwoWay, mergeContentUpdate } from './content-merge.js';
+import { mergeContent, mergeContentUpdate } from './content-merge.js';
 
 describe('mergeContent (3-way)', () => {
 	it('should return remote when local is unchanged', () => {
@@ -89,24 +89,6 @@ describe('mergeContent (3-way)', () => {
 	});
 });
 
-describe('mergeContentTwoWay', () => {
-	it('should return remote when both are identical', () => {
-		expect(mergeContentTwoWay('hello', 'hello')).toBe('hello');
-	});
-
-	it('should preserve the current server document when contents differ', () => {
-		const local = '- [x] Milk\n- [ ] Bread';
-		const remote = '- [ ] Milk\n- [ ] Bread\n- [ ] Eggs';
-
-		expect(mergeContentTwoWay(local, remote)).toBe(remote);
-	});
-
-	it('should not resurrect content deleted from the current document', () => {
-		expect(mergeContentTwoWay('deleted content', '')).toBe('');
-	});
-});
-
-
 describe('mergeContentUpdate', () => {
 	it('should merge an incoming update against current content when a base is available', () => {
 		const result = mergeContentUpdate({
@@ -118,13 +100,45 @@ describe('mergeContentUpdate', () => {
 		expect(result).toBe('- [x] Milk\n- [x] Bread');
 	});
 
-	it('should preserve current content when the base is missing', () => {
+	it('should keep the incoming edit when no base snapshot is available', () => {
+		// Without a common ancestor a 3-way merge is impossible; dropping the
+		// incoming edit would silently lose the user's changes.
 		const result = mergeContentUpdate({
 			baseContent: null,
 			incomingContent: '- [x] Milk',
 			currentContent: '- [ ] Bread'
 		});
 
-		expect(result).toBe('- [ ] Bread');
+		expect(result).toBe('- [x] Milk');
+	});
+
+	it('should keep current content when the incoming edit equals it', () => {
+		const result = mergeContentUpdate({
+			baseContent: null,
+			incomingContent: 'same',
+			currentContent: 'same'
+		});
+
+		expect(result).toBe('same');
+	});
+
+	it('should keep current content when the incoming edit matches the base (no local change)', () => {
+		const result = mergeContentUpdate({
+			baseContent: 'base',
+			incomingContent: 'base',
+			currentContent: 'server changed'
+		});
+
+		expect(result).toBe('server changed');
+	});
+
+	it('should take the incoming edit when the server is unchanged from the base', () => {
+		const result = mergeContentUpdate({
+			baseContent: 'base',
+			incomingContent: 'incoming change',
+			currentContent: 'base'
+		});
+
+		expect(result).toBe('incoming change');
 	});
 });
