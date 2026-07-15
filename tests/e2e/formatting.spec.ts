@@ -13,6 +13,29 @@ async function runTiptapCommand(page: Page, commandFn: string) {
 	);
 }
 
+/**
+ * Read the `checked` attribute of the first task item from the live ProseMirror
+ * document. This reflects the editor's document state, not just the native
+ * checkbox widget — so it catches a widget/document desync where the DOM
+ * checkbox toggles but the transaction never updates the node.
+ */
+async function firstTaskItemChecked(page: Page): Promise<boolean> {
+	return page.getByTestId('tiptap-editor').evaluate((el) => {
+		const editor = (el as any).__tiptapEditor;
+		if (!editor) throw new Error('TipTap editor not found on element');
+		let checked: boolean | undefined;
+		editor.state.doc.descendants((node: any) => {
+			if (checked === undefined && node.type.name === 'taskItem') {
+				checked = Boolean(node.attrs.checked);
+				return false;
+			}
+			return true;
+		});
+		if (checked === undefined) throw new Error('No task item found in document');
+		return checked;
+	});
+}
+
 /** Toggle markdown mode via the overflow menu. */
 async function toggleMarkdownMode(page: Page) {
 	await page.getByTestId('overflow-menu-btn').click();
@@ -140,17 +163,20 @@ test.describe('Rich text formatting on mobile', () => {
 			});
 		});
 
-		// When the checkbox is tapped, only its state changes and focus never enters the editor
+		// When the checkbox is tapped, the change propagates to the editor's document
+		// without focus ever entering the editor (which would open the mobile keyboard)
 		await checkbox.tap();
 
 		await expect(checkbox).toBeChecked();
+		expect(await firstTaskItemChecked(page)).toBe(true);
 		await expect(richTextEditor).not.toBeFocused();
 		await expect(richTextEditor).toHaveAttribute('data-focus-count', '0');
 
-		// And unchecking it also leaves the contenteditable editor unfocused
+		// And unchecking propagates to the document too, still without focusing the editor
 		await checkbox.tap();
 
 		await expect(checkbox).not.toBeChecked();
+		expect(await firstTaskItemChecked(page)).toBe(false);
 		await expect(richTextEditor).not.toBeFocused();
 		await expect(richTextEditor).toHaveAttribute('data-focus-count', '0');
 	});
