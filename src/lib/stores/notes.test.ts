@@ -99,15 +99,47 @@ describe('mergeNotesByVersion', () => {
 });
 
 describe('reconcileSearchResults', () => {
-	it('updates existing results and removes notes absent from canonical state', () => {
-		const updated = makeNote({ id: 'n1', title: 'Updated', version: 2 });
-		const removed = makeNote({ id: 'n2', title: 'Removed' });
+	it('replaces a stale result with the canonical note', () => {
+		const canonical = makeNote({ id: 'n1', title: 'Updated', version: 2 });
 
-		const result = reconcileSearchResults([updated], [
-			makeNote({ id: 'n1', title: 'Stale', version: 1 }),
-			removed
-		]);
+		const result = reconcileSearchResults(
+			[canonical],
+			[makeNote({ id: 'n1', title: 'Stale', version: 1 })]
+		);
 
-		expect(result).toEqual([updated]);
+		expect(result).toEqual([canonical]);
+	});
+
+	it('keeps a result absent from the canonical store (hit not yet loaded locally)', () => {
+		const serverHit = makeNote({ id: 'n2', title: 'From another device' });
+
+		const result = reconcileSearchResults([makeNote({ id: 'n1' })], [serverHit]);
+
+		expect(result).toEqual([serverHit]);
+	});
+
+	it('drops a result that is trashed in the canonical store', () => {
+		const trashed = makeNote({ id: 'n1', trashed: true });
+
+		const result = reconcileSearchResults([trashed], [makeNote({ id: 'n1', trashed: false })]);
+
+		expect(result).toEqual([]);
+	});
+
+	it('preserves result order while reconciling a mix of cases', () => {
+		const canonical = makeNote({ id: 'n1', title: 'Canonical', version: 2 });
+		const trashed = makeNote({ id: 'n2', trashed: true });
+		const absent = makeNote({ id: 'n3', title: 'Absent' });
+
+		const result = reconcileSearchResults(
+			[canonical, trashed],
+			[makeNote({ id: 'n1', title: 'Stale', version: 1 }), trashed, absent]
+		);
+
+		expect(result).toEqual([canonical, absent]);
+	});
+
+	it('returns an empty array when there are no results', () => {
+		expect(reconcileSearchResults([makeNote({ id: 'n1' })], [])).toEqual([]);
 	});
 });

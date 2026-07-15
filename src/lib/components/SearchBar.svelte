@@ -31,9 +31,9 @@
 		searchController = undefined;
 
 		const trimmedQuery = query.trim();
-		searchQuery.set(trimmedQuery);
 
 		if (!trimmedQuery) {
+			searchQuery.set('');
 			searchResults.set([]);
 			return;
 		}
@@ -48,7 +48,13 @@
 			if (res.ok) {
 				const results: Note[] = await res.json();
 				if (searchController !== controller || query.trim() !== trimmedQuery) return;
+				// Commit the query alongside its results so the view switches to the
+				// (possibly empty) result set only once it's ready — this avoids
+				// flashing an empty state over the current notes while the request is
+				// in flight, and keeps searchQuery consistent with searchResults on
+				// a failed request (neither updates).
 				searchResults.set(results);
+				searchQuery.set(trimmedQuery);
 			}
 		} catch (error) {
 			if (!(error instanceof DOMException && error.name === 'AbortError')) {

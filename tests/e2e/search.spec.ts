@@ -83,4 +83,32 @@ test.describe('Search', () => {
 		await expect(page.getByText('Race Fast 3812925')).toBeVisible();
 		await expect(page.getByText('Race Slow 3812925')).not.toBeVisible();
 	});
+
+	test('Scenario: Current notes stay visible while a search request is in flight', async ({ authenticatedPage: page }) => {
+		// Given two notes exist
+		await createNote(page, 'Flash Alpha 771903');
+		await createNote(page, 'Flash Beta 771903');
+
+		// And the search request is held open before it can respond
+		let releaseSearch: () => void = () => {};
+		const searchGate = new Promise<void>((resolve) => {
+			releaseSearch = resolve;
+		});
+		await page.route('**/api/search?*', async (route) => {
+			await searchGate;
+			await route.continue();
+		});
+
+		// When the user starts a search
+		await page.getByTestId('search-input').fill('Flash Alpha 771903');
+
+		// Then the current notes stay on screen instead of flashing an empty state
+		await expect(page.getByText('Flash Beta 771903')).toBeVisible();
+		await expect(page.getByText('Flash Alpha 771903')).toBeVisible();
+
+		// And once the results arrive, only the match remains
+		releaseSearch();
+		await expect(page.getByText('Flash Alpha 771903')).toBeVisible();
+		await expect(page.getByText('Flash Beta 771903')).not.toBeVisible();
+	});
 });

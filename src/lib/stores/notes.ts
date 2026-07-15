@@ -11,15 +11,27 @@ export const notesLoaded = writable(false);
 export const searchQuery = writable<string>('');
 export const searchResults = writable<Note[]>([]);
 
+/**
+ * Reconcile search results against the canonical notes store so local edits and
+ * trashing propagate into the active result set without re-querying the server.
+ *
+ * A result absent from the canonical store is kept as-is — it's a server hit not
+ * yet loaded locally (e.g. created on another device), and dropping it would make
+ * valid matches disappear mid-session. Notes removed locally (deleted or left) are
+ * pruned explicitly at their call sites; trashed notes are dropped here.
+ */
 export function reconcileSearchResults(canonicalNotes: Note[], results: Note[]): Note[] {
 	const notesMap = new Map(canonicalNotes.map((note) => [note.id, note]));
 	return results.flatMap((result) => {
-		const updated = notesMap.get(result.id);
-		return updated && !updated.trashed ? [updated] : [];
+		const canonical = notesMap.get(result.id);
+		if (!canonical) return [result];
+		return canonical.trashed ? [] : [canonical];
 	});
 }
 
-// Keep searchResults in sync with note updates/deletions in notes store
+// Keep searchResults in sync with edits/trashing in the notes store. These search
+// stores (like the others in this module) are client-only state; the subscription
+// lives for the app's lifetime and is intentionally never unsubscribed.
 notes.subscribe(($notes) => {
 	searchResults.update(($results) => {
 		if ($results.length === 0) return $results;
