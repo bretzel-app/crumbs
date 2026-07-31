@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getNoteColor, NOTE_COLORS, NOTE_COLORS_DARK } from '$lib/utils/colors.js';
+import {
+	getNoteColor,
+	getNoteChip,
+	NOTE_COLORS,
+	NOTE_COLORS_DARK,
+	NOTE_CHIPS_DARK
+} from '$lib/utils/colors.js';
+import type { NoteColor } from '$lib/types/index.js';
 
 describe('getNoteColor', () => {
 	it('returns light color when isDark is false', () => {
@@ -80,6 +87,41 @@ describe('dark note colours', () => {
 				const [[nameA, a], [nameB, b]] = [entries[i], entries[j]];
 				const distance = rgbDistance(a.bg, b.bg);
 				expect(distance, `${nameA} vs ${nameB}`).toBeGreaterThan(8);
+			}
+		}
+	});
+});
+
+describe('getNoteChip', () => {
+	it('returns the card colour in light mode, where pastels already are the cards', () => {
+		for (const color of Object.keys(NOTE_COLORS) as NoteColor[]) {
+			expect(getNoteChip(color, false)).toBe(getNoteColor(color, false));
+		}
+	});
+
+	it('returns a distinct vivid chip in dark mode, not the card surface', () => {
+		for (const color of Object.keys(NOTE_COLORS_DARK) as NoteColor[]) {
+			expect(getNoteChip(color, true)).not.toBe(getNoteColor(color, true));
+		}
+	});
+
+	it('falls back to default for an unknown colour', () => {
+		expect(getNoteChip('unknown' as any, true)).toBe(NOTE_CHIPS_DARK.default);
+	});
+
+	it('has matching keys with the colour maps', () => {
+		expect(Object.keys(NOTE_CHIPS_DARK).sort()).toEqual(Object.keys(NOTE_COLORS_DARK).sort());
+	});
+
+	it('keeps every pair of chips far enough apart to tell apart at 28px', () => {
+		// The regression this guards: at low chroma coral/peach/blossom and
+		// fog/storm collapse into each other.
+		const entries = Object.entries(NOTE_CHIPS_DARK);
+		for (let i = 0; i < entries.length; i++) {
+			for (let j = i + 1; j < entries.length; j++) {
+				const [[nameA, a], [nameB, b]] = [entries[i], entries[j]];
+				const distance = rgbDistance(a, b);
+				expect(distance, `${nameA} vs ${nameB}`).toBeGreaterThan(25);
 			}
 		}
 	});

@@ -84,4 +84,30 @@ test.describe.serial('Dark mode', () => {
 		// Dark default color is #21201f = rgb(33, 32, 31); NOT light default rgb(250, 245, 235)
 		expect(bg).not.toBe('rgb(250, 245, 235)');
 	});
+
+	test('Scenario: Colour picker swatches are identifiable in dark mode', async ({
+		authenticatedPage: page
+	}) => {
+		// Given dark theme is active
+		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
+		await page.getByTestId('pref-theme-dark').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+		// When the user opens the colour picker while editing a note
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await page.getByTestId('new-note-btn').click();
+		await page.getByTestId('note-title-input').fill('Swatch Test');
+		await page.getByTestId('color-picker-toggle').click();
+		await expect(page.getByTestId('color-picker')).toBeVisible();
+
+		// Then a swatch shows its vivid chip rather than the muted card surface
+		await expect(page.getByTestId('color-coral')).toHaveCSS(
+			'background-color',
+			'rgb(208, 79, 67)'
+		);
+
+		await page.getByTestId('close-editor-btn').click();
+	});
 });

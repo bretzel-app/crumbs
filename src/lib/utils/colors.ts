@@ -39,3 +39,29 @@ export const COLOR_OPTIONS = Object.entries(NOTE_COLORS).map(([value, { label }]
 	value: value as NoteColor,
 	label
 }));
+
+/**
+ * Picker swatches are labels, not surfaces. A 28px circle at card lightness
+ * reads as a grey dot — small patches lose apparent saturation — so the dark
+ * picker uses vivid mid-lightness chips that share the card's hue but not its
+ * lightness. Light mode needs no equivalent: there the pastels are the cards.
+ */
+export const NOTE_CHIPS_DARK: Record<NoteColor, string> = {
+	default: '#8d857c',
+	coral: '#d04f43',
+	peach: '#cd7c42',
+	sand: '#c7b138',
+	mint: '#7bbd4c',
+	sage: '#47b89d',
+	fog: '#609abe',
+	storm: '#547bc0',
+	dusk: '#a965bd',
+	blossom: '#c05d78',
+	clay: '#b5954a',
+	chalk: '#c3c3c8'
+};
+
+export function getNoteChip(color: NoteColor, isDark: boolean): string {
+	if (!isDark) return getNoteColor(color, false);
+	return NOTE_CHIPS_DARK[color] ?? NOTE_CHIPS_DARK.default;
+}
