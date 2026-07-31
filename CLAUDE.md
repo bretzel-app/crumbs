@@ -40,6 +40,36 @@ All colors are CSS variables in `src/app.css`. Never use hardcoded Tailwind colo
 
 Note colors for cards are defined in `src/lib/utils/colors.ts`.
 
+### Dark theme
+
+Dark mode overrides every colour variable in `[data-theme="dark"]` (`src/app.css`). It is not a
+mechanical inversion of light mode — two differences are deliberate:
+
+- **`--primary` differs per theme.** `#C8860A` on parchment, `#e0a030` on ink. The light gold reads
+  mustard on a dark background.
+- **`--border` is a warm mid-grey (`#57514b`), not mirrored cream.** A bright 1px line on a dark
+  background reads as glare rather than structure; the hard offset shadow carries the retro framing.
+
+Note colours have two representations, and they are not interchangeable:
+
+| Map | Function | Used by | Role |
+|---|---|---|---|
+| `NOTE_COLORS` / `NOTE_COLORS_DARK` | `getNoteColor(color, isDark)` | Cards, editor, share page | Quiet **surface** you read text on |
+| `NOTE_CHIPS_DARK` | `getNoteChip(color, isDark)` | `ColorPicker` only | Vivid **label** you identify at a glance |
+
+A dark card sits at low lightness, where a 28px picker circle would read as a grey dot — small
+patches lose apparent saturation. Never fill a picker swatch with `getNoteColor()`. In light mode
+`getNoteChip()` returns the pastel card colour, because there the pastels *are* the cards.
+
+When changing any dark note colour, keep the invariants asserted in `src/lib/utils/colors.test.ts`:
+AA contrast (4.5:1) against both `--text` and `--text-muted` on every dark surface, no two dark card
+surfaces closer than an RGB distance of 8, no two dark chips closer than an RGB distance of 25, and
+`getNoteChip()` returning the card colour in light mode but a distinct chip in dark mode.
+
+`--bg-base` is duplicated as a literal in `src/app.html` (FOUC script) and
+`src/lib/utils/theme.svelte.ts` (`DARK_THEME_COLOR`) for the browser theme-colour. Update all three
+together.
+
 ### Typography
 
 - **Body**: `JetBrains Mono` (monospace) — the hacker/dev aesthetic

@@ -159,7 +159,10 @@ Theme switching uses CSS variable overrides on the `<html>` element:
 - **Persistence**: preference stored as `theme` in the existing `userPreferences` key-value system (values: `"system"` | `"light"` | `"dark"`)
 - **FOUC prevention**: a blocking inline `<script>` in `app.html` reads the preference from localStorage and sets `data-theme` before any content renders
 - **Reactivity**: a `$effect` in the root `+layout.svelte` watches the theme store and updates `document.documentElement.dataset.theme` on change
-- **Note card colors**: `getNoteColor()` in `src/lib/utils/colors.ts` accepts a `dark` boolean and returns the appropriate color variant per theme
+- **Note card colors**: `getNoteColor()` in `src/lib/utils/colors.ts` accepts a `dark` boolean and
+  returns the appropriate surface variant per theme. Picker swatches use `getNoteChip()` instead —
+  in dark mode the card surfaces are too dark to be identifiable as small circles, so the picker
+  draws from a separate vivid `NOTE_CHIPS_DARK` map.
 
 ## File Organization
 
