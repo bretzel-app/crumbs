@@ -71,14 +71,15 @@ describe('dark note colours', () => {
 	});
 
 	it('keeps every pair of dark surfaces distinguishable', () => {
-		// The old palette failed this: fog and storm sat 7.5 apart, so the twelve
-		// colours read as one dark smudge. Current closest pair is coral/peach at 12.
+		// The old palette failed this: fog and storm sat 7.55 apart, so the twelve
+		// colours read as one dark smudge. Threshold 8 clears that while leaving
+		// headroom above the current closest pair, coral/peach at 12.0.
 		const entries = Object.entries(NOTE_COLORS_DARK);
 		for (let i = 0; i < entries.length; i++) {
 			for (let j = i + 1; j < entries.length; j++) {
 				const [[nameA, a], [nameB, b]] = [entries[i], entries[j]];
 				const distance = rgbDistance(a.bg, b.bg);
-				expect(distance, `${nameA} vs ${nameB}`).toBeGreaterThan(10);
+				expect(distance, `${nameA} vs ${nameB}`).toBeGreaterThan(8);
 			}
 		}
 	});

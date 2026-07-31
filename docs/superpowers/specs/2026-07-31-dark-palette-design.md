@@ -92,7 +92,7 @@ html, body { accent-color: var(--accent-check); }
 ## 2. Note card colours (`src/lib/utils/colors.ts`)
 
 Replace `NOTE_COLORS_DARK`. Every entry keeps its light counterpart's hue, holds lightness
-near-constant against today's values (measured average change: +4.1 saturation points, −0.1
+near-constant against today's values (measured average change: +4.1 saturation points, −0.18
 lightness points), and nudges two crowded hues apart (`blossom` and `storm` shift toward pink
 and true blue respectively) so the twelve read as distinguishable siblings rather than a smudge.
 The visible improvement in dark mode comes from the base surfaces, the picker chips, the
