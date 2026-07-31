@@ -21,29 +21,34 @@
 	--card-shadow: 2px 2px 0px var(--border-subtle);
 	--card-shadow-hover: 3px 3px 0px var(--primary);
 	--grid-dot: #1a1a2e;
+	--accent-check: var(--primary);
 }
 
 [data-theme="dark"] {
-	--bg-base: #1a1715;
-	--bg-surface: #2a2520;
-	--text: #e8dcc8;
-	--text-muted: #9a8e7e;
-	--border: #e8dcc8;
-	--border-subtle: #3a3530;
-	--destructive: #d4604e;
-	--error-bg: #3a2020;
-	--error-border: #5a3030;
-	--error-text: #e8a090;
-	--success-bg: #203020;
-	--success-text: #90c880;
+	--bg-base: #141312;
+	--bg-surface: #1e1c1b;
+	--primary: #e0a030;
+	--primary-hover: #f2b855;
+	--text: #ece3d3;
+	--text-muted: #b3a695;
+	--border: #57514b;
+	--border-subtle: #302d2b;
+	--destructive: #e2705c;
+	--error-bg: #3a2320;
+	--error-border: #5c3a34;
+	--error-text: #f0a898;
+	--success-bg: #1f2e1f;
+	--success-text: #8fc97a;
 	--card-shadow: 2px 2px 0px var(--border-subtle);
 	--card-shadow-hover: 3px 3px 0px var(--primary);
-	--grid-dot: #e8dcc8;
+	--grid-dot: #ece3d3;
+	/* Dimmed so a long done-list of gold checkboxes doesn't shout. */
+	--accent-check: #c8a44a;
 }
 
 html, body {
 	font-family: 'JetBrains Mono', monospace;
-	accent-color: var(--primary);
+	accent-color: var(--accent-check);
 	overscroll-behavior-y: none;
 }
 
