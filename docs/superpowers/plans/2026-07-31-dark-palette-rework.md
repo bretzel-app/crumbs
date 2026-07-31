@@ -82,7 +82,10 @@ describe('dark note colours', () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm test:unit colors`
-Expected: FAIL. The muted-text test fails on several colours (the old `#4a2522` family sits too close to `#b3a695`), and the lightness-band test fails because the old values wander.
+Expected: FAIL. Only the two hex-pinning assertions fail (they still pin the old values). The AA
+tests are forward guards, not regressions of the old palette — the old palette actually clears
+both AA thresholds. The distinguishability test is the one that would fail on the old palette
+(its closest pair, `fog`/`storm`, sits at RGB distance 7.5).
 
 - [ ] **Step 3: Replace the dark palette**
 

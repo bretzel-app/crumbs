@@ -91,10 +91,13 @@ html, body { accent-color: var(--accent-check); }
 
 ## 2. Note card colours (`src/lib/utils/colors.ts`)
 
-Replace `NOTE_COLORS_DARK`. Every entry keeps its light counterpart's hue, chroma roughly doubles
-against today's values, and lightness is held near-constant (~18%) so the twelve read as siblings —
-with blues and purples lifted ~3.5 points because they read darker than warm hues at equal HSL
-lightness.
+Replace `NOTE_COLORS_DARK`. Every entry keeps its light counterpart's hue, holds lightness
+near-constant against today's values (measured average change: +4.1 saturation points, −0.1
+lightness points), and nudges two crowded hues apart (`blossom` and `storm` shift toward pink
+and true blue respectively) so the twelve read as distinguishable siblings rather than a smudge.
+The visible improvement in dark mode comes from the base surfaces, the picker chips, the
+softened border, and the lifted gold — not from the card surfaces, which are close in chroma to
+the previous dark values.
 
 ```ts
 export const NOTE_COLORS_DARK: Record<NoteColor, { bg: string; label: string }> = {
