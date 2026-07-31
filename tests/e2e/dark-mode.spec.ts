@@ -81,7 +81,7 @@ test.describe.serial('Dark mode', () => {
 		const noteCard = page.getByTestId('note-card').first();
 		await expect(noteCard).toBeVisible();
 		const bg = await noteCard.evaluate((el) => getComputedStyle(el).backgroundColor);
-		// Dark default color is #2a2520 = rgb(42, 37, 32); NOT light default rgb(250, 245, 235)
+		// Dark default color is #21201f = rgb(33, 32, 31); NOT light default rgb(250, 245, 235)
 		expect(bg).not.toBe('rgb(250, 245, 235)');
 	});
 });

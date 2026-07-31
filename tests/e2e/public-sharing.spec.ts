@@ -139,7 +139,7 @@ test.describe('Public Note Sharing', () => {
 		await expect(publicPage.locator('html')).toHaveAttribute('data-theme', 'dark');
 		await expect(publicPage.getByTestId('shared-note')).toHaveCSS(
 			'background-color',
-			'rgb(34, 46, 58)'
+			'rgb(37, 57, 70)'
 		);
 
 		await context.close();
