@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { NOTE_COLORS } from '$lib/utils/colors.js';
+	import { getNoteColor } from '$lib/utils/colors.js';
 	import { renderMarkdown } from '$lib/utils/markdown.js';
 	import { linkifyText } from '$lib/utils/checklist.js';
 	import type { NoteColor, PublicAttachment } from '$lib/types/index.js';
@@ -12,8 +12,12 @@
 
 	const { data } = $props();
 
+	// Both palettes are emitted as custom properties so the card follows the visitor's theme on the
+	// first paint — the CSS variables in app.css switch on [data-theme], which app.html sets before
+	// hydration, so a JS-resolved single colour would flash the wrong palette on this SSR page.
 	const noteColor = data.color as NoteColor;
-	const bgColor = NOTE_COLORS[noteColor]?.bg ?? NOTE_COLORS.default.bg;
+	const bgLight = getNoteColor(noteColor, false);
+	const bgDark = getNoteColor(noteColor, true);
 
 	const renderedContent = renderMarkdown(data.content);
 
@@ -55,8 +59,8 @@
 
 <div class="mx-4 w-full max-w-2xl py-10">
 	<article
-		class="rounded-sm border border-[var(--border-subtle)] shadow-[var(--card-shadow)] overflow-hidden"
-		style="background-color: {bgColor}"
+		class="note-surface rounded-sm border border-[var(--border-subtle)] shadow-[var(--card-shadow)] overflow-hidden"
+		style="--note-bg: {bgLight}; --note-bg-dark: {bgDark}"
 		data-testid="shared-note"
 	>
 		<div class="px-6 py-5">
@@ -128,3 +132,13 @@
 		</a>
 	</div>
 </div>
+
+<style>
+	.note-surface {
+		background-color: var(--note-bg);
+	}
+
+	:global([data-theme='dark']) .note-surface {
+		background-color: var(--note-bg-dark);
+	}
+</style>

@@ -121,6 +121,54 @@ test.describe('Public Note Sharing', () => {
 		await expect(card.getByTestId('sharing-indicator')).toBeVisible();
 	});
 
+	test('Scenario: Shared note follows a dark-mode visitor theme', async ({
+		authenticatedPage: page,
+		browser
+	}) => {
+		// Given a publicly shared note colored "fog"
+		const note = await createNoteViaApi(page, 'Dark Visitor Note', 'Readable in dark mode');
+		await page.request.patch(`/api/notes/${note.id}`, { data: { color: 'fog' } });
+		const token = await createShareViaApi(page, note.id);
+
+		// When a visitor whose system prefers dark mode opens the share URL
+		const context = await browser.newContext({ colorScheme: 'dark' });
+		const publicPage = await context.newPage();
+		await publicPage.goto(`/s/${token}`);
+
+		// Then the note is rendered on the dark "fog" surface, so its text stays legible
+		await expect(publicPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+		await expect(publicPage.getByTestId('shared-note')).toHaveCSS(
+			'background-color',
+			'rgb(34, 46, 58)'
+		);
+
+		await context.close();
+	});
+
+	test('Scenario: Shared note follows a light-mode visitor theme', async ({
+		authenticatedPage: page,
+		browser
+	}) => {
+		// Given a publicly shared note colored "fog"
+		const note = await createNoteViaApi(page, 'Light Visitor Note', 'Readable in light mode');
+		await page.request.patch(`/api/notes/${note.id}`, { data: { color: 'fog' } });
+		const token = await createShareViaApi(page, note.id);
+
+		// When a visitor whose system prefers light mode opens the share URL
+		const context = await browser.newContext({ colorScheme: 'light' });
+		const publicPage = await context.newPage();
+		await publicPage.goto(`/s/${token}`);
+
+		// Then the note is rendered on the light "fog" surface
+		await expect(publicPage.locator('html')).not.toHaveAttribute('data-theme', 'dark');
+		await expect(publicPage.getByTestId('shared-note')).toHaveCSS(
+			'background-color',
+			'rgb(212, 228, 237)'
+		);
+
+		await context.close();
+	});
+
 	test('Scenario: Copy link button copies to clipboard', async ({
 		authenticatedPage: page
 	}) => {
