@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 
 const LIGHT_THEME_COLOR = '#f0e6d3';
-const DARK_THEME_COLOR = '#1a1715';
+const DARK_THEME_COLOR = '#141312';
 
 let darkMode = $state(false);
 
