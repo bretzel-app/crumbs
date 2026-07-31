@@ -121,15 +121,15 @@
 	const chevronSize = 14;
 
 	function btnClass(active: boolean = false, disabled: boolean = false): string {
-		return `shrink-0 rounded p-1.5 text-[var(--text)] hover:bg-[var(--border)]/10 ${active ? 'text-[var(--primary)] bg-[var(--border)]/10' : ''} ${disabled ? 'opacity-30' : ''}`;
+		return `shrink-0 rounded p-1.5 text-[var(--text)] hover:bg-[var(--hover-wash)]/10 ${active ? 'text-[var(--primary)] bg-[var(--hover-wash)]/10' : ''} ${disabled ? 'opacity-30' : ''}`;
 	}
 
 	function dropdownBtnClass(active: boolean = false): string {
-		return `shrink-0 flex items-center gap-0.5 rounded p-1.5 text-[var(--text)] hover:bg-[var(--border)]/10 ${active ? 'text-[var(--primary)] bg-[var(--border)]/10' : ''}`;
+		return `shrink-0 flex items-center gap-0.5 rounded p-1.5 text-[var(--text)] hover:bg-[var(--hover-wash)]/10 ${active ? 'text-[var(--primary)] bg-[var(--hover-wash)]/10' : ''}`;
 	}
 
 	function dropdownItemClass(active: boolean = false): string {
-		return `flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--border)]/5 ${active ? 'bg-[var(--border)]/5' : ''}`;
+		return `flex w-full items-center gap-2 rounded px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/5 ${active ? 'bg-[var(--hover-wash)]/5' : ''}`;
 	}
 
 	function handlePointerDown(event: PointerEvent) {
@@ -442,7 +442,7 @@
 				<button
 					onmousedown={preventToolbarMouseFocus}
 					type="submit"
-					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)]"
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--hover-wash)]/5 hover:text-[var(--text)]"
 					title="Apply link"
 					data-testid="format-link-apply"
 				>
@@ -454,7 +454,7 @@
 					type="button"
 					onclick={openLink}
 					disabled={!getAttrs('link').href}
-					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--text)] disabled:opacity-30"
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--hover-wash)]/5 hover:text-[var(--text)] disabled:opacity-30"
 					title="Open link"
 					data-testid="format-link-open"
 				>
@@ -465,7 +465,7 @@
 					type="button"
 					onclick={removeLink}
 					disabled={!isActive('link')}
-					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]/5 hover:text-[var(--destructive)] disabled:opacity-30"
+					class="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--hover-wash)]/5 hover:text-[var(--destructive)] disabled:opacity-30"
 					title="Remove link"
 					data-testid="format-link-remove"
 				>

@@ -116,7 +116,7 @@
 			</div>
 			<button
 				onclick={onClose}
-				class="rounded-sm p-1 hover:bg-[var(--border)]/10"
+				class="rounded-sm p-1 hover:bg-[var(--hover-wash)]/10"
 				title="Close history"
 				data-testid="close-history-btn"
 			>
@@ -140,7 +140,7 @@
 						{#each versions as v (v.id)}
 							<li>
 								<button
-									class="w-full px-3 py-3 text-left hover:bg-[var(--border)]/10 transition-colors {selectedVersion?.id === v.id ? 'bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]' : ''}"
+									class="w-full px-3 py-3 text-left hover:bg-[var(--hover-wash)]/10 transition-colors {selectedVersion?.id === v.id ? 'bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]' : ''}"
 									onclick={() => selectVersion(v.id)}
 									data-testid="version-item"
 								>
@@ -195,7 +195,7 @@
 										</button>
 										<button
 											onclick={() => (showConfirm = false)}
-											class="rounded-sm border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--border)]/10"
+											class="rounded-sm border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 										>
 											Cancel
 										</button>

@@ -71,7 +71,7 @@
 
 ### Dark Mode
 - Three-way theme toggle: System / Light / Dark (in Settings > Preferences)
-- Dark mode uses a warm parchment variant — retro aesthetic preserved in both themes
+- Dark mode uses near-neutral warm ink surfaces (not a sepia-tinted parchment) — retro aesthetic preserved in both themes
 - Respects system `prefers-color-scheme` preference by default
 - FOUC-free: theme applied before first paint via a blocking inline script
 

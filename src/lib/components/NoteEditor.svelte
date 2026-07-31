@@ -544,7 +544,7 @@
 			<!-- Mobile Back Button -->
 			<button
 				onclick={saveAndClose}
-				class="md:hidden rounded-sm p-2 text-[var(--text)] hover:bg-[var(--border)]/10 flex items-center shrink-0"
+				class="md:hidden rounded-sm p-2 text-[var(--text)] hover:bg-[var(--hover-wash)]/10 flex items-center shrink-0"
 				aria-label="Back"
 			>
 				<ArrowLeft class="h-6 w-6" />
@@ -569,7 +569,7 @@
 			<button
 				bind:this={mobileOverflowBtnEl}
 				onclick={() => { showOverflowMenu = !showOverflowMenu; overflowAnchorEl = mobileOverflowBtnEl; }}
-				class="md:hidden rounded-sm p-2 hover:bg-[var(--border)]/10 text-[var(--text)] shrink-0"
+				class="md:hidden rounded-sm p-2 hover:bg-[var(--hover-wash)]/10 text-[var(--text)] shrink-0"
 				data-testid="mobile-overflow-menu-btn"
 			>
 				<EllipsisVertical class="h-6 w-6" />
@@ -633,7 +633,7 @@
 				<div class="relative">
 					<button
 						onclick={() => (showColorPicker = !showColorPicker)}
-						class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+						class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 						use:tooltip={"Background color"}
 						data-testid="color-picker-toggle"
 					>
@@ -649,7 +649,7 @@
 				<!-- Image attachment toggle -->
 				<button
 					onclick={toggleImageUpload}
-					class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Attachments"}
 					data-testid="image-toggle"
 				>
@@ -660,7 +660,7 @@
 				{#if isOwner}
 					<button
 						onclick={toggleShareDialog}
-						class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+						class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 						use:tooltip={"Share"}
 						data-testid="share-toggle"
 					>
@@ -682,7 +682,7 @@
 				{#if !currentlyNew}
 					<button
 						onclick={handleArchive}
-						class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+						class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 						use:tooltip={"Archive"}
 						data-testid="archive-note-btn"
 					>
@@ -694,7 +694,7 @@
 				<button
 					bind:this={desktopOverflowBtnEl}
 					onclick={() => { showOverflowMenu = !showOverflowMenu; overflowAnchorEl = desktopOverflowBtnEl; }}
-					class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"More"}
 					data-testid="overflow-menu-btn"
 				>
@@ -704,7 +704,7 @@
 
 			<button
 				onclick={saveAndClose}
-				class="hidden md:block rounded-sm px-4 py-1 text-sm font-medium text-[var(--text)] hover:bg-[var(--border)]/10"
+				class="hidden md:block rounded-sm px-4 py-1 text-sm font-medium text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 				data-testid="close-editor-btn"
 			>
 				Close
@@ -733,7 +733,7 @@
 				<!-- Attachments -->
 				<button
 					onclick={() => { toggleImageUpload(); showOverflowMenu = false; }}
-					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 				>
 					<ImageIcon class="h-4 w-4 {showImageUpload ? 'text-[var(--primary)]' : ''}" />
 					Attachments
@@ -743,7 +743,7 @@
 				{#if isOwner}
 					<button
 						onclick={() => { toggleShareDialog(); showOverflowMenu = false; }}
-						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 					>
 						{#if hasPublicLink}
 							<Globe class="h-4 w-4 text-[var(--primary)]" />
@@ -765,7 +765,7 @@
 				{#if !currentlyNew}
 					<button
 						onclick={handleArchive}
-						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 					>
 						<Archive class="h-4 w-4" />
 						Archive
@@ -777,7 +777,7 @@
 			<!-- Checklist mode toggle -->
 			<button
 				onclick={() => { checklistMode = !checklistMode; showOverflowMenu = false; }}
-				class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+				class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 				data-testid="checklist-toggle"
 			>
 				{#if checklistMode}
@@ -793,7 +793,7 @@
 			{#if !checklistMode}
 				<button
 					onclick={() => { toggleMarkdownMode(); showOverflowMenu = false; }}
-					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 					data-testid="markdown-toggle"
 				>
 					{#if rawMarkdownMode}
@@ -810,7 +810,7 @@
 			{#if !currentlyNew}
 				<button
 					onclick={() => { toggleHistory(); showOverflowMenu = false; }}
-					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 					data-testid="history-toggle"
 				>
 					<History class="h-4 w-4 {showHistory ? 'text-[var(--primary)]' : ''}" />
@@ -823,7 +823,7 @@
 				<div class="my-1 border-t border-[var(--border-subtle)]"></div>
 				<button
 					onclick={handleTrash}
-					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--destructive)] hover:bg-[var(--border)]/10"
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--destructive)] hover:bg-[var(--hover-wash)]/10"
 					data-testid="trash-note-btn"
 				>
 					<Trash2 class="h-4 w-4" />
@@ -837,7 +837,7 @@
 				{#if hasDoneItems}
 					<button
 						onclick={deleteCheckedItems}
-						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+						class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 						data-testid="delete-checked-btn"
 					>
 						<Trash2 class="h-4 w-4" />
@@ -846,7 +846,7 @@
 				{/if}
 				<button
 					onclick={uncheckAllItems}
-					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--border)]/10"
+					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
 					data-testid="uncheck-all-btn"
 				>
 					<ListX class="h-4 w-4" />

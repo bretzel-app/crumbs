@@ -37,6 +37,8 @@ All colors are CSS variables in `src/app.css`. Never use hardcoded Tailwind colo
 | `--success-bg/text` | warm greens | Success states |
 | `--card-shadow` | `2px 2px 0px` | Hard-offset retro shadow (no blur) |
 | `--card-shadow-hover` | `3px 3px 0px` | Hover shadow in primary gold |
+| `--accent-check` | `var(--primary)` (light) / `#c8a44a` (dark) | Checkbox accent color — dimmed gold in dark mode so a long done-list doesn't shout |
+| `--hover-wash` | `var(--border)` (light) / `#ece3d3` (dark) | Tint source for hover/active washes (`bg-[var(--hover-wash)]/N`) — kept cream in dark mode since `--border`'s mid-grey is invisible at low opacity |
 
 Note colors for cards are defined in `src/lib/utils/colors.ts`.
 
@@ -83,7 +85,7 @@ together.
 - **Borders**: Default card borders use `--border-subtle`. `--border` is for strong emphasis (editor, login card). Hover borders use `--primary`.
 - **Animations**: Crisp and fast (150ms `ease-out`). No spring physics, no bounce. The retro feel comes from snappy transitions.
 - **Background texture**: A subtle 4px pixel grid overlay at 3% opacity (defined in `body::before`).
-- **Checkboxes**: Use `accent-color: var(--primary)` globally — gold checkboxes match the theme.
+- **Checkboxes**: Use `accent-color: var(--accent-check)` globally — resolves to `--primary` in light mode and to a dimmed gold (`#c8a44a`) in dark mode so a long done-list doesn't shout.
 - **Icons**: Lucide icons throughout. Keep at 16-20px size.
 - **Hover actions**: Never use `hidden group-hover:block` for action buttons — they're invisible on mobile (no hover). Use the opacity pattern instead: `max-md:opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100`. This keeps actions always visible on touch devices and hover-revealed on desktop.
 

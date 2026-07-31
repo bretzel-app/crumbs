@@ -21,7 +21,7 @@
 	{:else}
 		<button
 			onclick={onMenuToggle}
-			class="rounded-sm p-2 hover:bg-[var(--border)]/10"
+			class="rounded-sm p-2 hover:bg-[var(--hover-wash)]/10"
 			aria-label="Toggle sidebar"
 		>
 			<Menu class="h-6 w-6 text-[var(--text)]" />
@@ -40,7 +40,7 @@
 		<!-- Mobile search icon -->
 		<button
 			onclick={() => (mobileSearchOpen = true)}
-			class="ml-auto rounded-sm p-2 hover:bg-[var(--border)]/10 lg:hidden"
+			class="ml-auto rounded-sm p-2 hover:bg-[var(--hover-wash)]/10 lg:hidden"
 			aria-label="Search"
 		>
 			<Search class="h-5 w-5 text-[var(--text)]" />

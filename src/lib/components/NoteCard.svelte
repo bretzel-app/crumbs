@@ -118,7 +118,7 @@
 		{#if note.pinned}
 			<button
 				onclick={stop(() => togglePin(note.id, note.pinned))}
-				class="rounded-sm p-1 text-[var(--primary)] hover:bg-[var(--border)]/10"
+				class="rounded-sm p-1 text-[var(--primary)] hover:bg-[var(--hover-wash)]/10"
 				use:tooltip={"Unpin"}
 				data-testid="pin-indicator"
 			>
@@ -164,7 +164,7 @@
 		{#if $currentFilter === 'trashed'}
 			<button
 				onclick={stop(() => restoreNote(note.id))}
-				class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+				class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 				use:tooltip={"Restore"}
 				data-testid="restore-btn"
 			>
@@ -172,7 +172,7 @@
 			</button>
 			<button
 				onclick={stop(() => deleteNote(note.id))}
-				class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+				class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 				use:tooltip={"Delete forever"}
 				data-testid="delete-forever-btn"
 			>
@@ -182,7 +182,7 @@
 			{#if !note.pinned}
 				<button
 					onclick={stop(() => togglePin(note.id, note.pinned))}
-					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Pin"}
 					data-testid="pin-btn"
 				>
@@ -192,7 +192,7 @@
 			{#if $currentFilter === 'archived'}
 				<button
 					onclick={stop(() => unarchiveNote(note.id))}
-					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Unarchive"}
 					data-testid="unarchive-btn"
 				>
@@ -201,7 +201,7 @@
 			{:else}
 				<button
 					onclick={stop(() => archiveNote(note.id))}
-					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Archive"}
 					data-testid="archive-btn"
 				>
@@ -211,7 +211,7 @@
 			{#if note.isShared && !note.isOwner}
 				<button
 					onclick={stop(() => leaveNote(note.id))}
-					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Leave note"}
 					data-testid="leave-btn"
 				>
@@ -220,7 +220,7 @@
 			{:else}
 				<button
 					onclick={stop(() => trashNote(note.id))}
-					class="rounded-sm p-1.5 hover:bg-[var(--border)]/10"
+					class="rounded-sm p-1.5 hover:bg-[var(--hover-wash)]/10"
 					use:tooltip={"Trash"}
 					data-testid="trash-btn"
 				>

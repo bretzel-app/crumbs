@@ -22,6 +22,10 @@
 	--card-shadow-hover: 3px 3px 0px var(--primary);
 	--grid-dot: #1a1a2e;
 	--accent-check: var(--primary);
+	/* Tint source for hover/active washes. Light mode reuses the ink border, so
+	   light styling is byte-identical; dark mode keeps the cream that --border
+	   used to supply, because a mid-grey wash is invisible on a dark surface. */
+	--hover-wash: var(--border);
 }
 
 [data-theme="dark"] {
@@ -44,6 +48,7 @@
 	--grid-dot: #ece3d3;
 	/* Dimmed so a long done-list of gold checkboxes doesn't shout. */
 	--accent-check: #c8a44a;
+	--hover-wash: #ece3d3;
 }
 
 html, body {

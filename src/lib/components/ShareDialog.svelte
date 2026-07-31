@@ -168,7 +168,7 @@
 			<h2 class="text-sm font-semibold text-[var(--text)]">Share note</h2>
 			<button
 				onclick={onClose}
-				class="rounded-sm p-1 hover:bg-[var(--border)]/10"
+				class="rounded-sm p-1 hover:bg-[var(--hover-wash)]/10"
 				title="Close"
 			>
 				<X class="h-4 w-4" />
@@ -277,7 +277,7 @@
 				</li>
 				<!-- Collaborators -->
 				{#each collaborators as collab}
-					<li class="flex items-center justify-between rounded-sm px-2 py-1.5 hover:bg-[var(--border)]/10" data-testid="share-collaborator">
+					<li class="flex items-center justify-between rounded-sm px-2 py-1.5 hover:bg-[var(--hover-wash)]/10" data-testid="share-collaborator">
 						<span class="text-sm text-[var(--text)]">
 							{collab.displayName || collab.email}
 						</span>

@@ -144,8 +144,10 @@ export function getNoteChip(color: NoteColor, isDark: boolean): string {
 ```
 
 `default` and `chalk` stay deliberately neutral (grey and off-white) — they are the "no colour"
-slots. Every chip clears 4:1 against the chrome; the closest pair (`fog`/`storm`) is separated by an
-RGB distance of 33, which is comfortably tellable apart at 28px.
+slots. Chips are non-text UI, so WCAG's bar is 3:1, not 4:1; every chip clears that comfortably
+against `--bg-surface`, with the lowest at `coral` 3.95:1 (`storm` 4.02:1, `blossom` 4.10:1). The
+closest pair (`fog`/`storm`) is separated by an RGB distance of 33, which is comfortably tellable
+apart at 28px.
 
 `ColorPicker.svelte` switches from `getNoteColor` to `getNoteChip`. Nothing else uses chips — cards,
 the editor and the public share page keep calling `getNoteColor`.

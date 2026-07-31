@@ -125,4 +125,20 @@ describe('getNoteChip', () => {
 			}
 		}
 	});
+
+	it('keeps every chip lighter than every card, so chips read as vivid dots', () => {
+		// A chip set to card-lightness values could still pass the pairwise
+		// distance test above (25 apart) while being just as dark as the cards,
+		// reintroducing the "twelve grey dots" bug this palette fixed. Measured:
+		// the lightest card (mint) has luminance 0.0392; the darkest chip (coral)
+		// has luminance 0.1941 — almost 5x higher, comfortable headroom either
+		// side of the 0.1 threshold below.
+		const cardLuminances = Object.values(NOTE_COLORS_DARK).map(({ bg }) => relativeLuminance(bg));
+		const maxCardLuminance = Math.max(...cardLuminances);
+		expect(maxCardLuminance).toBeLessThan(0.1);
+
+		for (const [name, chip] of Object.entries(NOTE_CHIPS_DARK)) {
+			expect(relativeLuminance(chip), name).toBeGreaterThan(0.1);
+		}
+	});
 });
