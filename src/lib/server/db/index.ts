@@ -226,6 +226,13 @@ sqlite.exec(`
 		created_at INTEGER NOT NULL,
 		last_used_at INTEGER
 	);
+
+	CREATE TABLE IF NOT EXISTS note_links (
+		source_note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+		target_note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS note_links_source_idx ON note_links(source_note_id);
+	CREATE INDEX IF NOT EXISTS note_links_target_idx ON note_links(target_note_id);
 `);
 
 // Replace old tags unique index with compound index including user_id

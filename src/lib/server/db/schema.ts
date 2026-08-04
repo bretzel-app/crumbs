@@ -80,6 +80,22 @@ export const noteTags = sqliteTable(
 	]
 );
 
+export const noteLinks = sqliteTable(
+	'note_links',
+	{
+		sourceNoteId: text('source_note_id')
+			.references(() => notes.id, { onDelete: 'cascade' })
+			.notNull(),
+		targetNoteId: text('target_note_id')
+			.references(() => notes.id, { onDelete: 'cascade' })
+			.notNull()
+	},
+	(table) => [
+		index('note_links_source_idx').on(table.sourceNoteId),
+		index('note_links_target_idx').on(table.targetNoteId)
+	]
+);
+
 export const attachments = sqliteTable('attachments', {
 	id: text('id').primaryKey(),
 	userId: integer('user_id')
