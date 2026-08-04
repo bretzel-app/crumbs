@@ -13,6 +13,14 @@ async function runTiptapCommand(page: Page, commandFn: string) {
 	);
 }
 
+async function waitForTiptapEditor(page: Page) {
+	await page.getByTestId('tiptap-editor').waitFor({ state: 'visible' });
+	await page.waitForFunction(() => {
+		const el = document.querySelector('[data-testid="tiptap-editor"]');
+		return el && (el as any).__tiptapEditor != null;
+	});
+}
+
 /**
  * Read the `checked` attribute of the first task item from the live ProseMirror
  * document. This reflects the editor's document state, not just the native
@@ -57,6 +65,7 @@ test.describe('Rich text formatting', () => {
 		const editor = page.getByTestId('tiptap-editor').locator('.tiptap');
 
 		// When the user selects "world" and applies bold formatting
+		await waitForTiptapEditor(page);
 		await runTiptapCommand(page, 'editor.chain().focus().setTextSelection({from:7,to:12}).toggleBold().run()');
 
 		// Then the selected text appears bold in the editor
@@ -99,6 +108,7 @@ test.describe('Rich text formatting', () => {
 		// Given the user is editing a note with selected text
 		await page.getByTestId('new-note-btn').click();
 		await typeViaMarkdown(page, 'visit example');
+		await waitForTiptapEditor(page);
 		await runTiptapCommand(page, 'editor.chain().focus().setTextSelection({from:7,to:14}).run()');
 
 		// When the user opens the link popover and enters a URL
