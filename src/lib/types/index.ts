@@ -18,6 +18,12 @@ export interface Note {
 	isOwner?: boolean;
 	isShared?: boolean;
 	shareToken?: string;
+	backlinks?: NoteBacklink[];
+}
+
+export interface NoteBacklink {
+	id: string;
+	title: string;
 }
 
 export interface Collaborator {

@@ -39,6 +39,25 @@ md.core.ruler.after('inline', 'task-lists', (state) => {
 	}
 });
 
+md.core.ruler.after('task-lists', 'note-links', (state) => {
+	for (const token of state.tokens) {
+		if (token.type !== 'inline' || !token.children) continue;
+
+		const children = token.children;
+		for (let i = 0; i < children.length; i++) {
+			if (children[i].type !== 'link_open') continue;
+			const href = children[i].attrGet('href') ?? '';
+			if (!href.startsWith('crumb-note://')) continue;
+
+			let closeIndex = i + 1;
+			while (closeIndex < children.length && children[closeIndex].type !== 'link_close') closeIndex++;
+			children.splice(closeIndex, 1);
+			children.splice(i, 1);
+			i -= 1;
+		}
+	}
+});
+
 export function renderMarkdown(content: string): string {
 	return md.render(content);
 }

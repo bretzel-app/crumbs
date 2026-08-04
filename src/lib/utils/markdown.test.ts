@@ -85,3 +85,16 @@ describe('stripMarkdown', () => {
 		expect(stripMarkdown('')).toBe('');
 	});
 });
+
+describe('renderMarkdown note-link handling', () => {
+	it('should render a crumb-note:// link as plain text, not a clickable anchor', () => {
+		const html = renderMarkdown('See [Grocery List](crumb-note://abc-123) for details');
+		expect(html).not.toContain('<a');
+		expect(html).toContain('Grocery List');
+	});
+
+	it('should still render a normal external link as a real anchor', () => {
+		const html = renderMarkdown('See [Example](https://example.com) for details');
+		expect(html).toContain('<a href="https://example.com"');
+	});
+});
