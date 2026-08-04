@@ -33,9 +33,10 @@
 	interface Props {
 		tick?: number;
 		editor: Editor | undefined;
+		currentNoteId?: string | null;
 	}
 
-	let { editor, tick }: Props = $props();
+	let { editor, tick, currentNoteId = null }: Props = $props();
 
 	// A stale `editor` reference can still point at an instance mid-teardown (e.g. while
 	// NoteEditor swaps in a fresh Editor across a markdown-mode toggle); calling its
@@ -51,6 +52,36 @@
 	let linkUrl: string = $state('');
 	let linkInput: HTMLInputElement | undefined = $state();
 	let ignorePositionInvalidationUntil = 0;
+
+	let noteSearchResults: { id: string; title: string }[] = $state([]);
+	let noteSearchTimer: ReturnType<typeof setTimeout> | undefined;
+
+	async function searchNotesForLink(query: string) {
+		const requestId = ++noteSearchRequestId;
+		if (!query.trim()) {
+			noteSearchResults = [];
+			return;
+		}
+		const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+		if (requestId !== noteSearchRequestId) return;
+		if (!res.ok) return;
+		const results: { id: string; title: string }[] = await res.json();
+		noteSearchResults = results.filter((n) => n.id !== currentNoteId);
+	}
+
+	let noteSearchRequestId = 0;
+
+	function handleLinkInput() {
+		clearTimeout(noteSearchTimer);
+		noteSearchTimer = setTimeout(() => searchNotesForLink(linkUrl), 200);
+	}
+
+	function insertNoteLink(noteId: string) {
+		if (!editor) return;
+		editor.chain().focus().insertContent({ type: 'noteLink', attrs: { noteId } }).run();
+		noteSearchResults = [];
+		closeDropdowns();
+	}
 
 	const dropdownGap = 4;
 	const viewportMargin = 10;
@@ -84,6 +115,7 @@
 	function closeDropdowns() {
 		openDropdown = null;
 		dropdownAnchorEl = null;
+		noteSearchResults = [];
 	}
 
 	function closeDropdownsAfterPositionChange() {
@@ -437,6 +469,7 @@
 				<input
 					bind:this={linkInput}
 					bind:value={linkUrl}
+					oninput={handleLinkInput}
 					type="url"
 					placeholder="Paste a link..."
 					class="w-44 bg-transparent px-1.5 py-1 text-base md:text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
@@ -475,6 +508,21 @@
 					<Trash2 size={16} />
 				</button>
 			</form>
+			{#if noteSearchResults.length > 0}
+				<div class="mt-1 max-h-40 overflow-y-auto border-t border-[var(--border-subtle)] pt-1">
+					{#each noteSearchResults as result (result.id)}
+						<button
+							type="button"
+							onmousedown={preventToolbarMouseFocus}
+							onclick={() => insertNoteLink(result.id)}
+							class="block w-full truncate rounded-sm px-1.5 py-1 text-left text-sm text-[var(--text)] hover:bg-[var(--hover-wash)]/10"
+							data-testid="format-link-note-result"
+						>
+							{result.title || 'Untitled'}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	{:else if openDropdown === 'table'}
 		<div

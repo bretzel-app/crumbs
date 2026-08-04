@@ -13,19 +13,24 @@
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
 	import { Markdown } from 'tiptap-markdown';
+	import { NoteLink } from './tiptap/NoteLink.js';
+	import { getAllNotes } from '$lib/sync/idb.js';
 
 	interface Props {
 		content: string;
 		onUpdate: (markdown: string) => void;
 		onEditor?: (editor: Editor) => void;
 		onTransaction?: () => void;
+		onOpenNote?: (noteId: string) => void;
 		placeholder?: string;
 	}
 
-	let { content, onUpdate, onEditor, onTransaction, placeholder = 'Add a crumb...' }: Props = $props();
+	let { content, onUpdate, onEditor, onTransaction, onOpenNote, placeholder = 'Add a crumb...' }: Props = $props();
 
 	let element: HTMLDivElement | undefined = $state();
 	let editor: Editor | undefined = $state();
+
+	const titleIndexRef = { index: new Map<string, string>() };
 
 	function isTaskCheckboxTarget(target: EventTarget | null): boolean {
 		if (target instanceof Element) {
@@ -76,43 +81,53 @@
 	}
 
 	onMount(() => {
-		editor = new Editor({
-			element: element!,
-			extensions: [
-				StarterKit.configure({ link: false, underline: false }),
-				Link.configure({ openOnClick: false }),
-				Underline,
-				TextAlign.configure({ types: ['heading', 'paragraph'] }),
-				Placeholder.configure({ placeholder }),
-				Table.configure({ resizable: false }),
-				TableRow,
-				TableHeader,
-				TableCell,
+		let destroyed = false;
+		let editorInstance: Editor | undefined;
+
+		(async () => {
+			const allNotes = await getAllNotes();
+			if (destroyed) return;
+			titleIndexRef.index = new Map(allNotes.filter((n) => !n.trashed).map((n) => [n.id, n.title]));
+
+			editorInstance = new Editor({
+				element: element!,
+				extensions: [
+					StarterKit.configure({ link: false, underline: false }),
+					Link.configure({ openOnClick: false }),
+					Underline,
+					TextAlign.configure({ types: ['heading', 'paragraph'] }),
+					Placeholder.configure({ placeholder }),
+					Table.configure({ resizable: false }),
+					TableRow,
+					TableHeader,
+					TableCell,
 					TaskList,
-				TaskItem.configure({ nested: true }),
-				Markdown
-			],
-			content,
-			onUpdate: ({ editor: e }) => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				onUpdate((e.storage as Record<string, any>).markdown.getMarkdown());
-			},
-			onTransaction: () => {
-				// Trigger Svelte reactivity for active state checks
-				editor = editor;
-				onTransaction?.();
+					TaskItem.configure({ nested: true }),
+					NoteLink.configure({ titleIndexRef, onOpenNote: onOpenNote ?? (() => {}) }),
+					Markdown
+				],
+				content,
+				onUpdate: ({ editor: e }) => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					onUpdate((e.storage as Record<string, any>).markdown.getMarkdown());
+				},
+				onTransaction: () => {
+					editor = editorInstance;
+					onTransaction?.();
+				}
+			});
+			editor = editorInstance;
+
+			if (element && !destroyed) {
+				(element as any).__tiptapEditor = editorInstance;
 			}
-		});
 
-		// Expose editor on DOM element for e2e testing
-		if (element) {
-			(element as any).__tiptapEditor = editor;
-		}
-
-		onEditor?.(editor);
+			onEditor?.(editorInstance);
+		})();
 
 		return () => {
-			editor?.destroy();
+			destroyed = true;
+			editorInstance?.destroy();
 		};
 	});
 </script>

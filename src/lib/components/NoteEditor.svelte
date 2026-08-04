@@ -43,9 +43,10 @@
 		isNew?: boolean;
 		initialChecklistMode?: boolean;
 		onClose: () => void;
+		onOpenNote: (noteId: string) => void;
 	}
 
-	const { note, isNew = false, initialChecklistMode = false, onClose }: Props = $props();
+	const { note, isNew = false, initialChecklistMode = false, onClose, onOpenNote }: Props = $props();
 	const prefs = getPreferences();
 
 	// svelte-ignore state_referenced_locally
@@ -597,6 +598,7 @@
 					onUpdate={(md) => (content = md)}
 					onEditor={(e) => (tiptapEditor = e)}
 					onTransaction={() => editorTick++}
+					{onOpenNote}
 					placeholder="Add a crumb..."
 				/>
 			{/if}
@@ -616,10 +618,29 @@
 			</div>
 		{/if}
 
+		<!-- Backlinks -->
+		{#if note?.backlinks && note.backlinks.length > 0}
+			<div class="border-t border-[var(--border-subtle)] px-4 py-2 shrink-0">
+				<p class="mb-1 text-xs font-medium text-[var(--text-muted)]">Referenced by</p>
+				<div class="flex flex-wrap gap-1.5">
+					{#each note.backlinks as backlink (backlink.id)}
+						<button
+							type="button"
+							onclick={() => onOpenNote(backlink.id)}
+							class="rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5 text-xs text-[var(--text)] hover:border-[var(--primary)]"
+							data-testid="backlink-chip"
+						>
+							{backlink.title || 'Untitled'}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		<!-- Formatting toolbar -->
 		{#if !rawMarkdownMode && !checklistMode}
 			<div class="shrink-0 touch-pan-x" style={toolbarInteractive ? '' : 'pointer-events: none'}>
-				<FormattingToolbar editor={tiptapEditor} tick={editorTick} />
+				<FormattingToolbar editor={tiptapEditor} tick={editorTick} currentNoteId={noteId} />
 			</div>
 		{/if}
 

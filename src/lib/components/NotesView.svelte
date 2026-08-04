@@ -9,6 +9,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import SquareCheck from 'lucide-svelte/icons/square-check';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { getNote as getIdbNote } from '$lib/sync/idb.js';
 
 	interface Props {
 		filter: NoteFilter;
@@ -31,8 +32,18 @@
 	// Use SvelteKit's replaceState (not the raw history API) so the router keeps
 	// ownership of the entry — NoteEditor's close-on-back relies on popstate being
 	// handled by SvelteKit.
-	function openEditor(note: Note) {
-		editingNote = note;
+	async function openEditor(note: Note) {
+		try {
+			const res = await fetch(`/api/notes/${note.id}`);
+			if (res.ok) {
+				const full = await res.json();
+				editingNote = { ...note, backlinks: full.backlinks ?? [] };
+			} else {
+				editingNote = note;
+			}
+		} catch {
+			editingNote = note;
+		}
 		replaceState(`#${note.id}`, {});
 	}
 
@@ -41,6 +52,27 @@
 		showNewNote = false;
 		newNoteChecklist = false;
 		replaceState(location.pathname, {});
+	}
+
+	async function openNoteById(noteId: string) {
+		showNewNote = false;
+		newNoteChecklist = false;
+		editingNote = null;
+
+		try {
+			const res = await fetch(`/api/notes/${noteId}`);
+			if (res.ok) {
+				const full = await res.json();
+				editingNote = full;
+				replaceState(`#${noteId}`, {});
+			}
+		} catch {
+			const note = await getIdbNote(noteId);
+			if (note) {
+				editingNote = note;
+				replaceState(`#${noteId}`, {});
+			}
+		}
 	}
 
 	function handleReorder(noteIds: string[]) {
@@ -137,9 +169,9 @@
 {/if}
 
 {#if showNewNote}
-	<NoteEditor note={null} isNew={true} initialChecklistMode={newNoteChecklist} onClose={closeEditor} />
+	<NoteEditor note={null} isNew={true} initialChecklistMode={newNoteChecklist} onClose={closeEditor} onOpenNote={openNoteById} />
 {/if}
 
 {#if editingNote}
-	<NoteEditor note={editingNote} onClose={closeEditor} />
+	<NoteEditor note={editingNote} onClose={closeEditor} onOpenNote={openNoteById} />
 {/if}
