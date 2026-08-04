@@ -374,3 +374,45 @@ describe('reorderNotes', () => {
 		expect(collabView!.sortOrder).toBe(5);
 	});
 });
+
+describe('note links', () => {
+	it('should sync note-links when a note is created with a reference', () => {
+		const target = createNote(db, OWNER_ID, { title: 'Target' });
+		const source = createNote(db, OWNER_ID, {
+			title: 'Source',
+			content: `See [Target](crumb-note://${target.id})`
+		});
+
+		const reopened = getNote(db, OWNER_ID, target.id);
+		expect(reopened?.backlinks).toEqual([{ id: source.id, title: 'Source' }]);
+	});
+
+	it('should sync note-links when a note is updated with a reference', () => {
+		const target = createNote(db, OWNER_ID, { title: 'Target' });
+		const source = createNote(db, OWNER_ID, { title: 'Source', content: '' });
+
+		updateNote(db, OWNER_ID, source.id, { content: `See [Target](crumb-note://${target.id})` });
+
+		const reopened = getNote(db, OWNER_ID, target.id);
+		expect(reopened?.backlinks).toEqual([{ id: source.id, title: 'Source' }]);
+	});
+
+	it('should remove a backlink when the referencing note is edited to drop the reference', () => {
+		const target = createNote(db, OWNER_ID, { title: 'Target' });
+		const source = createNote(db, OWNER_ID, {
+			title: 'Source',
+			content: `See [Target](crumb-note://${target.id})`
+		});
+
+		updateNote(db, OWNER_ID, source.id, { content: 'No longer references anything' });
+
+		const reopened = getNote(db, OWNER_ID, target.id);
+		expect(reopened?.backlinks).toEqual([]);
+	});
+
+	it('should return an empty backlinks array for a note nothing links to', () => {
+		const note = createNote(db, OWNER_ID, { title: 'Lonely note' });
+		const reopened = getNote(db, OWNER_ID, note.id);
+		expect(reopened?.backlinks).toEqual([]);
+	});
+});

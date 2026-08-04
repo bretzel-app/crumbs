@@ -3,7 +3,9 @@ import { notes, noteTags, tags, noteCollaborators, noteUserState } from './db/sc
 import { eq, and, like, or, inArray, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { extractTags } from '$lib/utils/tags.js';
+import { extractNoteLinks } from '$lib/utils/note-links.js';
 import { fetchTagsForNotes, syncNoteTags } from './tags.js';
+import { syncNoteLinks, fetchBacklinksForNote } from './note-links.js';
 import { fetchAttachmentsForNotes } from './attachments.js';
 import { fetchCollaboratorsForNotes } from './collaborators.js';
 import { fetchSharesForNotes } from './shares-service.js';
@@ -155,7 +157,10 @@ export function getNote(db: Db, userId: number, id: string) {
 	}
 
 	const result = hydrateNotes(db, [effectiveNote], userId);
-	return result[0] ?? null;
+	const hydrated = result[0];
+	if (!hydrated) return null;
+
+	return { ...hydrated, backlinks: fetchBacklinksForNote(db, id, userId) };
 }
 
 export interface CreateNoteInput {
@@ -196,6 +201,9 @@ export function createNote(db: Db, userId: number, input: CreateNoteInput) {
 		tx.insert(notes).values(newNote).run();
 	});
 	syncNoteTags(db, id, extractedTags, userId);
+
+	const extractedLinks = extractNoteLinks(content);
+	syncNoteLinks(db, id, extractedLinks);
 
 	return { ...newNote, tags: extractedTags };
 }
@@ -326,6 +334,8 @@ export function updateNote(db: Db, userId: number, id: string, input: UpdateNote
 			const content = `${updated.title} ${updated.content}`;
 			const extractedTags = extractTags(content);
 			syncNoteTags(db, id, extractedTags, existing.userId);
+			const extractedLinks = extractNoteLinks(content);
+			syncNoteLinks(db, id, extractedLinks);
 		}
 	}
 
