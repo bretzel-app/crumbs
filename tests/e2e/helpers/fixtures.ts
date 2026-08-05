@@ -13,9 +13,18 @@ const COLLAB_EMAIL = 'collab@test.com';
 const COLLAB_PASSWORD = collabPassword;
 const COLLAB_NAME = 'Collaborator User';
 
-/** Find a specific note card by its title text */
+/**
+ * Find a specific note card by its exact title text. Matches only the
+ * card's <h3> title, not its full text content — with note-linking, a
+ * card's content preview can render another note's title as plain text
+ * (e.g. a stripped note-link), so a substring match against the whole
+ * card can ambiguously resolve to more than one card.
+ */
 export function noteCard(page: Page, title: string): Locator {
-	return page.locator('[data-testid="note-card"]', { hasText: title });
+	const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return page.locator('[data-testid="note-card"]').filter({
+		has: page.locator('h3', { hasText: new RegExp(`^${escaped}$`) })
+	});
 }
 
 /**
