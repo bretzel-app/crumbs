@@ -62,11 +62,15 @@
 			noteSearchResults = [];
 			return;
 		}
-		const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-		if (requestId !== noteSearchRequestId) return;
-		if (!res.ok) return;
-		const results: { id: string; title: string }[] = await res.json();
-		noteSearchResults = results.filter((n) => n.id !== currentNoteId);
+		try {
+			const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+			if (requestId !== noteSearchRequestId) return;
+			if (!res.ok) return;
+			const results: { id: string; title: string }[] = await res.json();
+			noteSearchResults = results.filter((n) => n.id !== currentNoteId);
+		} catch {
+			// Search failed silently
+		}
 	}
 
 	let noteSearchRequestId = 0;
@@ -115,6 +119,7 @@
 	function closeDropdowns() {
 		openDropdown = null;
 		dropdownAnchorEl = null;
+		clearTimeout(noteSearchTimer);
 		noteSearchResults = [];
 	}
 

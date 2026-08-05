@@ -108,12 +108,25 @@
 				],
 				content,
 				onUpdate: ({ editor: e }) => {
+					if (destroyed) return;
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					onUpdate((e.storage as Record<string, any>).markdown.getMarkdown());
 				},
 				onTransaction: () => {
-					editor = editorInstance;
-					onTransaction?.();
+					// Removing this component's DOM node (e.g. a {#key}-driven remount
+					// in NotesView.svelte when switching to a different note) fires a
+					// native blur on the still-focused contenteditable, which
+					// ProseMirror's blur plugin turns into one last transaction —
+					// synchronously, from inside Svelte's own render/effect pass that's
+					// doing the removal. Mutating $state right there crashes with
+					// state_unsafe_mutation; the `destroyed` check alone isn't enough
+					// since this can fire before onMount's own cleanup runs. Defer to a
+					// microtask so the write lands after Svelte's current pass finishes.
+					queueMicrotask(() => {
+						if (destroyed) return;
+						editor = editorInstance;
+						onTransaction?.();
+					});
 				}
 			});
 			editor = editorInstance;

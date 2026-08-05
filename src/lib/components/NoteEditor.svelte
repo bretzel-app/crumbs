@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import ColorPicker from './ColorPicker.svelte';
@@ -19,7 +19,7 @@
 	import { getIsDarkMode } from '$lib/utils/theme.svelte.js';
 	import { getPreferences } from '$lib/stores/preferences.svelte.js';
 	import type { Editor } from '@tiptap/core';
-	import type { Note, NoteColor, Attachment, Collaborator } from '$lib/types/index.js';
+	import type { Note, NoteColor, Attachment, Collaborator, NoteBacklink } from '$lib/types/index.js';
 	import Palette from 'lucide-svelte/icons/palette';
 	import SquareCheck from 'lucide-svelte/icons/square-check';
 	import ImageIcon from 'lucide-svelte/icons/image';
@@ -165,8 +165,22 @@
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
+	// Safety net for note-link/backlink navigation: NotesView.svelte remounts this
+	// component (rather than reusing the instance) whenever the user switches to a
+	// different note while the editor is open. That teardown skips the debounced
+	// autosave timer's cleanup (it only clears the timer, it doesn't flush) and
+	// beforeunload (which never fires for an in-SPA unmount), so a very recent edit
+	// could otherwise be silently dropped.
+	onDestroy(() => {
+		if (hasUnsavedChanges() && (title.trim() || content.trim())) {
+			performSave();
+		}
+	});
+
 	// svelte-ignore state_referenced_locally
 	let attachmentsList = $state<Attachment[]>(note?.attachments ?? []);
+	// svelte-ignore state_referenced_locally
+	let backlinksList = $state<NoteBacklink[]>(note?.backlinks ?? []);
 
 	let viewportHeight = $state('100dvh');
 	let viewportTop = $state('0px');
@@ -326,15 +340,45 @@
 		}
 	}
 
-	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB)
+	// Fetch attachments for existing notes if not pre-populated (e.g. loaded from IDB).
+	// Guarded against post-teardown writes: since NotesView.svelte now remounts this
+	// component on every note-switch (rather than reusing the instance), a fetch that
+	// resolves after teardown would otherwise write to $state on an already-destroyed
+	// instance racing the newly-mounted one.
 	$effect(() => {
 		if (noteId && !currentlyNew && (!note?.attachments || note.attachments.length === 0)) {
+			let destroyed = false;
 			fetch(`/api/notes/${noteId}/attachments`)
 				.then((res) => res.ok ? res.json() : [])
 				.then((data: Attachment[]) => {
+					if (destroyed) return;
 					if (data.length > 0) attachmentsList = data;
 				})
 				.catch(() => {});
+			return () => {
+				destroyed = true;
+			};
+		}
+	});
+
+	// Fetch backlinks for existing notes if not pre-populated (e.g. loaded from IDB) —
+	// note.backlinks is only ever attached server-side by getNote(), which nothing
+	// else in the client calls when opening a note (the bulk notes store and
+	// IndexedDB never carry it), so this mirrors the attachments effect above to
+	// fill it in on open. Same post-teardown guard as above.
+	$effect(() => {
+		if (noteId && !currentlyNew && (!note?.backlinks || note.backlinks.length === 0)) {
+			let destroyed = false;
+			fetch(`/api/notes/${noteId}`)
+				.then((res) => res.ok ? res.json() : null)
+				.then((data: Note | null) => {
+					if (destroyed) return;
+					if (data?.backlinks && data.backlinks.length > 0) backlinksList = data.backlinks;
+				})
+				.catch(() => {});
+			return () => {
+				destroyed = true;
+			};
 		}
 	});
 
@@ -619,11 +663,11 @@
 		{/if}
 
 		<!-- Backlinks -->
-		{#if note?.backlinks && note.backlinks.length > 0}
+		{#if backlinksList.length > 0}
 			<div class="border-t border-[var(--border-subtle)] px-4 py-2 shrink-0">
 				<p class="mb-1 text-xs font-medium text-[var(--text-muted)]">Referenced by</p>
 				<div class="flex flex-wrap gap-1.5">
-					{#each note.backlinks as backlink (backlink.id)}
+					{#each backlinksList as backlink (backlink.id)}
 						<button
 							type="button"
 							onclick={() => onOpenNote(backlink.id)}

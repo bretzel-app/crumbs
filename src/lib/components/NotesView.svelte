@@ -32,18 +32,8 @@
 	// Use SvelteKit's replaceState (not the raw history API) so the router keeps
 	// ownership of the entry — NoteEditor's close-on-back relies on popstate being
 	// handled by SvelteKit.
-	async function openEditor(note: Note) {
-		try {
-			const res = await fetch(`/api/notes/${note.id}`);
-			if (res.ok) {
-				const full = await res.json();
-				editingNote = { ...note, backlinks: full.backlinks ?? [] };
-			} else {
-				editingNote = note;
-			}
-		} catch {
-			editingNote = note;
-		}
+	function openEditor(note: Note) {
+		editingNote = note;
 		replaceState(`#${note.id}`, {});
 	}
 
@@ -54,25 +44,18 @@
 		replaceState(location.pathname, {});
 	}
 
-	async function openNoteById(noteId: string) {
-		showNewNote = false;
-		newNoteChecklist = false;
-		editingNote = null;
+	// Reads from the local IndexedDB cache rather than fetching over the network —
+	// this keeps note-link navigation instant and offline-safe (matching how the
+	// rest of the app opens notes), and backlinks are filled in progressively by
+	// NoteEditor's own fetch-if-not-pre-populated effect once the editor is open,
+	// the same pattern already used there for attachments.
+	let openNoteRequestId = 0;
 
-		try {
-			const res = await fetch(`/api/notes/${noteId}`);
-			if (res.ok) {
-				const full = await res.json();
-				editingNote = full;
-				replaceState(`#${noteId}`, {});
-			}
-		} catch {
-			const note = await getIdbNote(noteId);
-			if (note) {
-				editingNote = note;
-				replaceState(`#${noteId}`, {});
-			}
-		}
+	async function openNoteById(noteId: string) {
+		const requestId = ++openNoteRequestId;
+		const note = await getIdbNote(noteId);
+		if (requestId !== openNoteRequestId) return; // a newer navigation superseded this one
+		if (note) openEditor(note);
 	}
 
 	function handleReorder(noteIds: string[]) {
@@ -173,5 +156,13 @@
 {/if}
 
 {#if editingNote}
-	<NoteEditor note={editingNote} onClose={closeEditor} onOpenNote={openNoteById} />
+	<!-- Forces a full destroy+remount on note-switch (e.g. clicking a note-link
+	     while the editor is already open) instead of reusing the same instance
+	     with a new `note` prop — a persisting instance's own back-navigation
+	     effect misreads `openEditor`'s replaceState call as "browser back was
+	     pressed" and closes the editor, and its once-only local state never
+	     resyncs to the new note otherwise. -->
+	{#key editingNote.id}
+		<NoteEditor note={editingNote} onClose={closeEditor} onOpenNote={openNoteById} />
+	{/key}
 {/if}
