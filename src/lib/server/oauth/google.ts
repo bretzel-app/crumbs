@@ -1,5 +1,6 @@
 import * as arctic from 'arctic';
 import { getGoogleClient } from './providers.js';
+import { verifiedEmailFromClaims } from './verified-email.js';
 
 export function createGoogleAuthUrl(): { url: URL; state: string; codeVerifier: string } | null {
 	const google = getGoogleClient();
@@ -25,14 +26,17 @@ export async function validateGoogleCallback(
 	const claims = arctic.decodeIdToken(idToken) as {
 		sub: string;
 		email?: string;
+		email_verified?: boolean;
 		name?: string;
 	};
 
-	if (!claims.email) return null;
+	// Only a verified address may identify an account — see verified-email.ts.
+	const email = verifiedEmailFromClaims(claims);
+	if (!email) return null;
 
 	return {
-		email: claims.email,
-		name: claims.name || claims.email.split('@')[0],
+		email,
+		name: claims.name || email.split('@')[0],
 		providerId: claims.sub
 	};
 }

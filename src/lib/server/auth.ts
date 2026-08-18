@@ -1,6 +1,6 @@
 import { db, sqlite } from './db/index.js';
 import { users, sessions } from './db/schema.js';
-import { eq, lt, and } from 'drizzle-orm';
+import { eq, lt, and, isNull } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import type { User } from '$lib/types/index.js';
@@ -318,9 +318,23 @@ export function findOrLinkOAuthUser(
 		.get();
 	if (byProvider) return toUser(byProvider);
 
-	// Try matching by email (invite-only: user must already exist)
-	const byEmail = db.select().from(users).where(eq(users.email, email)).get();
-	if (!byEmail) return null; // No matching user — not invited
+	// Try matching by email (invite-only: user must already exist).
+	//
+	// Restricted to accounts with no provider identity on file. Without that, an
+	// address asserted by the IdP could be linked onto an account that already
+	// belongs to a different provider identity — overwriting provider_id below and
+	// handing over the account. Nothing in the app can clear provider_id, so such a
+	// takeover would outlast a session revocation and be undoable only by deleting
+	// the user, which cascades away their notes.
+	//
+	// An invited account that has never signed in still has provider_id NULL, so the
+	// documented invite flow is unaffected.
+	const byEmail = db
+		.select()
+		.from(users)
+		.where(and(eq(users.email, email), isNull(users.providerId)))
+		.get();
+	if (!byEmail) return null; // Not invited, or already linked to another identity
 
 	// Link this OAuth provider to the existing user
 	db.update(users)

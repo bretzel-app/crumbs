@@ -1,5 +1,6 @@
 import * as arctic from 'arctic';
 import { getGithubClient } from './providers.js';
+import { verifiedGithubEmail } from './verified-email.js';
 
 export function createGithubAuthUrl(): { url: URL; state: string } | null {
 	const github = getGithubClient();
@@ -26,21 +27,23 @@ export async function validateGithubCallback(
 		headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
 	});
 	if (!userRes.ok) return null;
-	const user = (await userRes.json()) as { id: number; login: string; name?: string; email?: string };
+	const user = (await userRes.json()) as { id: number; login: string; name?: string };
 
-	// GitHub may not return email in profile — fetch from emails endpoint
-	let email = user.email;
-	if (!email) {
-		const emailsRes = await fetch('https://api.github.com/user/emails', {
-			headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
-		});
-		if (emailsRes.ok) {
-			const emails = (await emailsRes.json()) as { email: string; primary: boolean; verified: boolean }[];
-			const primary = emails.find((e) => e.primary && e.verified);
-			email = primary?.email || emails.find((e) => e.verified)?.email || undefined;
-		}
-	}
+	// Always resolve the address from /user/emails, never from the profile. The
+	// profile's `email` carries no verification flag, so it cannot support the trust
+	// decision this address is used for. The `user:email` scope is requested above,
+	// so this endpoint is available.
+	const emailsRes = await fetch('https://api.github.com/user/emails', {
+		headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
+	});
+	if (!emailsRes.ok) return null;
 
+	const emails = (await emailsRes.json()) as {
+		email: string;
+		primary: boolean;
+		verified: boolean;
+	}[];
+	const email = verifiedGithubEmail(emails);
 	if (!email) return null;
 
 	return {

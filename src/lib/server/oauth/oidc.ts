@@ -1,4 +1,5 @@
 import * as arctic from 'arctic';
+import { verifiedEmailFromClaims } from './verified-email.js';
 
 let oidcClient: arctic.OAuth2Client | null = null;
 let oidcConfig: {
@@ -85,12 +86,14 @@ export async function validateOidcCallback(
 		const claims = arctic.decodeIdToken(idToken) as {
 			sub: string;
 			email?: string;
+			email_verified?: boolean;
 			name?: string;
 		};
-		if (claims.email) {
+		const claimEmail = verifiedEmailFromClaims(claims);
+		if (claimEmail) {
 			return {
-				email: claims.email,
-				name: claims.name || claims.email.split('@')[0],
+				email: claimEmail,
+				name: claims.name || claimEmail.split('@')[0],
 				providerId: claims.sub
 			};
 		}
@@ -106,14 +109,17 @@ export async function validateOidcCallback(
 	const userInfo = (await userRes.json()) as {
 		sub: string;
 		email?: string;
+		email_verified?: boolean;
 		name?: string;
 	};
 
-	if (!userInfo.email) return null;
+	// userinfo commonly omits email_verified; an absent claim is not verification.
+	const email = verifiedEmailFromClaims(userInfo);
+	if (!email) return null;
 
 	return {
-		email: userInfo.email,
-		name: userInfo.name || userInfo.email.split('@')[0],
+		email,
+		name: userInfo.name || email.split('@')[0],
 		providerId: userInfo.sub
 	};
 }
