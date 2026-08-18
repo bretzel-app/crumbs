@@ -142,8 +142,11 @@
 ### User Management (admin)
 - Admin dashboard to create, list, and delete users
 - Assign roles (admin / user)
-- Reset passwords for any user
-- Revoke all sessions (force logout) for any user
+- Reset another user's password — Crumbs generates a 20-character password and shows it once in that user's row, with a copy button; it cannot be shown again
+  - Only for accounts that sign in with a password — OAuth/SSO accounts show why the reset is unavailable
+  - Your own password is changed from Settings > Profile, not here
+  - A reset does not sign the user out — revoke their sessions separately to force a logout
+- Revoke all sessions (force logout) for any user other than yourself
 
 ### PWA / Offline-First
 - Installable as standalone app

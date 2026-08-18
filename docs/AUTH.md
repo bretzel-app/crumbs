@@ -10,7 +10,24 @@ On first launch, Crumbs presents a setup screen to create the initial admin acco
 
 - Passwords are hashed with **Argon2** (argon2id variant)
 - Sessions use httpOnly cookies with 30-day expiry
-- Admins can reset passwords and revoke sessions for any user via Settings
+- Admins can revoke the sessions of, and reset the password of, users other than themselves via **Settings > Users** — see [Admin password resets](#admin-password-resets)
+
+### Admin password resets
+
+An admin can reset the password of any user other than themselves, provided that account signs in with a password. Crumbs generates the new password and shows it once in that user's row — copy it and pass it to the user out of band, because it is not stored anywhere and cannot be shown again once dismissed. If SMTP is configured Crumbs also tries to notify the user that their password was reset, but the attempt is best-effort: a delivery failure is logged on the server and never surfaced in the UI, so a successful reset is not evidence the user was told. The notification never contains the password.
+
+The control appears on every row, but is unavailable in two cases, each stating its reason on the row:
+
+- **Your own row** — change your own password in **Settings > Profile**, which verifies your current password first.
+- **An account that signs in via OAuth/SSO** — it has no password the login form would accept, so setting one would hand the user a credential that cannot work.
+
+It is also unavailable while a generated password is still on screen, and that case gives no reason — dismiss the password first if you need to generate another.
+
+A reset does not sign the user out. **Revoke all sessions** is a separate action on the same row and, like the reset, is not offered for your own account.
+
+A displayed password is only good until that account's password changes again: any later reset — by another admin, or by the user themselves from **Settings > Profile** — silently invalidates one still on screen, and nothing marks it as stale. Separately, if Crumbs cannot confirm a reset it says so and shows the password anyway; keep that one, since it may or may not have been applied, and reset again if the user cannot sign in.
+
+> **No password recovery.** Crumbs has no forgot-password flow. An admin who forgets their own password cannot reset it themselves: the admin control excludes their own row, and the profile flow requires the current password. Another admin can reset you, so keep a second admin account as cheap insurance. Failing that, if an OAuth/SSO provider is configured and your account's email matches your identity there, signing in with that provider gets you back in without a password — at the cost of handing the account over to the provider permanently, after which your password no longer works. With no other admin and no provider configured, there is no way back in through the app.
 
 ## OAuth / SSO
 
@@ -29,11 +46,13 @@ OAuth providers are **auto-enabled** when their environment variables are set �
 
 OAuth does **not** auto-create accounts. Users must be pre-created by an admin:
 
-1. Go to **Settings > Users > Invite User**
+1. Go to **Settings > Users** and fill in the **Create User** form
 2. Create the user with the **same email** they use on the OAuth provider
 3. The user can now log in via OAuth — their account is automatically linked on first sign-in
 
 After initial linking, the user is identified by their provider-specific ID (`sub` claim), so email changes on the provider side won't break login.
+
+Tick **OAuth-only (no password)** when creating these accounts — the provider is how they will sign in anyway. If you set a password instead, treat it as temporary: the first OAuth sign-in hands the account over to the provider, after which the password no longer works at the login form and the admin password reset is unavailable for that account.
 
 ### Environment variables
 
@@ -130,7 +149,7 @@ services:
 
 **4. Pre-create users:**
 
-In Crumbs, go to **Settings > Users > Invite User** and create accounts with emails matching your Authentik users. They can then log in via the "Authentik" button on the login page.
+In Crumbs, go to **Settings > Users** and create accounts with emails matching your Authentik users, ticking **OAuth-only (no password)**. They can then log in via the "Authentik" button on the login page.
 
 #### Keycloak
 
