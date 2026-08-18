@@ -284,3 +284,532 @@ test.describe.serial('Admin — Password Reset', () => {
 		await page.request.delete(`/api/admin/users/${victimId}`);
 	});
 });
+
+/** Open the users settings page and wait for it to hydrate. */
+async function openUsersPage(page: import('@playwright/test').Page): Promise<void> {
+	await page.goto('/settings/users');
+	await page.waitForLoadState('networkidle');
+}
+
+/**
+ * Reset a row's password through the UI and return the revealed plaintext.
+ * Trimmed because the reveal is markup-formatted text, not a form value.
+ */
+async function resetViaUi(
+	page: import('@playwright/test').Page,
+	victimId: number
+): Promise<string> {
+	await page.getByTestId(`reset-password-btn-${victimId}`).click();
+	const reveal = page.getByTestId(`generated-password-${victimId}`);
+	await expect(reveal).toBeVisible();
+	const revealed = (await reveal.textContent())?.trim() ?? '';
+	expect(revealed.length).toBeGreaterThanOrEqual(8);
+	return revealed;
+}
+
+test.describe('Admin — Password Reset UI', () => {
+	test('Scenario: Every user row offers a reset control, and an unavailable one says why', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user and an OAuth-only user exist
+		const eligibleId = await createVictim(page, 'ui-reason-pw@test.com', 'UI Reason Pw');
+		const oauthId = await createOAuthOnlyVictim(page, 'ui-reason-oauth@test.com', 'UI Reason OAuth');
+		const adminId = await currentAdminId(page);
+
+		// When the admin views the users list
+		const patchedIds: string[] = [];
+		page.on('request', (req) => {
+			if (req.method() === 'PATCH' && req.url().includes('/api/admin/users/')) {
+				patchedIds.push(req.url());
+			}
+		});
+		await openUsersPage(page);
+
+		// Then the control is offered on every row, including the admin's own
+		for (const id of [eligibleId, oauthId, adminId]) {
+			await expect(page.getByTestId(`reset-password-btn-${id}`)).toBeVisible();
+		}
+
+		// And it is available for the password-auth account
+		await expect(page.getByTestId(`reset-password-btn-${eligibleId}`)).toHaveAttribute(
+			'aria-disabled',
+			'false'
+		);
+		await expect(page.getByTestId(`reset-password-reason-${eligibleId}`)).toHaveCount(0);
+
+		// And the OAuth-only account explains in visible text why it is unavailable
+		const oauthBtn = page.getByTestId(`reset-password-btn-${oauthId}`);
+		await expect(oauthBtn).toHaveAttribute('aria-disabled', 'true');
+		const oauthReason = page.getByTestId(`reset-password-reason-${oauthId}`);
+		await expect(oauthReason).toBeVisible();
+		await expect(oauthReason).toContainText(/OAuth|password login/i);
+		await expect(oauthBtn).toHaveAttribute(
+			'aria-describedby',
+			`reset-password-reason-${oauthId}`
+		);
+
+		// And the admin's own row points them at their profile instead
+		const ownBtn = page.getByTestId(`reset-password-btn-${adminId}`);
+		await expect(ownBtn).toHaveAttribute('aria-disabled', 'true');
+		await expect(page.getByTestId(`reset-password-reason-${adminId}`)).toContainText(/Profile/i);
+
+		// And an unavailable control stays reachable by keyboard
+		for (const btn of [oauthBtn, ownBtn]) {
+			await expect(btn).not.toHaveAttribute('disabled', /.*/);
+			await btn.focus();
+			await expect(btn).toBeFocused();
+		}
+
+		// And activating an unavailable control changes nothing. force: true skips
+		// Playwright's own aria-disabled actionability check, so what is under test is
+		// the handler refusing the activation, not the harness declining to send it.
+		await ownBtn.click({ force: true });
+		await oauthBtn.click({ force: true });
+		await expect(page.getByTestId(`generated-password-${adminId}`)).toHaveCount(0);
+		await expect(page.getByTestId(`generated-password-${oauthId}`)).toHaveCount(0);
+		expect(patchedIds).toEqual([]);
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${eligibleId}`);
+		await page.request.delete(`/api/admin/users/${oauthId}`);
+	});
+
+	test('Scenario: An account signs in with the password the admin generated, and its old one stops working', async ({
+		authenticatedPage: page,
+		browser
+	}) => {
+		// Given a password-auth user exists
+		const email = 'ui-roundtrip@test.com';
+		const victimId = await createVictim(page, email, 'UI Roundtrip');
+		await openUsersPage(page);
+
+		// And the announcement region is present and silent
+		await expect(page.getByTestId('reset-password-live')).toHaveText('');
+
+		// When the admin resets that account's password
+		const patch = page.waitForResponse(
+			(res) =>
+				res.url().endsWith(`/api/admin/users/${victimId}`) && res.request().method() === 'PATCH'
+		);
+		const revealed = await resetViaUi(page, victimId);
+		expect((await patch).status()).toBe(200);
+
+		// Then the reveal is announced
+		await expect(page.getByTestId('reset-password-live')).toContainText(/password/i);
+
+		// And that row's control is unavailable until the reveal is dismissed
+		await expect(page.getByTestId(`reset-password-btn-${victimId}`)).toHaveAttribute(
+			'aria-disabled',
+			'true'
+		);
+
+		// And the account signs in with the generated password, from a context whose
+		// cookie jar is separate from the admin's
+		const ctx = await browser.newContext();
+		const newLogin = await ctx.request.post('/api/auth/login', {
+			data: { email, password: revealed }
+		});
+		expect(newLogin.status()).toBe(200);
+
+		// And the password it had before is refused. 401 exactly: a 429 would mean the
+		// shared test IP is rate-limited, which proves nothing about the credential.
+		const oldLogin = await ctx.request.post('/api/auth/login', {
+			data: { email, password: userPassword }
+		});
+		expect(oldLogin.status()).toBe(401);
+		await ctx.close();
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A revealed password is never persisted or logged', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user exists
+		const victimId = await createVictim(page, 'ui-nostore@test.com', 'UI No Store');
+		const consoleMessages: string[] = [];
+		page.on('console', (msg) => consoleMessages.push(msg.text()));
+		await openUsersPage(page);
+
+		// When the admin resets that account's password
+		const revealed = await resetViaUi(page, victimId);
+
+		// Then the plaintext reaches no persistent client storage
+		const leaks = await page.evaluate(async (secret: string) => {
+			const hits: string[] = [];
+			const scanWebStorage = (store: Storage, label: string) => {
+				for (let i = 0; i < store.length; i++) {
+					const key = store.key(i);
+					if (key === null) continue;
+					if (key.includes(secret) || (store.getItem(key) ?? '').includes(secret)) {
+						hits.push(`${label}:${key}`);
+					}
+				}
+			};
+			scanWebStorage(localStorage, 'localStorage');
+			scanWebStorage(sessionStorage, 'sessionStorage');
+
+			const databases = (await indexedDB.databases?.()) ?? [];
+			for (const info of databases) {
+				if (!info.name) continue;
+				const db = await new Promise<IDBDatabase>((resolve, reject) => {
+					const request = indexedDB.open(info.name as string);
+					request.onsuccess = () => resolve(request.result);
+					request.onerror = () => reject(request.error);
+				});
+				for (const storeName of Array.from(db.objectStoreNames)) {
+					const records = await new Promise<unknown[]>((resolve, reject) => {
+						const request = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
+						request.onsuccess = () => resolve(request.result);
+						request.onerror = () => reject(request.error);
+					});
+					let serialised = '';
+					try {
+						serialised = JSON.stringify(records) ?? '';
+					} catch {
+						serialised = '';
+					}
+					if (serialised.includes(secret)) hits.push(`indexedDB:${info.name}/${storeName}`);
+				}
+				db.close();
+			}
+			return hits;
+		}, revealed);
+		expect(leaks).toEqual([]);
+
+		// And it appears in no console output
+		expect(consoleMessages.filter((m) => m.includes(revealed))).toEqual([]);
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A revealed password is shown whole on a phone-sized screen', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user seen on a 360px-wide screen
+		const victimId = await createVictim(page, 'ui-narrow@test.com', 'UI Narrow');
+		await page.setViewportSize({ width: 360, height: 800 });
+		await openUsersPage(page);
+
+		// When the admin resets that account's password
+		const revealed = await resetViaUi(page, victimId);
+
+		// Then none of it is clipped away — truncating it would quietly corrupt the
+		// fallback of copying it by hand
+		const shown = await page.getByTestId(`generated-password-${victimId}`).evaluate((el) => ({
+			scrollWidth: el.scrollWidth,
+			clientWidth: el.clientWidth,
+			text: (el.textContent ?? '').trim()
+		}));
+		expect(shown.text).toBe(revealed);
+		expect(shown.clientWidth).toBeGreaterThan(0);
+		expect(shown.scrollWidth).toBeLessThanOrEqual(shown.clientWidth);
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: Copying a revealed password confirms that it was copied', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user exists and the clipboard is available
+		await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+		const victimId = await createVictim(page, 'ui-copy-ok@test.com', 'UI Copy Ok');
+		await openUsersPage(page);
+
+		// When the admin resets the password and copies it
+		const revealed = await resetViaUi(page, victimId);
+		await page.getByTestId(`copy-password-btn-${victimId}`).click();
+
+		// Then the copy is confirmed and the clipboard holds the password
+		await expect(page.getByTestId(`copy-status-${victimId}`)).toContainText(/copied/i);
+		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(revealed);
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A refused clipboard leaves the password copyable by hand', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user exists and the clipboard refuses writes.
+		// defineProperty, not assignment: navigator.clipboard is a getter-only
+		// accessor, so assigning to it silently leaves the real API in place.
+		const victimId = await createVictim(page, 'ui-copy-denied@test.com', 'UI Copy Denied');
+		await page.addInitScript(() => {
+			Object.defineProperty(navigator, 'clipboard', {
+				configurable: true,
+				get: () => ({
+					writeText: () => Promise.reject(new DOMException('denied', 'NotAllowedError'))
+				})
+			});
+		});
+		await openUsersPage(page);
+
+		// When the admin resets the password and tries to copy it
+		const revealed = await resetViaUi(page, victimId);
+		await page.getByTestId(`copy-password-btn-${victimId}`).click();
+
+		// Then the failure is reported as a manual-copy fallback
+		await expect(page.getByTestId(`copy-status-${victimId}`)).toContainText(/by hand|manually/i);
+
+		// And the password is still shown, selectable, for copying by hand
+		const reveal = page.getByTestId(`generated-password-${victimId}`);
+		await expect(reveal).toBeVisible();
+		expect((await reveal.textContent())?.trim()).toBe(revealed);
+		expect(await reveal.evaluate((el) => getComputedStyle(el).userSelect)).not.toBe('none');
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: Dismissing a reveal clears the password and leaves focus on that row', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user whose password was just reset
+		const victimId = await createVictim(page, 'ui-dismiss@test.com', 'UI Dismiss');
+		await openUsersPage(page);
+		await resetViaUi(page, victimId);
+
+		// When the admin dismisses the reveal
+		await page.getByTestId(`dismiss-password-btn-${victimId}`).click();
+
+		// Then the password is gone from the page
+		await expect(page.getByTestId(`generated-password-${victimId}`)).toHaveCount(0);
+		await expect(page.getByTestId(`copy-password-btn-${victimId}`)).toHaveCount(0);
+
+		// And focus is back on that row's control, which is available again
+		const btn = page.getByTestId(`reset-password-btn-${victimId}`);
+		await expect(btn).toBeFocused();
+		await expect(btn).toHaveAttribute('aria-disabled', 'false');
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: Each of the three controls is large enough to hit on a phone', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user exists, seen on a phone-sized screen
+		const victimId = await createVictim(page, 'ui-target@test.com', 'UI Target');
+		await page.setViewportSize({ width: 360, height: 800 });
+		await openUsersPage(page);
+
+		// When the admin resets that account's password
+		await resetViaUi(page, victimId);
+
+		// Then every control in the flow meets the 44px minimum. Dismiss destroys the
+		// only copy of the credential, so a cramped target is a data-loss risk.
+		for (const testId of [
+			`reset-password-btn-${victimId}`,
+			`copy-password-btn-${victimId}`,
+			`dismiss-password-btn-${victimId}`
+		]) {
+			const box = await page.getByTestId(testId).boundingBox();
+			expect(box, testId).not.toBeNull();
+			expect(Math.min(box!.width, box!.height), testId).toBeGreaterThanOrEqual(44);
+		}
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A refused reset reports the server reason and reveals no password', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a user the server refuses to reset — an account whose sign-in method
+		// changed after the list was loaded, so the row still looks eligible
+		const victimId = await createVictim(page, 'ui-rejected@test.com', 'UI Rejected');
+		const serverReason = 'Managed by SSO — password login is disabled for this account.';
+		await openUsersPage(page);
+		await page.route(`**/api/admin/users/${victimId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			await route.fulfill({
+				status: 400,
+				contentType: 'application/json',
+				body: JSON.stringify({ message: serverReason })
+			});
+		});
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the refusal is shown in that row, and announced
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toContainText(serverReason);
+		await expect(page.getByTestId('reset-password-live')).toContainText(serverReason);
+
+		// And no password is revealed
+		await expect(page.getByTestId(`generated-password-${victimId}`)).toHaveCount(0);
+
+		// And the control no longer invites a retry that would fail the same way
+		const btn = page.getByTestId(`reset-password-btn-${victimId}`);
+		await expect(btn).toHaveAttribute('aria-disabled', 'true');
+		await expect(page.getByTestId(`reset-password-reason-${victimId}`)).toContainText(serverReason);
+
+		// And dismissing the message keeps that explanation in place
+		await page.getByTestId(`dismiss-password-btn-${victimId}`).click();
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toHaveCount(0);
+		await expect(btn).toBeFocused();
+		await expect(btn).toHaveAttribute('aria-disabled', 'true');
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${victimId}`);
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A reset whose outcome is unknown keeps the generated password', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a user whose reset response never arrives, so the server may or may
+		// not have stored the new password
+		const victimId = await createVictim(page, 'ui-unknown@test.com', 'UI Unknown');
+		await openUsersPage(page);
+		await page.route(`**/api/admin/users/${victimId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			await route.abort('connectionreset');
+		});
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the uncertainty is stated
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toContainText(
+			/may or may not/i
+		);
+
+		// And the generated password is kept, because it may be the account's only
+		// working credential and nothing else holds a copy of it
+		const reveal = page.getByTestId(`generated-password-${victimId}`);
+		await expect(reveal).toBeVisible();
+		expect(((await reveal.textContent()) ?? '').trim().length).toBeGreaterThanOrEqual(8);
+		await expect(page.getByTestId(`copy-password-btn-${victimId}`)).toBeVisible();
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${victimId}`);
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A reset attempted offline reports that nothing was changed', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user exists and the browser has no connection
+		const victimId = await createVictim(page, 'ui-offline@test.com', 'UI Offline');
+		await openUsersPage(page);
+		const patchRequests: string[] = [];
+		page.on('request', (req) => {
+			if (req.method() === 'PATCH') patchRequests.push(req.url());
+		});
+		await page.context().setOffline(true);
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the outcome is stated as definite: nothing left the device
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toContainText(
+			/offline.*nothing was changed/i
+		);
+		expect(patchRequests).toEqual([]);
+
+		// And no password is revealed, since none was set
+		await expect(page.getByTestId(`generated-password-${victimId}`)).toHaveCount(0);
+
+		// Restore connectivity — Playwright does not reliably emit the online event
+		await page.context().setOffline(false);
+		await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: One row\'s reset never touches another row', async ({
+		authenticatedPage: page
+	}) => {
+		// Given two password-auth users exist
+		const firstId = await createVictim(page, 'ui-isolation-a@test.com', 'UI Isolation A');
+		const secondId = await createVictim(page, 'ui-isolation-b@test.com', 'UI Isolation B');
+		await openUsersPage(page);
+
+		// When the first account's password is reset
+		const revealed = await resetViaUi(page, firstId);
+
+		// Then the second row shows neither a password nor a message
+		await expect(page.getByTestId(`generated-password-${secondId}`)).toHaveCount(0);
+		await expect(page.getByTestId(`reset-password-error-${secondId}`)).toHaveCount(0);
+		await expect(page.getByTestId(`reset-password-btn-${secondId}`)).toHaveAttribute(
+			'aria-disabled',
+			'false'
+		);
+
+		// And when the second account's reset is refused
+		await page.route(`**/api/admin/users/${secondId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			await route.fulfill({
+				status: 400,
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'Password login is not available for this account.' })
+			});
+		});
+		await page.getByTestId(`reset-password-btn-${secondId}`).click();
+		await expect(page.getByTestId(`reset-password-error-${secondId}`)).toBeVisible();
+
+		// Then the first row keeps its password and stays free of that message
+		expect((await page.getByTestId(`generated-password-${firstId}`).textContent())?.trim()).toBe(
+			revealed
+		);
+		await expect(page.getByTestId(`reset-password-error-${firstId}`)).toHaveCount(0);
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${secondId}`);
+		await page.request.delete(`/api/admin/users/${firstId}`);
+		await page.request.delete(`/api/admin/users/${secondId}`);
+	});
+
+	test('Scenario: Resetting an account that no longer exists drops it from the list', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a user who is deleted after the list was loaded
+		const victimId = await createVictim(page, 'ui-missing@test.com', 'UI Missing');
+		await openUsersPage(page);
+		await expect(page.getByTestId(`user-row-${victimId}`)).toBeVisible();
+		expect((await page.request.delete(`/api/admin/users/${victimId}`)).status()).toBe(200);
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the row disappears and no password is left behind
+		await expect(page.getByTestId(`user-row-${victimId}`)).toHaveCount(0);
+		await expect(page.getByTestId(`generated-password-${victimId}`)).toHaveCount(0);
+	});
+
+	test('Scenario: A reset in flight cannot be issued twice', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user whose reset response is slow to arrive
+		const victimId = await createVictim(page, 'ui-inflight@test.com', 'UI In Flight');
+		await openUsersPage(page);
+		let patchCount = 0;
+		await page.route(`**/api/admin/users/${victimId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			patchCount++;
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await route.continue();
+		});
+
+		// When the admin activates the control twice in a row
+		const btn = page.getByTestId(`reset-password-btn-${victimId}`);
+		await btn.click();
+		await expect(btn).toContainText(/Resetting/);
+		await expect(btn).toHaveAttribute('aria-disabled', 'true');
+		await btn.click({ force: true });
+
+		// Then only one reset is issued
+		await expect(page.getByTestId(`generated-password-${victimId}`)).toBeVisible();
+		expect(patchCount).toBe(1);
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${victimId}`);
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+});
