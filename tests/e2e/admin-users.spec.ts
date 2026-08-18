@@ -307,6 +307,17 @@ async function resetViaUi(
 	return revealed;
 }
 
+/**
+ * The four row action buttons, in DOM order, named by their accessible name. An
+ * eligible row that is not the signed-in admin's own offers all four.
+ */
+const ROW_ACTION_LABELS = [
+	'Promote to admin',
+	'Reset password',
+	'Revoke all sessions',
+	'Delete user'
+] as const;
+
 test.describe('Admin — Password Reset UI', () => {
 	test('Scenario: Every user row offers a reset control, and an unavailable one says why', async ({
 		authenticatedPage: page
@@ -616,6 +627,65 @@ test.describe('Admin — Password Reset UI', () => {
 		await page.request.delete(`/api/admin/users/${victimId}`);
 	});
 
+	test('Scenario: Row actions stay full-size square targets at every phone width', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a password-auth user, whose row therefore offers all four actions
+		const victimId = await createVictim(page, 'ui-strip@test.com', 'UI Strip');
+
+		// The strip needs 188px of room, so it holds one line to 336px and wraps
+		// below. 360px covers the fitting case; 320px covers the case that used to
+		// shrink; 300px is narrow enough that a strip which refused to wrap would be
+		// pushed clear of its row, which the containment check below then catches.
+		for (const [width, fitsOneLine] of [
+			[360, true],
+			[320, false],
+			[300, false]
+		] as const) {
+			// When the admin views the users list on a screen that wide
+			await page.setViewportSize({ width, height: 800 });
+			await openUsersPage(page);
+			const row = page.getByTestId(`user-row-${victimId}`);
+
+			const boxes = [];
+			for (const label of ROW_ACTION_LABELS) {
+				const box = await row.getByRole('button', { name: label, exact: true }).boundingBox();
+				expect(box, `${label} at ${width}px`).not.toBeNull();
+				boxes.push(box!);
+			}
+
+			// Then every action is a square that clears the 44px minimum. One of them
+			// deletes an account irreversibly, so an action that shrank to fit its row
+			// would put a data-losing target under a thumb.
+			for (const [i, box] of boxes.entries()) {
+				const at = `${ROW_ACTION_LABELS[i]} at ${width}px`;
+				expect(Math.min(box.width, box.height), at).toBeGreaterThanOrEqual(44);
+				expect(Math.abs(box.width - box.height), at).toBeLessThan(1);
+			}
+
+			// And they sit on one line wherever there is room for one
+			const lines = new Set(boxes.map((box) => Math.round(box.y)));
+			if (fitsOneLine) expect(lines.size, `lines at ${width}px`).toBe(1);
+
+			// And where there is not, they wrap rather than spill out of their row or
+			// push the page sideways
+			const rowBox = await row.boundingBox();
+			expect(rowBox, `row at ${width}px`).not.toBeNull();
+			for (const [i, box] of boxes.entries()) {
+				expect(box.x + box.width, `${ROW_ACTION_LABELS[i]} at ${width}px`).toBeLessThanOrEqual(
+					rowBox!.x + rowBox!.width
+				);
+			}
+			const overflows = await page.evaluate(
+				() => document.documentElement.scrollWidth > document.documentElement.clientWidth
+			);
+			expect(overflows, `horizontal overflow at ${width}px`).toBe(false);
+		}
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
 	test('Scenario: A refused reset reports the server reason and reveals no password', async ({
 		authenticatedPage: page
 	}) => {
@@ -685,6 +755,81 @@ test.describe('Admin — Password Reset UI', () => {
 		await expect(reveal).toBeVisible();
 		expect(((await reveal.textContent()) ?? '').trim().length).toBeGreaterThanOrEqual(8);
 		await expect(page.getByTestId(`copy-password-btn-${victimId}`)).toBeVisible();
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${victimId}`);
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A server-side failure keeps the generated password even when it gives a reason', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a user whose reset fails inside the server, with a reason attached —
+		// a reason says why the server is unhappy, never whether it already stored
+		// the password, so the outcome is unknown however readable the body is
+		const victimId = await createVictim(page, 'ui-5xx-reason@test.com', 'UI 5xx Reason');
+		await openUsersPage(page);
+		await page.route(`**/api/admin/users/${victimId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			await route.fulfill({
+				status: 503,
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'Database is temporarily read-only.' })
+			});
+		});
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the uncertainty is stated rather than the server's reason being taken
+		// as a refusal
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toContainText(
+			/may or may not/i
+		);
+
+		// And the generated password is kept, because the server may already hold it
+		const reveal = page.getByTestId(`generated-password-${victimId}`);
+		await expect(reveal).toBeVisible();
+		expect(((await reveal.textContent()) ?? '').trim().length).toBeGreaterThanOrEqual(8);
+
+		// Clean up
+		await page.unroute(`**/api/admin/users/${victimId}`);
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A rejection nobody can read keeps the generated password', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a user whose reset comes back as an unreadable error page — what a
+		// reverse proxy returns when it answers instead of the app, so the request may
+		// have reached the server or may not have
+		const victimId = await createVictim(page, 'ui-html-error@test.com', 'UI Html Error');
+		await openUsersPage(page);
+		await page.route(`**/api/admin/users/${victimId}`, async (route) => {
+			if (route.request().method() !== 'PATCH') return route.continue();
+			await route.fulfill({
+				status: 400,
+				contentType: 'text/html',
+				body: '<html><body><h1>400 Bad Request</h1></body></html>'
+			});
+		});
+
+		// When the admin resets that account's password
+		await page.getByTestId(`reset-password-btn-${victimId}`).click();
+
+		// Then the uncertainty is stated rather than the status alone being read as a
+		// refusal
+		await expect(page.getByTestId(`reset-password-error-${victimId}`)).toContainText(
+			/may or may not/i
+		);
+
+		// And the generated password is kept, because nothing said it was not stored
+		const reveal = page.getByTestId(`generated-password-${victimId}`);
+		await expect(reveal).toBeVisible();
+		expect(((await reveal.textContent()) ?? '').trim().length).toBeGreaterThanOrEqual(8);
+
+		// And the control is not left explaining a reason it never received
+		await expect(page.getByTestId(`reset-password-reason-${victimId}`)).toHaveCount(0);
 
 		// Clean up
 		await page.unroute(`**/api/admin/users/${victimId}`);
@@ -800,7 +945,7 @@ test.describe('Admin — Password Reset UI', () => {
 		// When the admin activates the control twice in a row
 		const btn = page.getByTestId(`reset-password-btn-${victimId}`);
 		await btn.click();
-		await expect(btn).toContainText(/Resetting/);
+		await expect(btn).toHaveAccessibleName(/Resetting/);
 		await expect(btn).toHaveAttribute('aria-disabled', 'true');
 		await btn.click({ force: true });
 
