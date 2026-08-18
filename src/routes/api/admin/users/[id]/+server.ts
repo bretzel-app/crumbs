@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { requireAdmin } from '$lib/server/api-utils.js';
 import { getUser, deleteUser, updateUserRole, resetPassword, revokeAllSessions } from '$lib/server/auth.js';
 import { isEmailConfigured, sendPasswordResetEmail, sendRoleChangedEmail } from '$lib/server/email.js';
+import { canResetPassword, passwordResetBlockedReason } from '$lib/utils/auth-methods.js';
 
 export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 	const admin = requireAdmin(event);
@@ -33,6 +34,20 @@ export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 	if (body.newPassword !== undefined) {
 		if (body.newPassword.length < 8) {
 			throw error(400, 'Password must be at least 8 characters');
+		}
+		// Prevent admin from resetting their own password — changing your own
+		// password goes through the profile flow, which verifies the current one.
+		if (userId === admin.id) {
+			throw error(400, 'Cannot reset your own password — change it from your profile instead');
+		}
+		// Refuse accounts that do not sign in with a password. resetPassword()
+		// writes only passwordHash, and verifyPassword() matches only rows whose
+		// authProvider is 'password' — a hash written here could never be used to
+		// sign in, while the email below would claim the reset worked. The reason
+		// text comes from the same module as the check, so this matches what the
+		// UI explains; the ?? only satisfies error()'s string parameter.
+		if (!canResetPassword(user)) {
+			throw error(400, passwordResetBlockedReason(user) ?? 'This account does not use password login');
 		}
 		await resetPassword(userId, body.newPassword);
 
