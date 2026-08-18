@@ -3,6 +3,13 @@
 	import PasswordStrengthMeter from '$lib/components/PasswordStrengthMeter.svelte';
 	import { canResetPassword, passwordResetBlockedReason } from '$lib/utils/auth-methods.js';
 	import { generatePassword } from '$lib/utils/password.js';
+	import { tooltip } from '$lib/utils/tooltip.js';
+	import ShieldCheck from 'lucide-svelte/icons/shield-check';
+	import ShieldOff from 'lucide-svelte/icons/shield-off';
+	import KeyRound from 'lucide-svelte/icons/key-round';
+	import LogOut from 'lucide-svelte/icons/log-out';
+	import Trash2 from 'lucide-svelte/icons/trash-2';
+	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 
 	let { data } = $props();
 	// svelte-ignore state_referenced_locally
@@ -396,6 +403,8 @@
 			{#each users as user (user.id)}
 				{@const reset = resets[user.id]}
 				{@const control = resetControl(user)}
+				{@const roleAction = user.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+				{@const resetLabel = control.inFlight ? 'Resetting…' : 'Reset password'}
 				<div
 					class="flex flex-col gap-3 rounded-sm border border-[var(--border-subtle)] p-4"
 					data-testid="user-row-{user.id}"
@@ -410,13 +419,32 @@
 							</p>
 							<p class="truncate text-sm text-[var(--text-muted)]">{user.email}</p>
 						</div>
-						<div class="flex flex-wrap items-center gap-2">
+						<!-- One uniform 44x44 square per action, replacing four text labels that
+						     wrapped onto three lines at phone width. `flex-wrap` is what keeps the
+						     squares square: flex compresses items only on a line that overflows, so
+						     breaking the line means no button is ever asked to shrink. Drop it and
+						     the four flatten to 40x44 at 320px — under the minimum, on a row whose
+						     Delete is irreversible. They hold one line down to 336px, which is
+						     exactly 4x44 plus the gaps, and take a second line below that: correctly
+						     sized targets over two lines beat cramped ones on one. The container's
+						     own `shrink-0` is a different mechanism and does carry weight — from
+						     640px the row turns `sm:flex-row`, where the truncating name block would
+						     otherwise squeeze the strip. On the buttons themselves that same token
+						     would do nothing, `flex-wrap` having already spared them. Each icon
+						     carries both a tooltip, for a mouse, and an aria-label, since an icon
+						     alone has no accessible name. -->
+						<div class="flex shrink-0 flex-wrap items-center gap-1">
 							<button
 								onclick={() => toggleRole(user)}
-								class="rounded-sm px-3 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--border-subtle)]/50"
-								title={user.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+								class="inline-flex size-11 items-center justify-center rounded-sm text-[var(--text-muted)] transition-colors duration-150 ease-out hover:bg-[var(--hover-wash)]/10"
+								use:tooltip={roleAction}
+								aria-label={roleAction}
 							>
-								{user.role === 'admin' ? 'Make user' : 'Make admin'}
+								{#if user.role === 'admin'}
+									<ShieldOff class="h-4 w-4" />
+								{:else}
+									<ShieldCheck class="h-4 w-4" />
+								{/if}
 							</button>
 							<!-- Offered on every row, the admin's own included: a control that
 							     vanishes is the confusion this replaces. -->
@@ -426,26 +454,37 @@
 								data-testid="reset-password-btn-{user.id}"
 								aria-disabled={control.unavailable}
 								aria-describedby={control.reason ? `reset-password-reason-${user.id}` : undefined}
-								class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border px-3 text-xs transition-colors duration-150 ease-out {control.unavailable
-									? 'cursor-not-allowed border-dashed border-[var(--border-subtle)] text-[var(--text-muted)]'
-									: 'border-[var(--border-subtle)] text-[var(--text)] hover:border-[var(--primary)] hover:bg-[var(--hover-wash)]/10'}"
+								use:tooltip={resetLabel}
+								aria-label={resetLabel}
+								class="inline-flex size-11 items-center justify-center rounded-sm transition-colors duration-150 ease-out {control.unavailable
+									? 'cursor-not-allowed border border-dashed border-[var(--border-subtle)] text-[var(--text-muted)]'
+									: 'text-[var(--text)] hover:bg-[var(--hover-wash)]/10'}"
 							>
-								{control.inFlight ? 'Resetting…' : 'Reset password'}
+								{#if control.inFlight}
+									<!-- The label went with the text, so in-flight has to be carried by
+									     the icon and by the accessible name above. -->
+									<LoaderCircle class="h-4 w-4 animate-spin" />
+								{:else}
+									<KeyRound class="h-4 w-4" />
+								{/if}
 							</button>
 							{#if user.id !== data.user?.id}
 								<button
 									onclick={() => revokeSessions(user)}
-									class="rounded-sm px-3 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--border-subtle)]/50"
-									title="Force logout"
+									class="inline-flex size-11 items-center justify-center rounded-sm text-[var(--text-muted)] transition-colors duration-150 ease-out hover:bg-[var(--hover-wash)]/10"
+									use:tooltip={'Revoke all sessions'}
+									aria-label="Revoke all sessions"
 								>
-									Revoke
+									<LogOut class="h-4 w-4" />
 								</button>
 								<button
 									onclick={() => deleteUser(user.id)}
 									data-testid="delete-user-btn-{user.id}"
-									class="rounded-sm px-3 py-1 text-xs text-[var(--destructive)] hover:bg-[var(--error-bg)]"
+									class="inline-flex size-11 items-center justify-center rounded-sm text-[var(--destructive)] transition-colors duration-150 ease-out hover:bg-[var(--error-bg)]"
+									use:tooltip={'Delete user'}
+									aria-label="Delete user"
 								>
-									Delete
+									<Trash2 class="h-4 w-4" />
 								</button>
 							{/if}
 						</div>
