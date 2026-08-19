@@ -1,44 +1,51 @@
 import type { User } from '$lib/types/index.js';
 
 /**
- * Human-readable reason a password reset is unavailable, keyed by auth provider.
- * Anything absent from this map falls back to BLOCKED_REASON_FALLBACK, so the
- * blocked path can never be left unexplained.
- *
- * A Map, not an object literal: an object inherits Object.prototype, so a lookup
- * for 'toString' or '__proto__' would resolve to an inherited member instead of
- * missing, and the fallback below would never fire. A Map has no such keys, so
- * totality holds by construction rather than by a guard that could be dropped.
- */
-const BLOCKED_REASONS = new Map<string, string>([
-	['none', 'This account has no password — it signs in via OAuth.'],
-	['google', 'Managed by Google — password login is disabled for this account.'],
-	['github', 'Managed by GitHub — password login is disabled for this account.'],
-	['oidc', 'Managed by SSO — password login is disabled for this account.']
-]);
-
-const BLOCKED_REASON_FALLBACK = 'Password login is not available for this account.';
-
-/**
  * Whether an admin may set a new password for this account.
  *
- * Password login is gated on `authProvider` — verifyPassword() only matches rows
- * where it equals 'password' — so writing a hash for any other provider stores a
- * credential that can never be used to sign in.
+ * Password login is gated on `passwordLoginEnabled`, which resetPassword() sets
+ * deliberately — so an admin can enable password auth on any account, including
+ * OAuth-only ones, without clearing their SSO link.
  */
-export function canResetPassword(user: Pick<User, 'authProvider'>): boolean {
-	return user.authProvider === 'password';
+export function canResetPassword(_user: Pick<User, 'passwordLoginEnabled' | 'authProvider'>): boolean {
+	return true;
 }
 
 /**
  * Why a password reset is blocked, or null when it is allowed.
  *
- * `authProvider` is typed `string`, so the compiler cannot enforce exhaustiveness
- * here. The fallback guarantees the invariant this module exists for: whenever
- * `canResetPassword` is false, this returns a non-empty explanation, so the UI
- * never shows a disabled control without saying why.
+ * Eligibility is checked in the UI for the signed-in admin's own row; every
+ * other account may receive a reset that enables password login.
  */
-export function passwordResetBlockedReason(user: Pick<User, 'authProvider'>): string | null {
-	if (canResetPassword(user)) return null;
-	return BLOCKED_REASONS.get(user.authProvider) ?? BLOCKED_REASON_FALLBACK;
+export function passwordResetBlockedReason(
+	_user: Pick<User, 'passwordLoginEnabled' | 'authProvider'>
+): string | null {
+	return null;
+}
+
+/**
+ * Whether self-service account deletion must verify the user's password.
+ *
+ * OAuth-linked accounts may delete with their active SSO session alone, even
+ * when an admin has enabled password login. Pure password accounts, and
+ * OAuth-only rows with password login enabled but no provider link, still
+ * require the password.
+ */
+export function requiresPasswordForAccountDeletion(
+	user: Pick<User, 'authProvider' | 'passwordLoginEnabled'>
+): boolean {
+	if (user.authProvider === 'password') return true;
+	if (user.authProvider === 'none' && user.passwordLoginEnabled) return true;
+	return false;
+}
+
+/** Whether an admin may turn off password login for this account. */
+export function canDisablePasswordLogin(
+	user: Pick<User, 'id' | 'passwordLoginEnabled' | 'authProvider'>,
+	adminId: number
+): boolean {
+	if (user.id === adminId || !user.passwordLoginEnabled) return false;
+	// Only when another sign-in method exists — disabling on a password-only row
+	// would lock the user out with no OAuth fallback.
+	return user.authProvider !== 'password' && user.authProvider !== 'none';
 }

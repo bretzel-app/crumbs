@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { getUserId } from '$lib/server/api-utils.js';
 import { verifyPassword, deleteUser, deleteSession, getUser } from '$lib/server/auth.js';
 import { isEmailConfigured, sendAccountDeletedEmail } from '$lib/server/email.js';
+import { requiresPasswordForAccountDeletion } from '$lib/utils/auth-methods.js';
 
 export const DELETE: RequestHandler = async ({ request, cookies, ...event }) => {
 	const userId = getUserId(event);
@@ -11,8 +12,9 @@ export const DELETE: RequestHandler = async ({ request, cookies, ...event }) => 
 
 	const body = await request.json();
 
-	// OAuth users don't have passwords — allow deletion without password
-	if (user.authProvider === 'password') {
+	// Password required for pure password accounts; OAuth-linked accounts may delete
+	// with their active SSO session even when password login was admin-enabled.
+	if (requiresPasswordForAccountDeletion(user)) {
 		if (!body.password) throw error(400, 'Password is required');
 		const verified = await verifyPassword(user.email, body.password);
 		if (!verified) throw error(401, 'Invalid password');

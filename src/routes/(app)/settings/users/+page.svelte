@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { User } from '$lib/types/index.js';
 	import PasswordStrengthMeter from '$lib/components/PasswordStrengthMeter.svelte';
-	import { canResetPassword, passwordResetBlockedReason } from '$lib/utils/auth-methods.js';
+	import { canResetPassword, passwordResetBlockedReason, canDisablePasswordLogin } from '$lib/utils/auth-methods.js';
 	import { generatePassword } from '$lib/utils/password.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import ShieldCheck from 'lucide-svelte/icons/shield-check';
 	import ShieldOff from 'lucide-svelte/icons/shield-off';
 	import KeyRound from 'lucide-svelte/icons/key-round';
+	import LockKeyhole from 'lucide-svelte/icons/lock-keyhole';
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -331,6 +332,37 @@
 			// ignore
 		}
 	}
+
+	async function disablePasswordLogin(user: User) {
+		if (!canDisablePasswordLogin(user, data.user?.id ?? -1)) return;
+		if (
+			!confirm(
+				`Disable password login for ${userLabel(user)}? They will need to sign in via their linked OAuth provider. All sessions will be revoked.`
+			)
+		) {
+			return;
+		}
+		try {
+			const res = await fetch(`/api/admin/users/${user.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ disablePasswordLogin: true })
+			});
+			if (res.ok) {
+				const updated = await res.json();
+				users = users.map((u) => (u.id === user.id ? updated : u));
+				createMsg = `Password login disabled for ${userLabel(user)}`;
+				createError = false;
+			} else {
+				const d = await res.json().catch(() => ({}));
+				createMsg = d.message || 'Failed to disable password login';
+				createError = true;
+			}
+		} catch {
+			createMsg = 'Connection error';
+			createError = true;
+		}
+	}
 </script>
 
 <!-- Create User -->
@@ -468,6 +500,17 @@
 									<KeyRound class="h-4 w-4" />
 								{/if}
 							</button>
+							{#if canDisablePasswordLogin(user, data.user?.id ?? -1)}
+								<button
+									onclick={() => disablePasswordLogin(user)}
+									data-testid="disable-password-btn-{user.id}"
+									class="inline-flex size-11 items-center justify-center rounded-sm text-[var(--text-muted)] transition-colors duration-150 ease-out hover:bg-[var(--hover-wash)]/10"
+									use:tooltip={'Disable password login'}
+									aria-label="Disable password login"
+								>
+									<LockKeyhole class="h-4 w-4" />
+								</button>
+							{/if}
 							{#if user.id !== data.user?.id}
 								<button
 									onclick={() => revokeSessions(user)}

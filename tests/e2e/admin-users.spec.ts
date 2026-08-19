@@ -3,12 +3,25 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import Database from 'better-sqlite3';
 import { TEST_CREDENTIALS_FILE } from './global-setup';
 
 const { userPassword } = JSON.parse(readFileSync(TEST_CREDENTIALS_FILE, 'utf-8'));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_IMAGE_PATH = join(__dirname, 'helpers', 'test-image.png');
+const TEST_DB = './data/test-crumbs.db';
+
+/** Link a user row to an OAuth provider in the test database (simulates first SSO sign-in). */
+function linkUserToOAuth(userId: number, provider = 'google', providerId?: string): void {
+	const db = new Database(TEST_DB);
+	db.prepare('UPDATE users SET auth_provider = ?, provider_id = ? WHERE id = ?').run(
+		provider,
+		providerId ?? `test-${userId}`,
+		userId
+	);
+	db.close();
+}
 
 /** Create a victim user via the admin API, returning the user's id. */
 async function createVictim(
@@ -27,7 +40,7 @@ async function createVictim(
 /**
  * Create a victim user with no password via the admin API, returning the user's id.
  * Omitting the password is the OAuth-only path: createUser() stores authProvider
- * 'none', which verifyPassword() never matches.
+ * 'none' with passwordLoginEnabled false until an admin reset enables it.
  */
 async function createOAuthOnlyVictim(
 	page: import('@playwright/test').Page,
@@ -40,6 +53,7 @@ async function createOAuthOnlyVictim(
 	expect(res.status()).toBe(201);
 	const user = await res.json();
 	expect(user.authProvider).toBe('none');
+	expect(user.passwordLoginEnabled).toBe(false);
 	return user.id;
 }
 
@@ -213,7 +227,7 @@ test.describe.serial('Admin — Password Reset', () => {
 		await page.request.delete(`/api/admin/users/${victimId}`);
 	});
 
-	test('Scenario: An account that signs in via OAuth cannot be given a password', async ({
+	test('Scenario: An OAuth-only account can be given a password by an admin', async ({
 		authenticatedPage: page,
 		browser
 	}) => {
@@ -221,26 +235,88 @@ test.describe.serial('Admin — Password Reset', () => {
 		const email = 'oauth-only@test.com';
 		const victimId = await createOAuthOnlyVictim(page, email, 'OAuth Only');
 
-		// When the admin attempts to set a password for that account
-		const attemptedPassword = `attempt-${randomUUID()}`;
+		// When the admin sets a password for that account
+		const newPassword = `oauth-pw-${randomUUID()}`;
 		const res = await page.request.patch(`/api/admin/users/${victimId}`, {
-			data: { newPassword: attemptedPassword }
+			data: { newPassword }
 		});
 
-		// Then the attempt is rejected and the response says why
-		expect(res.status()).toBe(400);
-		const body = await res.json();
-		expect(body.message).toMatch(/OAuth|password login/i);
+		// Then the reset succeeds and enables password login
+		expect(res.status()).toBe(200);
+		const updated = await res.json();
+		expect(updated.passwordLoginEnabled).toBe(true);
 
-		// And the account still cannot sign in with the attempted password.
-		// This is the positive control for the rejection above: it confirms no
-		// usable credential was stored, not merely that the request 400'd.
+		// And the account can sign in with the new password while keeping OAuth
 		const ctx = await browser.newContext();
 		const loginRes = await ctx.request.post('/api/auth/login', {
-			data: { email, password: attemptedPassword }
+			data: { email, password: newPassword }
 		});
-		expect(loginRes.status()).toBe(401);
+		expect(loginRes.status()).toBe(200);
 		await ctx.close();
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: A password reset revokes all existing sessions', async ({
+		authenticatedPage: page,
+		browser
+	}) => {
+		// Given a password-auth user with an active session
+		const email = 'revoke-on-reset@test.com';
+		const victimId = await createVictim(page, email, 'Revoke Reset');
+		const ctx = await browser.newContext();
+		const loginRes = await ctx.request.post('/api/auth/login', {
+			data: { email, password: userPassword }
+		});
+		expect(loginRes.status()).toBe(200);
+
+		// When the admin sets a new password for that account
+		const newPassword = `revoke-${randomUUID()}`;
+		const resetRes = await page.request.patch(`/api/admin/users/${victimId}`, {
+			data: { newPassword }
+		});
+		expect(resetRes.status()).toBe(200);
+
+		// Then the old session is no longer valid
+		expect((await ctx.request.get('/api/notes')).status()).toBe(401);
+		await ctx.close();
+
+		// And the new password still works
+		const fresh = await browser.newContext();
+		expect(
+			(
+				await fresh.request.post('/api/auth/login', {
+					data: { email, password: newPassword }
+				})
+			).status()
+		).toBe(200);
+		await fresh.close();
+
+		// Clean up
+		await page.request.delete(`/api/admin/users/${victimId}`);
+	});
+
+	test('Scenario: An admin can disable password login on an OAuth-linked user', async ({
+		authenticatedPage: page
+	}) => {
+		// Given an OAuth-linked user with password login enabled
+		const email = 'disable-pw@test.com';
+		const victimId = await createVictim(page, email, 'Disable Pw');
+		linkUserToOAuth(victimId);
+
+		// When the admin disables password login for that account
+		const res = await page.request.patch(`/api/admin/users/${victimId}`, {
+			data: { disablePasswordLogin: true }
+		});
+
+		// Then password login is off and the old password no longer works
+		expect(res.status()).toBe(200);
+		expect((await res.json()).passwordLoginEnabled).toBe(false);
+		expect(
+			(await page.request.post('/api/auth/login', { data: { email, password: userPassword } }))
+				.status()
+		).toBe(401);
 
 		// Clean up
 		await page.request.delete(`/api/admin/users/${victimId}`);
@@ -314,6 +390,7 @@ async function resetViaUi(
 const ROW_ACTION_LABELS = [
 	'Promote to admin',
 	'Reset password',
+	'Disable password login',
 	'Revoke all sessions',
 	'Delete user'
 ] as const;
@@ -341,23 +418,14 @@ test.describe('Admin — Password Reset UI', () => {
 			await expect(page.getByTestId(`reset-password-btn-${id}`)).toBeVisible();
 		}
 
-		// And it is available for the password-auth account
-		await expect(page.getByTestId(`reset-password-btn-${eligibleId}`)).toHaveAttribute(
-			'aria-disabled',
-			'false'
-		);
-		await expect(page.getByTestId(`reset-password-reason-${eligibleId}`)).toHaveCount(0);
-
-		// And the OAuth-only account explains in visible text why it is unavailable
-		const oauthBtn = page.getByTestId(`reset-password-btn-${oauthId}`);
-		await expect(oauthBtn).toHaveAttribute('aria-disabled', 'true');
-		const oauthReason = page.getByTestId(`reset-password-reason-${oauthId}`);
-		await expect(oauthReason).toBeVisible();
-		await expect(oauthReason).toContainText(/OAuth|password login/i);
-		await expect(oauthBtn).toHaveAttribute(
-			'aria-describedby',
-			`reset-password-reason-${oauthId}`
-		);
+		// And it is available for both password and OAuth-only accounts
+		for (const id of [eligibleId, oauthId]) {
+			await expect(page.getByTestId(`reset-password-btn-${id}`)).toHaveAttribute(
+				'aria-disabled',
+				'false'
+			);
+			await expect(page.getByTestId(`reset-password-reason-${id}`)).toHaveCount(0);
+		}
 
 		// And the admin's own row points them at their profile instead
 		const ownBtn = page.getByTestId(`reset-password-btn-${adminId}`);
@@ -365,19 +433,13 @@ test.describe('Admin — Password Reset UI', () => {
 		await expect(page.getByTestId(`reset-password-reason-${adminId}`)).toContainText(/Profile/i);
 
 		// And an unavailable control stays reachable by keyboard
-		for (const btn of [oauthBtn, ownBtn]) {
-			await expect(btn).not.toHaveAttribute('disabled', /.*/);
-			await btn.focus();
-			await expect(btn).toBeFocused();
-		}
+		await expect(ownBtn).not.toHaveAttribute('disabled', /.*/);
+		await ownBtn.focus();
+		await expect(ownBtn).toBeFocused();
 
-		// And activating an unavailable control changes nothing. force: true skips
-		// Playwright's own aria-disabled actionability check, so what is under test is
-		// the handler refusing the activation, not the harness declining to send it.
+		// And activating the admin's own control changes nothing
 		await ownBtn.click({ force: true });
-		await oauthBtn.click({ force: true });
 		await expect(page.getByTestId(`generated-password-${adminId}`)).toHaveCount(0);
-		await expect(page.getByTestId(`generated-password-${oauthId}`)).toHaveCount(0);
 		expect(patchedIds).toEqual([]);
 
 		// Clean up
@@ -630,15 +692,19 @@ test.describe('Admin — Password Reset UI', () => {
 	test('Scenario: Row actions stay full-size square targets at every phone width', async ({
 		authenticatedPage: page
 	}) => {
-		// Given a password-auth user, whose row therefore offers all four actions
+		// Given an OAuth-linked user, whose row therefore offers all five actions
+		// (the disable-password control is only offered where another sign-in
+		// method exists)
 		const victimId = await createVictim(page, 'ui-strip@test.com', 'UI Strip');
+		linkUserToOAuth(victimId);
 
-		// The strip needs 188px of room, so it holds one line to 336px and wraps
-		// below. 360px covers the fitting case; 320px covers the case that used to
-		// shrink; 300px is narrow enough that a strip which refused to wrap would be
-		// pushed clear of its row, which the containment check below then catches.
+		// The strip fits four of its five 44px squares on one line and wraps the
+		// fifth below it at every phone width, so all three widths exercise the
+		// wrap case; 300px is narrow enough that a strip which refused to wrap
+		// would be pushed clear of its row, which the containment check below
+		// then catches.
 		for (const [width, fitsOneLine] of [
-			[360, true],
+			[360, false],
 			[320, false],
 			[300, false]
 		] as const) {

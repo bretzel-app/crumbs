@@ -29,7 +29,14 @@ export default defineConfig({
 		}
 	],
 	webServer: {
-		command: 'pnpm preview --port 4173',
+		// The wipe runs here (before the server opens the database), not in
+		// globalSetup: Playwright starts the webServer before globalSetup, so
+		// deleting the SQLite files later would orphan the server's open
+		// database onto a deleted inode. Tests that read the database file
+		// directly (see linkUserToOAuth in admin-users.spec.ts) must see the
+		// server's real database file.
+		command:
+			'rm -f data/test-crumbs.db data/test-crumbs.db-wal data/test-crumbs.db-shm data/test-crumbs.db-journal && pnpm preview --port 4173',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 		timeout: 120_000,

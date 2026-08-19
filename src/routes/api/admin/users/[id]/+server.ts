@@ -1,9 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireAdmin } from '$lib/server/api-utils.js';
-import { getUser, deleteUser, updateUserRole, resetPassword, revokeAllSessions } from '$lib/server/auth.js';
+import { getUser, deleteUser, updateUserRole, resetPassword, revokeAllSessions, disablePasswordLogin } from '$lib/server/auth.js';
 import { isEmailConfigured, sendPasswordResetEmail, sendRoleChangedEmail } from '$lib/server/email.js';
-import { canResetPassword, passwordResetBlockedReason } from '$lib/utils/auth-methods.js';
 
 export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 	const admin = requireAdmin(event);
@@ -40,21 +39,29 @@ export const PATCH: RequestHandler = async ({ params, request, ...event }) => {
 		if (userId === admin.id) {
 			throw error(400, 'Cannot reset your own password — change it from your profile instead');
 		}
-		// Refuse accounts that do not sign in with a password. resetPassword()
-		// writes only passwordHash, and verifyPassword() matches only rows whose
-		// authProvider is 'password' — a hash written here could never be used to
-		// sign in, while the email below would claim the reset worked. The reason
-		// text comes from the same module as the check, so this matches what the
-		// UI explains; the ?? only satisfies error()'s string parameter.
-		if (!canResetPassword(user)) {
-			throw error(400, passwordResetBlockedReason(user) ?? 'This account does not use password login');
-		}
 		await resetPassword(userId, body.newPassword);
+		revokeAllSessions(userId);
 
 		// Notify user of password reset (fire-and-forget)
 		if (isEmailConfigured() && user.email) {
 			sendPasswordResetEmail(user.email, user.displayName, origin).catch(() => {});
 		}
+	}
+
+	if (body.disablePasswordLogin) {
+		if (userId === admin.id) {
+			throw error(400, 'Cannot disable password login on your own account');
+		}
+		if (!user.passwordLoginEnabled) {
+			throw error(400, 'Password login is not enabled for this account');
+		}
+		if (user.authProvider === 'password' || user.authProvider === 'none') {
+			throw error(
+				400,
+				'Password login can only be disabled when the account is linked to OAuth'
+			);
+		}
+		disablePasswordLogin(userId);
 	}
 
 	if (body.revokeSessions) {

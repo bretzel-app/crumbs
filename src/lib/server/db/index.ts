@@ -28,6 +28,7 @@ sqlite.exec(`
 		display_name TEXT NOT NULL DEFAULT '',
 		role TEXT NOT NULL DEFAULT 'user',
 		password_hash TEXT,
+		password_login_enabled INTEGER NOT NULL DEFAULT 0,
 		auth_provider TEXT NOT NULL DEFAULT 'password',
 		provider_id TEXT,
 		created_at INTEGER NOT NULL
@@ -269,15 +270,30 @@ if (pwCol && pwCol.notnull) {
 			display_name TEXT NOT NULL DEFAULT '',
 			role TEXT NOT NULL DEFAULT 'user',
 			password_hash TEXT,
+			password_login_enabled INTEGER NOT NULL DEFAULT 0,
 			auth_provider TEXT NOT NULL DEFAULT 'password',
 			provider_id TEXT,
 			created_at INTEGER NOT NULL
 		);
-		INSERT INTO __new_users(id, email, display_name, role, password_hash, auth_provider, provider_id, created_at)
-			SELECT id, email, display_name, role, password_hash, auth_provider, provider_id, created_at FROM users;
+		INSERT INTO __new_users(id, email, display_name, role, password_hash, password_login_enabled, auth_provider, provider_id, created_at)
+			SELECT id, email, display_name, role, password_hash,
+				CASE WHEN auth_provider = 'password' THEN 1 ELSE 0 END,
+				auth_provider, provider_id, created_at FROM users;
 		DROP TABLE users;
 		ALTER TABLE __new_users RENAME TO users;
 	`);
+}
+
+// Migration: add password_login_enabled (independent of OAuth provider)
+const userColumnsAfterPw = sqlite
+	.prepare("PRAGMA table_info('users')")
+	.all() as { name: string }[];
+if (!userColumnsAfterPw.some((col) => col.name === 'password_login_enabled')) {
+	sqlite.exec(`ALTER TABLE users ADD COLUMN password_login_enabled INTEGER NOT NULL DEFAULT 0;`);
+	// Backfill: only accounts whose sign-in method was password keep it enabled.
+	// OAuth-linked rows may carry a legacy hash; leaving them disabled avoids
+	// silently widening access — an admin reset is the deliberate enable act.
+	sqlite.exec(`UPDATE users SET password_login_enabled = 1 WHERE auth_provider = 'password';`);
 }
 
 // Re-enable foreign keys
