@@ -75,6 +75,7 @@ export interface User {
 	displayName: string;
 	role: 'admin' | 'user';
 	authProvider: string;
+	passwordLoginEnabled: boolean;
 	providerId: string | null;
 	createdAt: Date;
 }

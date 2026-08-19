@@ -143,9 +143,10 @@
 - Admin dashboard to create, list, and delete users
 - Assign roles (admin / user)
 - Reset another user's password — Crumbs generates a 20-character password and shows it once in that user's row, with a copy button; it cannot be shown again
-  - Only for accounts that sign in with a password — OAuth/SSO accounts show why the reset is unavailable
+  - Works for any account other than your own, including OAuth-only — the reset deliberately enables password login and revokes all sessions
+  - **Disable password login** turns off password auth, clears the hash, and revokes sessions (not offered on your own row)
   - Your own password is changed from Settings > Profile, not here
-  - A reset does not sign the user out — revoke their sessions separately to force a logout
+  - Use **Revoke all sessions** separately if you need to force a logout without changing credentials
 - Revoke all sessions (force logout) for any user other than yourself
 
 ### PWA / Offline-First

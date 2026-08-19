@@ -91,7 +91,7 @@ For a single-user app with multiple devices:
 See `src/lib/server/db/schema.ts` for the complete Drizzle schema.
 
 Key tables:
-- `users` - User accounts (password hash, OAuth provider link, role)
+- `users` - User accounts (password hash, `password_login_enabled`, OAuth provider link, role)
 - `sessions` - Auth sessions (30-day TTL)
 - `notes` - Core note data with version tracking
 - `tags` - Unique tag names

@@ -19,6 +19,7 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 			display_name TEXT NOT NULL DEFAULT '',
 			role TEXT NOT NULL DEFAULT 'user',
 			password_hash TEXT,
+			password_login_enabled INTEGER NOT NULL DEFAULT 0,
 			auth_provider TEXT NOT NULL DEFAULT 'password',
 			provider_id TEXT,
 			created_at INTEGER NOT NULL
@@ -173,6 +174,7 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 			displayName: 'Test User',
 			role: 'admin',
 			authProvider: 'password',
+			passwordLoginEnabled: true,
 			createdAt: new Date()
 		}).run();
 	}

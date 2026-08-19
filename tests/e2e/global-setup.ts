@@ -1,17 +1,14 @@
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { randomUUID } from 'crypto';
 
-const TEST_DB = './data/test-crumbs.db';
 export const TEST_CREDENTIALS_FILE = './data/test-credentials.json';
 
 export default function globalSetup() {
-	// Clean test database before E2E run so each run starts fresh
-	for (const ext of ['', '-journal', '-wal', '-shm']) {
-		const path = `${TEST_DB}${ext}`;
-		if (existsSync(path)) {
-			unlinkSync(path);
-		}
-	}
+	// The test database is wiped before the webServer starts (see the
+	// webServer.command in playwright.config.ts), NOT here: Playwright brings
+	// the webServer up before globalSetup runs, so deleting the SQLite files
+	// here would orphan the server's open database onto a deleted inode and
+	// tests that read the database file directly would see an empty schema.
 
 	// Generate random passwords for this test run, shared across all workers
 	writeFileSync(
