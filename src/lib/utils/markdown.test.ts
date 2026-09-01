@@ -62,6 +62,39 @@ describe('renderMarkdown', () => {
 		const html = renderMarkdown('line 1\nline 2');
 		expect(html).toContain('<br>');
 	});
+
+	it('should render a raw HTML table block (the table-with-a-list-in-a-cell fallback) instead of escaping it', () => {
+		// crumbs#83: a bulleted list inside a table cell can't be expressed in
+		// plain GFM, so the editor falls back to embedding the whole table as
+		// raw HTML in the saved markdown. The preview/share renderer must
+		// actually render that block, not show it as literal escaped text.
+		const html = renderMarkdown(
+			'<table><tbody><tr><td><ul><li>First</li><li>Second</li></ul></td><td>Plain cell</td></tr></tbody></table>'
+		);
+		expect(html).toContain('<table>');
+		expect(html).toContain('<li>First</li>');
+		expect(html).toContain('<li>Second</li>');
+		expect(html).not.toContain('&lt;table&gt;');
+	});
+
+	it('should strip a script tag from raw HTML content', () => {
+		// Note content isn't only ever written through the Tiptap editor - the
+		// MCP server and the notes API accept a raw markdown string directly,
+		// so this renderer can't trust that any HTML it's asked to render is
+		// safe just because rendering HTML at all is now allowed.
+		const html = renderMarkdown('<p>hello</p><script>alert(1)</script><img src=x onerror="alert(2)">');
+		expect(html).not.toContain('<script');
+		expect(html).not.toContain('onerror');
+		expect(html).toContain('hello');
+	});
+
+	it('should still render task-list checkboxes after sanitization', () => {
+		const html = renderMarkdown('[ ] todo\n\n[x] done');
+		expect(html).toContain('type="checkbox"');
+		expect(html).toContain('checked');
+		expect(html).toContain('disabled');
+		expect(html).toContain('class="task-checkbox"');
+	});
 });
 
 describe('stripMarkdown', () => {

@@ -10,6 +10,10 @@ interface MarkdownSerializerState {
 	inTable: boolean;
 }
 
+interface SerializeContext {
+	editor: { storage: { markdown: { options: { html: boolean } } } };
+}
+
 function childNodes(node: ProseMirrorNode): ProseMirrorNode[] {
 	const nodes: ProseMirrorNode[] = [];
 	node.forEach((child) => nodes.push(child));
@@ -59,7 +63,25 @@ function formatBlock(html: string): string {
 	return element.outerHTML;
 }
 
-function serializeAsHTML(state: MarkdownSerializerState, node: ProseMirrorNode, parent: ProseMirrorNode | Fragment) {
+/**
+ * Same as tiptap-markdown's HTMLNode fallback: when the editor's `html`
+ * option is off, other node types degrade to a `[nodename]` placeholder
+ * instead of emitting HTML. A table with non-inline cell content has to
+ * follow the same rule, or it'd be the only node type still leaking raw HTML
+ * with html mode disabled.
+ */
+function serializeAsHTML(
+	context: SerializeContext,
+	state: MarkdownSerializerState,
+	node: ProseMirrorNode,
+	parent: ProseMirrorNode | Fragment
+) {
+	if (!context.editor.storage.markdown.options.html) {
+		state.write(`[${node.type.name}]`);
+		state.closeBlock(node);
+		return;
+	}
+
 	const schema = node.type.schema;
 	const html = getHTMLFromFragment(Fragment.from(node), schema);
 	const isTopLevel = parent instanceof Fragment || parent.type.name === schema.topNodeType.name;
@@ -76,9 +98,14 @@ export const Table = BaseTable.extend({
 	addStorage() {
 		return {
 			markdown: {
-				serialize(this: unknown, state: MarkdownSerializerState, node: ProseMirrorNode, parent: ProseMirrorNode | Fragment) {
+				serialize(
+					this: SerializeContext,
+					state: MarkdownSerializerState,
+					node: ProseMirrorNode,
+					parent: ProseMirrorNode | Fragment
+				) {
 					if (!isMarkdownSerializable(node)) {
-						serializeAsHTML(state, node, parent);
+						serializeAsHTML(this, state, node, parent);
 						return;
 					}
 
