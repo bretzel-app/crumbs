@@ -50,7 +50,7 @@
     "@tiptap/pm": "^3.31.0",
     "@tiptap/starter-kit": "^3.31.0",
     "arctic": "^3.7.0",
-    "argon2": "^0.43.1",
+    "argon2": "^0.45.1",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "^0.45.2",
     "idb": "^8.0.3",
