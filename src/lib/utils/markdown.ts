@@ -48,7 +48,7 @@ md.core.ruler.after('inline', 'task-lists', (state) => {
 			// Add task-list class to parent <ul> (once)
 			for (let j = i - 1; j >= 0; j--) {
 				if (tokens[j].type === 'bullet_list_open') {
-					const cls = tokens[j].attrGet('class') ?? '';
+					const cls = String(tokens[j].attrGet('class') ?? '');
 					if (!cls.includes('task-list')) {
 						tokens[j].attrJoin('class', 'task-list');
 					}
@@ -66,7 +66,7 @@ md.core.ruler.after('task-lists', 'note-links', (state) => {
 		const children = token.children;
 		for (let i = 0; i < children.length; i++) {
 			if (children[i].type !== 'link_open') continue;
-			const href = children[i].attrGet('href') ?? '';
+			const href = String(children[i].attrGet('href') ?? '');
 			if (!href.startsWith('crumb-note://')) continue;
 
 			let closeIndex = i + 1;
