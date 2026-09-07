@@ -9,6 +9,10 @@ import { setupAndLogin } from './helpers/fixtures.js';
  * 3. Test tool invocations via JSON-RPC over Streamable HTTP
  */
 
+// Start unauthenticated: the "rejects requests without API key" scenario must
+// not carry the shared admin session cookie, and the apiKey fixture logs in itself.
+base.use({ storageState: { cookies: [], origins: [] } });
+
 const test = base.extend<{ apiKey: string }>({
 	apiKey: async ({ page }, use) => {
 		await setupAndLogin(page);

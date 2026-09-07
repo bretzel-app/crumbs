@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// These scenarios describe what an anonymous visitor receives, so drop the
+// shared admin session the `app` project injects.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('PWA', () => {
 	test('Scenario: Web manifest provides correct app metadata', async ({ page }) => {
 		// When the browser requests the web manifest
