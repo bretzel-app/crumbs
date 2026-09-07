@@ -218,6 +218,7 @@ Write tests first or alongside features. Tests serve as living documentation of 
 - Config: `playwright.config.ts` (Chromium only, builds + previews app on port 4173)
 - Test database: `./data/test-crumbs.db` (cleaned via `global-setup.ts`)
 - Auth fixture: `tests/e2e/helpers/fixtures.ts` provides `authenticatedPage` (handles setup/login race conditions across parallel workers)
+- **Shared login state**: `tests/e2e/auth.setup.ts` (project `login-state`) logs in once and saves the admin session cookie to `data/test-storage-state.json`; the `app` project loads it into every context so tests start authenticated instead of submitting the login form each time. A spec that needs an anonymous baseline opts out with `test.use({ storageState: { cookies: [], origins: [] } })` (see `pwa.spec.ts`, `mcp.spec.ts`). Never write a test that revokes or logs out the admin's own session — it would break every test in other workers
 - Auth tests use `test.describe.serial` because they depend on sequential database state
 - **Offline/online tests**: After `setOffline(false)`, always manually dispatch the `online` event via `page.evaluate(() => window.dispatchEvent(new Event('online')))` — Playwright doesn't reliably emit it in headless/CI environments, causing flaky `waitForResponse` timeouts
 
