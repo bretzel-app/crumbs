@@ -88,14 +88,29 @@ body::before {
 	to { transform: translateY(0); }
 }
 
-/* Prose overrides for parchment theme */
+/* Prose overrides for parchment theme.
+   The typography plugin gives every element type its own --tw-prose-* variable,
+   each defaulting to a fixed grey. Anything not remapped here stays that grey in
+   dark mode (bold text was near-black on ink — see issue #86), so map them all. */
 .prose {
 	--tw-prose-body: var(--text);
 	--tw-prose-headings: var(--text);
+	--tw-prose-lead: var(--text-muted);
 	--tw-prose-links: var(--primary);
+	--tw-prose-bold: var(--text);
+	--tw-prose-counters: var(--text-muted);
+	--tw-prose-bullets: var(--text-muted);
+	--tw-prose-hr: var(--border-subtle);
+	--tw-prose-quotes: var(--text);
+	--tw-prose-quote-borders: var(--border-subtle);
+	--tw-prose-captions: var(--text-muted);
+	--tw-prose-kbd: var(--text);
+	--tw-prose-kbd-shadows: color-mix(in oklab, var(--text) 10%, transparent);
 	--tw-prose-code: var(--text);
-	--tw-prose-pre-bg: var(--bg-surface);
 	--tw-prose-pre-code: var(--text);
+	--tw-prose-pre-bg: var(--bg-surface);
+	--tw-prose-th-borders: var(--border-subtle);
+	--tw-prose-td-borders: var(--border-subtle);
 }
 
 .prose :where(code):not(:where([class~="not-prose"] *)) {
