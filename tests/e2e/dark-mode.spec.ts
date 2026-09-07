@@ -1,4 +1,4 @@
-import { test, expect, createNote } from './helpers/fixtures.js';
+import { test, expect, createNote, noteCard } from './helpers/fixtures.js';
 
 test.describe.serial('Dark mode', () => {
 	test('Scenario: Theme toggle persists selection across page reload', async ({
@@ -107,6 +107,40 @@ test.describe.serial('Dark mode', () => {
 			'background-color',
 			'rgb(208, 79, 67)'
 		);
+
+		await page.getByTestId('close-editor-btn').click();
+	});
+
+	test('Scenario: Bold text in notes uses the theme text colour in dark mode', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a note with bold content exists
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await createNote(page, 'Bold Contrast Note', 'Plain then **bold words** here');
+
+		// And dark theme is active
+		await page.goto('/settings/preferences');
+		await page.waitForLoadState('networkidle');
+		await page.getByTestId('pref-theme-dark').click();
+		await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+		// When viewing the note on the notes page
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		const preview = noteCard(page, 'Bold Contrast Note').getByTestId('note-content-preview');
+		const boldInCard = preview.locator('strong');
+		await expect(boldInCard).toHaveText('bold words');
+
+		// Then the bold text is rendered in the dark theme's text colour (--text = #ece3d3),
+		// not the typography plugin's hardcoded near-black
+		await expect(boldInCard).toHaveCSS('color', 'rgb(236, 227, 211)');
+
+		// And the same holds inside the editor
+		await noteCard(page, 'Bold Contrast Note').click();
+		const boldInEditor = page.getByTestId('tiptap-editor').locator('.tiptap strong');
+		await expect(boldInEditor).toHaveText('bold words');
+		await expect(boldInEditor).toHaveCSS('color', 'rgb(236, 227, 211)');
 
 		await page.getByTestId('close-editor-btn').click();
 	});
