@@ -33,12 +33,16 @@ md.core.ruler.after('inline', 'task-lists', (state) => {
 	for (let i = 0; i < tokens.length; i++) {
 		if (tokens[i].type !== 'inline') continue;
 		const content = tokens[i].content;
-		if (content.startsWith('[ ] ') || content.startsWith('[x] ')) {
-			const checked = content.startsWith('[x] ');
+		// markdown-it trims trailing whitespace from inline content, so an item
+		// with no text after the marker arrives as exactly "[ ]" — match the
+		// marker followed by a space or end-of-content.
+		const marker = /^\[( |x)\](?: |$)/.exec(content);
+		if (marker) {
+			const checked = marker[1] === 'x';
 			const checkbox = checked
 				? '<input type="checkbox" checked disabled class="task-checkbox" /> '
 				: '<input type="checkbox" disabled class="task-checkbox" /> ';
-			tokens[i].content = content.slice(4);
+			tokens[i].content = content.slice(marker[0].length);
 			tokens[i].children = md.parseInline(tokens[i].content, state.env)[0].children;
 			// Prepend checkbox
 			const token = new state.Token('html_inline', '', 0);
