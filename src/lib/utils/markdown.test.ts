@@ -95,6 +95,25 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('disabled');
 		expect(html).toContain('class="task-checkbox"');
 	});
+
+	it('should render an empty task item as a checkbox, not literal brackets', () => {
+		const html = renderMarkdown('- [ ] Train tickets\n- [ ]');
+		expect(html).not.toContain('[ ]');
+		expect(html.match(/type="checkbox"/g)).toHaveLength(2);
+	});
+
+	it('should render an empty checked task item as a checked checkbox', () => {
+		const html = renderMarkdown('- [x]');
+		expect(html).not.toContain('[x]');
+		expect(html).toContain('<input type="checkbox" checked disabled class="task-checkbox">');
+		expect(html).toContain('class="task-list"');
+	});
+
+	it('should not treat brackets glued to text as a task marker', () => {
+		const html = renderMarkdown('- [ ]x');
+		expect(html).not.toContain('type="checkbox"');
+		expect(html).toContain('[ ]x');
+	});
 });
 
 describe('stripMarkdown', () => {
