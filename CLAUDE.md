@@ -171,7 +171,8 @@ A `Makefile` wraps all common tasks for tool-agnostic usage. Run `make help` to 
 - **Conventional commits**: Use `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:` prefixes
 - **Commit regularly**: Bundle related changes into logical commits after each step or feature slice — don't accumulate a large diff
 - **Main branch**: `main` — use as base for all PRs and feature branches
-- **Feature branches**: Use `feat/<name>` branches with worktrees for isolation
+- **Always work in a worktree**: Never edit files in the main checkout. Before touching any file, create a dedicated worktree (`EnterWorktree` or `git worktree add .worktrees/<name> -b <branch>`) on a fresh branch from `origin/main`, do all work, commits, and PR creation from there. This keeps the main checkout clean and lets several tasks run side by side without clobbering each other's uncommitted changes.
+- **Feature branches**: Use `feat/<name>` (or `fix/<name>`) branches, one per worktree
 - **Rebase before PR**: Always `git rebase origin/main` (not merge) before pushing or creating a PR to keep a clean linear history and avoid merge conflicts in the PR
 
 ## CI/CD
