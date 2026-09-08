@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { STORAGE_STATE_FILE } from './tests/e2e/global-setup';
 
 export default defineConfig({
 	testDir: './tests/e2e',
@@ -22,10 +23,20 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] }
 		},
 		{
-			name: 'app',
-			testIgnore: 'auth.spec.ts',
+			// Logs in once and saves the session cookie for the `app` project.
+			name: 'login-state',
+			testMatch: 'auth.setup.ts',
 			dependencies: ['auth-setup'],
 			use: { ...devices['Desktop Chrome'] }
+		},
+		{
+			name: 'app',
+			testIgnore: ['auth.spec.ts', 'auth.setup.ts'],
+			dependencies: ['login-state'],
+			// Every context starts with the admin already logged in. Specs that
+			// need an unauthenticated baseline opt out with
+			// `test.use({ storageState: { cookies: [], origins: [] } })`.
+			use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE_FILE }
 		}
 	],
 	webServer: {

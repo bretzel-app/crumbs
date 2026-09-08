@@ -2,6 +2,8 @@ import { writeFileSync } from 'fs';
 import { randomUUID } from 'crypto';
 
 export const TEST_CREDENTIALS_FILE = './data/test-credentials.json';
+/** Admin session cookie captured by auth.setup.ts and shared by the `app` project. */
+export const STORAGE_STATE_FILE = './data/test-storage-state.json';
 
 export default function globalSetup() {
 	// The test database is wiped before the webServer starts (see the
