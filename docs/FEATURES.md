@@ -23,7 +23,7 @@
 - Blockquotes (`> quote`)
 - Unordered lists (`- item`)
 - Ordered lists (`1. item`)
-- Code blocks (triple backtick)
+- Code blocks (triple backtick) with syntax highlighting for 30+ languages — set the language in the fence (```ts) or from the toolbar picker while the cursor is inside the block; unlabelled blocks stay plain rather than guessing
 - Inline code (single backtick)
 - Links — insert, edit, and remove with URL input
 - Tables (insert, add/delete rows and columns)

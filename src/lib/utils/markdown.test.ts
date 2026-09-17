@@ -35,6 +35,40 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('const x = 1;');
 	});
 
+	it('should syntax-highlight a fenced block that names its language', () => {
+		const html = renderMarkdown('```ts\nconst x: number = 1;\n```');
+		expect(html).toContain('<code class="language-ts">');
+		expect(html).toContain('<span class="hljs-keyword">const</span>');
+		expect(html).toContain('<span class="hljs-number">1</span>');
+	});
+
+	it('should leave an unlabelled fence as plain text rather than guessing a language', () => {
+		const html = renderMarkdown('```\nSELECT * FROM users;\n```');
+		expect(html).toContain('<pre><code>SELECT * FROM users;');
+		expect(html).not.toContain('hljs-');
+	});
+
+	it('should leave a fence with an unknown language as plain text but keep its label', () => {
+		const html = renderMarkdown('```brainfuck\n+++\n```');
+		expect(html).toContain('<code class="language-brainfuck">+++');
+		expect(html).not.toContain('hljs-');
+	});
+
+	it('should keep code in a highlighted fence escaped', () => {
+		const html = renderMarkdown('```html\n<script>alert(1)</script>\n```');
+		expect(html).not.toContain('<script>');
+		expect(html).toContain('&lt;<span class="hljs-name">script</span>&gt;');
+	});
+
+	it('should strip classes other than highlighting classes from raw HTML spans and code', () => {
+		const html = renderMarkdown(
+			'<p><span class="hljs-keyword">kept</span> <span class="evil">dropped</span> <code class="language-js other">c</code></p>'
+		);
+		expect(html).toContain('<span class="hljs-keyword">kept</span>');
+		expect(html).toContain('<span>dropped</span>');
+		expect(html).toContain('<code class="language-js">c</code>');
+	});
+
 	it('should render inline code', () => {
 		const html = renderMarkdown('Use `npm install`');
 		expect(html).toContain('<code>npm install</code>');

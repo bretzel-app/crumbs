@@ -39,6 +39,8 @@ All colors are CSS variables in `src/app.css`. Never use hardcoded Tailwind colo
 | `--card-shadow-hover` | `3px 3px 0px` | Hover shadow in primary gold |
 | `--accent-check` | `var(--primary)` (light) / `#c8a44a` (dark) | Checkbox accent color — dimmed gold in dark mode so a long done-list doesn't shout |
 | `--hover-wash` | `var(--border)` (light) / `#ece3d3` (dark) | Tint source for hover/active washes (`bg-[var(--hover-wash)]/N`) — kept cream in dark mode since `--border`'s mid-grey is invisible at low opacity |
+| `--code-bg` | `#dfd5c1` (light) / `#141312` (dark) | Code block and inline code surface — one step below the page so it stands out on every note colour, including the default card which is `--bg-surface` itself |
+| `--hl-keyword` … `--hl-tag` | six token colours per theme | Syntax highlighting roles (keyword, string, number, comment, title, tag). Must keep AA contrast against `--code-bg`; asserted in `src/lib/utils/highlight.test.ts` |
 
 Note colors for cards are defined in `src/lib/utils/colors.ts`.
 

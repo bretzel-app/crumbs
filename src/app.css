@@ -26,6 +26,17 @@
 	   light styling is byte-identical; dark mode keeps the cream that --border
 	   used to supply, because a mid-grey wash is invisible on a dark surface. */
 	--hover-wash: var(--border);
+	/* Code surface: an inset one step below the page so it reads as a panel on
+	   every note colour (the default card is --bg-surface itself, so neither
+	   surface nor base would stand out on it). Token colours must keep AA
+	   contrast against it — see src/lib/utils/highlight.test.ts. */
+	--code-bg: #dfd5c1;
+	--hl-keyword: #7d5306;
+	--hl-string: #325d28;
+	--hl-number: #1f5c7a;
+	--hl-comment: #5d5462;
+	--hl-title: #6a2c7a;
+	--hl-tag: #8b2e1f;
 }
 
 [data-theme="dark"] {
@@ -49,6 +60,15 @@
 	/* Dimmed so a long done-list of gold checkboxes doesn't shout. */
 	--accent-check: #c8a44a;
 	--hover-wash: #ece3d3;
+	/* Dark code sinks to page level (the ink behind the cards) rather than
+	   lifting, so a snippet on a dark card reads as a cut-out, not a slab. */
+	--code-bg: #141312;
+	--hl-keyword: #e0a030;
+	--hl-string: #8fc97a;
+	--hl-number: #7fb8e0;
+	--hl-comment: #a89b8c;
+	--hl-title: #cfa3e6;
+	--hl-tag: #e2705c;
 }
 
 html, body {
@@ -108,15 +128,109 @@ body::before {
 	--tw-prose-kbd-shadows: color-mix(in oklab, var(--text) 10%, transparent);
 	--tw-prose-code: var(--text);
 	--tw-prose-pre-code: var(--text);
-	--tw-prose-pre-bg: var(--bg-surface);
+	--tw-prose-pre-bg: var(--code-bg);
 	--tw-prose-th-borders: var(--border-subtle);
 	--tw-prose-td-borders: var(--border-subtle);
 }
 
+/* Code — the body font is already monospace, so the typography plugin's
+   "shrink code to 86%" default only makes snippets harder to read. Code keeps
+   the surrounding text size and gets a distinct surface instead. */
 .prose :where(code):not(:where([class~="not-prose"] *)) {
-	background-color: var(--bg-surface);
+	background-color: var(--code-bg);
 	border-radius: 2px;
 	padding: 0.125rem 0.25rem;
+	font-size: inherit;
+}
+
+/* The chip is the signal now; the plugin's decorative backticks doubled it. */
+.prose :where(code):not(:where([class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"] *))::after {
+	content: none;
+}
+
+.prose :where(pre):not(:where([class~="not-prose"] *)) {
+	border: 1px solid var(--border-subtle);
+	border-radius: 2px;
+	font-size: inherit;
+	line-height: 1.6;
+	padding: 0.625rem 0.75rem;
+	tab-size: 4;
+}
+
+.prose :where(pre code):not(:where([class~="not-prose"] *)) {
+	background-color: transparent;
+	border-radius: 0;
+	padding: 0;
+}
+
+/* Card previews are a glance, not a workspace: clip long lines instead of
+   growing a scrollbar inside the card. The editor and share page keep the
+   typography default of scrolling horizontally. */
+.card-preview :where(pre) {
+	overflow: hidden;
+	/* line-clamp is a legacy -webkit-box; without this a wide <pre> takes its
+	   content width and runs out past the card edge instead of being clipped. */
+	max-width: 100%;
+}
+
+/* Syntax highlighting (highlight.js classes via lowlight). Six roles are
+   enough to tell structure apart without turning a snippet into confetti;
+   the colours live in --hl-* above so the dark theme can swap them. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-type,
+.hljs-literal {
+	color: var(--hl-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-quote,
+.hljs-addition {
+	color: var(--hl-string);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+	color: var(--hl-number);
+}
+
+.hljs-comment,
+.hljs-meta,
+.hljs-doctag {
+	color: var(--hl-comment);
+	font-style: italic;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id,
+.hljs-selector-class {
+	color: var(--hl-title);
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-deletion {
+	color: var(--hl-tag);
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: 600;
 }
 
 .prose :where(a):not(:where([class~="not-prose"] *)) {
