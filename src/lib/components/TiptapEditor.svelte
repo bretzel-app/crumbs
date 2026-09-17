@@ -13,7 +13,9 @@
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
 	import { Markdown } from 'tiptap-markdown';
+	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import { NoteLink } from './tiptap/NoteLink.js';
+	import { editorLowlight } from '$lib/utils/highlight.js';
 	import { getAllNotes } from '$lib/sync/idb.js';
 
 	interface Props {
@@ -92,7 +94,8 @@
 			editorInstance = new Editor({
 				element: element!,
 				extensions: [
-					StarterKit.configure({ link: false, underline: false }),
+					StarterKit.configure({ link: false, underline: false, codeBlock: false }),
+					CodeBlockLowlight.configure({ lowlight: editorLowlight }),
 					Link.configure({ openOnClick: false }),
 					Underline,
 					TextAlign.configure({ types: ['heading', 'paragraph'] }),

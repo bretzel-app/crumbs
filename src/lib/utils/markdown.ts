@@ -1,11 +1,15 @@
 import MarkdownIt from 'markdown-it';
 import sanitizeHtml from 'sanitize-html';
+import { highlightCode } from './highlight.js';
 
 const md = new MarkdownIt({
 	html: true,
 	linkify: true,
 	typographer: true,
-	breaks: true
+	breaks: true,
+	// Returning '' makes markdown-it escape and wrap the block itself, so an
+	// unlabelled or unknown-language fence still renders as plain <pre><code>.
+	highlight: (code, lang) => highlightCode(code, lang) ?? ''
 });
 
 // Raw HTML has to render (not just be escaped as visible text): a table with
@@ -20,6 +24,13 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 		...sanitizeHtml.defaults.allowedAttributes,
 		input: ['type', 'checked', 'disabled', 'class'],
 		ul: ['class']
+	},
+	// Syntax highlighting is carried by classes: `language-*` on the <code>
+	// of a fence and `hljs-*` (plus highlight.js sub-scopes like `function_`)
+	// on the token spans. Nothing else may put a class on these tags.
+	allowedClasses: {
+		code: [/^language-[\w+#.-]+$/],
+		span: [/^hljs-[\w-]+$/, /^language-[\w+#.-]+$/, /^[a-z]+_{1,2}$/]
 	},
 	// Keep markdown-it's bare void-element style (<br>, not <br />) so
 	// sanitizing doesn't change output for content that had no raw HTML to

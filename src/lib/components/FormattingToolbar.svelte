@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
+	import { CODE_LANGUAGES } from '$lib/utils/highlight.js';
 	import {
 		Undo2,
 		Redo2,
@@ -46,6 +47,18 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function isActive(nameOrAttrs: any, attrs?: Record<string, any>): boolean { void tick; return (!editor?.isDestroyed && editor?.isActive(nameOrAttrs, attrs)) ?? false; }
 	function getAttrs(type: string) { void tick; return (!editor?.isDestroyed && editor?.getAttributes(type)) || {}; }
+
+	// The fence info string may carry an alias (```js) or a language the picker
+	// doesn't list; surface it as-is rather than silently showing "Plain text".
+	function codeBlockLanguage(): string {
+		const lang = getAttrs('codeBlock').language;
+		return typeof lang === 'string' ? lang : '';
+	}
+
+	function setCodeBlockLanguage(event: Event) {
+		const value = (event.currentTarget as HTMLSelectElement).value;
+		editor?.chain().focus().updateAttributes('codeBlock', { language: value || null }).run();
+	}
 
 	let openDropdown: string | null = $state(null);
 	let dropdownAnchorEl: HTMLElement | null = $state(null);
@@ -378,6 +391,25 @@
 	>
 		<CodeXml size={iconSize} />
 	</button>
+	{#if isActive('codeBlock')}
+		{@const currentLanguage = codeBlockLanguage()}
+		<select
+			value={currentLanguage}
+			onchange={setCodeBlockLanguage}
+			class="shrink-0 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-1.5 py-1 text-xs text-[var(--text)] outline-none focus:border-[var(--primary)]"
+			title="Code block language"
+			aria-label="Code block language"
+			data-testid="format-code-language"
+		>
+			<option value="">Plain text</option>
+			{#if currentLanguage && !CODE_LANGUAGES.some((l) => l.id === currentLanguage)}
+				<option value={currentLanguage}>{currentLanguage}</option>
+			{/if}
+			{#each CODE_LANGUAGES as lang (lang.id)}
+				<option value={lang.id}>{lang.label}</option>
+			{/each}
+		</select>
+	{/if}
 	<button
 		onmousedown={preventToolbarMouseFocus}
 		onclick={() => handleCommandClick(() => editor?.chain().focus().setHorizontalRule().run())}

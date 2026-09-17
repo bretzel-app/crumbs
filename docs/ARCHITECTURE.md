@@ -82,6 +82,9 @@ For a single-user app with multiple devices:
 - Built-in dark mode support (`dark:` variants)
 - New v4 uses Vite plugin (faster builds)
 
+### lowlight (highlight.js)
+Code blocks are highlighted by one shared lowlight instance (`src/lib/utils/highlight.ts`) that feeds both the TipTap editor (`@tiptap/extension-code-block-lowlight`, live decorations) and the markdown-it renderer used for card previews and the share page, so a fence looks the same everywhere. Only the highlight.js "common" grammar set is bundled. Language auto-detection is deliberately disabled: it misreads note-sized snippets too often, so an unlabelled fence renders as plain text and the language comes from the fence info string or the toolbar picker. Token colours are the six `--hl-*` variables in `src/app.css`; a unit test asserts AA contrast against `--code-bg` in both themes.
+
 ### Argon2
 - Memory-hard password hashing (resists GPU attacks)
 - See [AUTH.md](AUTH.md) for authentication details
