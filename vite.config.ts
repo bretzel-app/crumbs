@@ -2,13 +2,36 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import tailwindcss from '@tailwindcss/vite';
 import istanbul from 'vite-plugin-istanbul';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * The e2e suite drives `vite preview` and its API helpers reuse keep-alive
+ * sockets. Node's http server drops an idle keep-alive socket after 5s by
+ * default, and a request that lands on a socket the server is closing at that
+ * instant fails client-side with "socket hang up" (seen on main CI in
+ * public-sharing.spec). Keeping the server's idle timeout well above any
+ * client's means the client always closes first, so the race cannot happen.
+ */
+function previewKeepAlive(): Plugin {
+	return {
+		name: 'crumbs:preview-keep-alive',
+		configurePreviewServer({ httpServer }) {
+			// HTTP/2 servers have no keep-alive timeout; preview is HTTP/1 here.
+			if ('keepAliveTimeout' in httpServer) {
+				httpServer.keepAliveTimeout = 65_000;
+				// Node requires headersTimeout to exceed keepAliveTimeout.
+				httpServer.headersTimeout = 66_000;
+			}
+		}
+	};
+}
 
 export default defineConfig({
 	build: {
 		chunkSizeWarningLimit: 850
 	},
 	plugins: [
+		previewKeepAlive(),
 		tailwindcss(),
 		sveltekit(),
 		...(process.env.VITE_COVERAGE === 'true'
