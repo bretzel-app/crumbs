@@ -313,6 +313,7 @@
 					type="checkbox"
 					checked={item.checked}
 					onchange={() => toggleItem(item.id)}
+					aria-label={item.text ? `Done: ${item.text}` : 'Done'}
 					class="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--primary)] focus:ring-[var(--primary)]"
 					data-testid="checklist-checkbox"
 				/>
@@ -335,6 +336,7 @@
 					class="flex-1 min-w-0 bg-transparent text-sm outline-none break-words {item.checked ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text)]'}"
 					data-placeholder="List item"
 					aria-placeholder="List item"
+					aria-label="Checklist item"
 					data-testid="checklist-input"
 					data-item-id={item.id}
 					role="textbox"
@@ -377,7 +379,7 @@
 					{#each doneSectionGroups as group}
 						{#if group.parentLabel}
 							<div class="flex items-center gap-2 py-1.5 pl-5" data-testid="checklist-done-parent-label">
-								<input type="checkbox" disabled class="h-4 w-4 rounded border-[var(--border-subtle)] opacity-50" />
+								<input type="checkbox" disabled tabindex="-1" aria-hidden="true" class="h-4 w-4 rounded border-[var(--border-subtle)] opacity-50" />
 								<span class="text-sm text-[var(--text-muted)] break-words min-w-0">{@html linkifyText(group.parentLabel.text)}</span>
 							</div>
 						{/if}
@@ -387,6 +389,7 @@
 									type="checkbox"
 									checked={item.checked}
 									onchange={() => toggleItem(item.id)}
+									aria-label={item.text ? `Done: ${item.text}` : 'Done'}
 									class="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--primary)] focus:ring-[var(--primary)]"
 									data-testid="checklist-done-checkbox"
 								/>

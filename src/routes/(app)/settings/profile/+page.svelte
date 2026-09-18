@@ -176,6 +176,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>Profile settings - Crumbs</title>
+</svelte:head>
+
 <!-- Profile -->
 <section class="mb-6 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--card-shadow)]">
 	<h2 class="mb-4 text-lg font-semibold text-[var(--text)]">Profile</h2>

@@ -37,7 +37,7 @@
 	let lightboxSrc = $state<string | null>(null);
 	let lightboxAlt = $state('');
 
-	const renderedContent = $derived(renderMarkdown(note.content));
+	const renderedContent = $derived(renderMarkdown(note.content, { focusableCode: false }));
 
 	const checklistItems = $derived<ChecklistItem[]>(
 		note.checklistMode
@@ -143,6 +143,8 @@
 						type="checkbox"
 						checked={item.checked}
 						disabled
+						tabindex="-1"
+						aria-hidden="true"
 						class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[var(--border-subtle)] text-[var(--primary)]"
 						data-testid="card-checklist-checkbox"
 					/>

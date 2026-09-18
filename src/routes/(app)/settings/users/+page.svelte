@@ -365,6 +365,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>User management - Crumbs</title>
+</svelte:head>
+
 <!-- Create User -->
 	<section class="mb-6 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--card-shadow)]">
 		<h2 class="mb-4 text-lg font-semibold text-[var(--text)]">Create User</h2>
@@ -403,6 +407,7 @@
 			{/if}
 			<select
 				bind:value={newRole}
+				aria-label="Role"
 				class="w-full rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-base)] px-4 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)]"
 			>
 				<option value="user">User</option>

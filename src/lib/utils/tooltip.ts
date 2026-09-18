@@ -68,15 +68,26 @@ export function tooltip(node: HTMLElement, value: string | TooltipOptions) {
 	const nativeTitle = node.getAttribute('title');
 	if (nativeTitle) node.removeAttribute('title');
 
+	// Removing `title` also removed the only accessible name most icon-only
+	// buttons had (RGAA 11.9 / WCAG 4.1.2). The tooltip text is that name, so
+	// expose it to assistive tech unless the element already names itself.
+	const ownsLabel = !node.hasAttribute('aria-label') && !node.hasAttribute('aria-labelledby') && !node.textContent?.trim();
+	function syncLabel() {
+		if (ownsLabel) node.setAttribute('aria-label', opts.text);
+	}
+	syncLabel();
+
 	return {
 		update(newValue: string | TooltipOptions) {
 			opts = parseOptions(newValue);
+			syncLabel();
 		},
 		destroy() {
 			hide();
 			node.removeEventListener('mouseenter', show);
 			node.removeEventListener('mouseleave', hide);
 			node.removeEventListener('pointerdown', hide);
+			if (ownsLabel) node.removeAttribute('aria-label');
 			if (nativeTitle) node.setAttribute('title', nativeTitle);
 		}
 	};

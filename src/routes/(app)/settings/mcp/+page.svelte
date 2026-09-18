@@ -115,6 +115,10 @@ ${mcpJsonConfig}`);
 	});
 </script>
 
+<svelte:head>
+	<title>MCP settings - Crumbs</title>
+</svelte:head>
+
 <!-- API Keys -->
 <section class="mb-6 rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--card-shadow)]">
 	<div class="mb-4 flex items-center gap-2">

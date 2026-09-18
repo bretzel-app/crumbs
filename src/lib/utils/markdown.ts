@@ -19,7 +19,8 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 	allowedAttributes: {
 		...sanitizeHtml.defaults.allowedAttributes,
 		input: ['type', 'checked', 'disabled', 'class'],
-		ul: ['class']
+		ul: ['class'],
+		pre: ['tabindex']
 	},
 	// Keep markdown-it's bare void-element style (<br>, not <br />) so
 	// sanitizing doesn't change output for content that had no raw HTML to
@@ -82,8 +83,22 @@ md.core.ruler.after('task-lists', 'note-links', (state) => {
 	}
 });
 
-export function renderMarkdown(content: string): string {
-	return sanitizeHtml(md.render(content), SANITIZE_OPTIONS);
+// A <pre> that scrolls horizontally is a scrollable region and must be
+// reachable by keyboard (RGAA 7.3 / WCAG 2.1.1). Card previews clip instead of
+// scrolling and turn this off so a card does not gain a pointless tab stop.
+const defaultFence = md.renderer.rules.fence!;
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+	const html = defaultFence(tokens, idx, options, env, self);
+	return env?.focusableCode === false ? html : html.replace(/^<pre>/, '<pre tabindex="0">');
+};
+
+export interface RenderMarkdownOptions {
+	/** Whether scrollable code blocks get `tabindex="0"`. Default true. */
+	focusableCode?: boolean;
+}
+
+export function renderMarkdown(content: string, options: RenderMarkdownOptions = {}): string {
+	return sanitizeHtml(md.render(content, { focusableCode: options.focusableCode ?? true }), SANITIZE_OPTIONS);
 }
 
 export function stripMarkdown(content: string): string {

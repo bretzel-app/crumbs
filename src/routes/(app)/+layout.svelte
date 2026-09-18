@@ -33,10 +33,18 @@
 </script>
 
 <div class="flex min-h-screen flex-col bg-[var(--bg-base)] text-[var(--text)]">
+	<!-- RGAA 12.7: header and sidebar repeat on every page, so keyboard users get a way past them. -->
+	<a
+		href="#main-content"
+		class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:border focus:border-[var(--border)] focus:bg-[var(--bg-surface)] focus:px-4 focus:py-2 focus:text-sm focus:text-[var(--text)] focus:shadow-[var(--card-shadow)]"
+		data-testid="skip-link"
+	>
+		Skip to content
+	</a>
 	<Header onMenuToggle={() => (sidebarOpen = !sidebarOpen)} />
 	<Sidebar open={sidebarOpen} onClose={() => (sidebarOpen = false)} />
 
-	<main class="flex-1 pt-4 transition-all {sidebarOpen ? 'lg:ml-64' : ''}">
+	<main id="main-content" tabindex="-1" class="flex-1 pt-4 outline-none transition-all {sidebarOpen ? 'lg:ml-64' : ''}">
 		<div class="mx-auto max-w-7xl px-4">
 			{@render children()}
 		</div>

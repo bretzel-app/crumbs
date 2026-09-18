@@ -107,6 +107,8 @@
 					Markdown
 				],
 				content,
+				// The contenteditable is exposed as role="textbox"; give it a name (RGAA 11.1).
+				editorProps: { attributes: { 'aria-label': 'Note content' } },
 				onUpdate: ({ editor: e }) => {
 					if (destroyed) return;
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any

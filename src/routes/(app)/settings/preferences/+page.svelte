@@ -6,6 +6,10 @@
 	const prefs = $derived(getPreferences());
 </script>
 
+<svelte:head>
+	<title>Preferences - Crumbs</title>
+</svelte:head>
+
 <div class="space-y-8">
 	<h2 class="text-xl font-bold text-[var(--text)]">Preferences</h2>
 

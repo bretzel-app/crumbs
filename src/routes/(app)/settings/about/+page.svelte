@@ -4,6 +4,10 @@
 	let appVersion = $derived($page.data.appVersion);
 </script>
 
+<svelte:head>
+	<title>About - Crumbs</title>
+</svelte:head>
+
 <div class="space-y-8">
 	<div class="flex items-center gap-3">
 		<h2 class="text-xl font-bold text-[var(--text)]">About Crumbs</h2>
