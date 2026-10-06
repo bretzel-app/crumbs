@@ -125,5 +125,21 @@ jobs:
           push: false
           provenance: false
           tags: crumbs:ci
+          load: true
           cache-from: type=gha,scope=ci-docker
           cache-to: type=gha,scope=ci-docker,mode=max
+
+      # Regression for #93: a host folder bind-mounted at /data is owned by the
+      # host user (the runner, uid 1001), not the container's node user (1000)
+      - name: Start with a host-owned bind mount
+        run: |
+          mkdir -p "$RUNNER_TEMP/crumbs-data"
+          docker run -d --name crumbs -p 3000:3000 -v "$RUNNER_TEMP/crumbs-data:/data" crumbs:ci
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:3000/login; then
+              test -f "$RUNNER_TEMP/crumbs-data/crumbs.db" && exit 0
+            fi
+            sleep 1
+          done
+          docker logs crumbs
+          exit 1

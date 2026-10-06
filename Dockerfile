@@ -37,8 +37,10 @@ COPY --from=build /app/package.json ./
 # Create data directory
 RUN mkdir -p /data && chown -R node:node /data
 
-# Use non-root user
-USER node
+# Runs as root only long enough to hand the data folder (often a host bind
+# mount) to the node user, then drops privileges — see crumbs-entrypoint.sh
+COPY crumbs-entrypoint.sh /usr/local/bin/crumbs-entrypoint.sh
+ENTRYPOINT ["crumbs-entrypoint.sh"]
 
 # Configuration
 ENV NODE_ENV=production
