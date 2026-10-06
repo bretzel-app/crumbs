@@ -26,6 +26,10 @@ services:
     restart: unless-stopped
 ```
 
+The app runs as the image's `node` user (uid 1000). On startup the container hands ownership of a
+bind-mounted data folder to uid 1000, so a folder created by any host user works as-is. If you set
+`user:` in compose, that step is skipped and the folder must already be writable by that user.
+
 ### Reverse Proxy (nginx)
 
 ```nginx
