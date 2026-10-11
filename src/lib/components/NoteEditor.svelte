@@ -60,7 +60,7 @@
 	let showColorPicker = $state(false);
 	let showImageUpload = $state(false);
 	// svelte-ignore state_referenced_locally
-	let rawMarkdownMode = $state(note ? (note.checklistMode ?? false) : prefs.defaultNoteMode === 'markdown');
+	let rawMarkdownMode = $state(prefs.defaultNoteMode === 'markdown');
 	let textareaEl: HTMLTextAreaElement | undefined = $state();
 	let tiptapEditor: Editor | undefined = $state();
 	let editorTick = $state(0);

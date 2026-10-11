@@ -1,4 +1,4 @@
-import { test, expect } from './helpers/fixtures.js';
+import { test, expect, noteCard } from './helpers/fixtures.js';
 import type { Page } from '@playwright/test';
 
 const DEFAULT_PREFS = {
@@ -79,6 +79,30 @@ test.describe('Settings — Preferences', () => {
 
 		// Then the note editor opens in markdown mode (textarea visible)
 		await expect(page.getByTestId('note-content-input')).toBeVisible();
+	});
+
+	test('Scenario: Default note mode applies when reopening an existing note', async ({
+		authenticatedPage: page
+	}) => {
+		await resetPreferences(page);
+
+		// Given a note titled "Existing Markdown Note" exists
+		const title = `Existing Markdown Note ${Date.now()}`;
+		await page.request.post('/api/notes', { data: { title, content: 'Some **bold** text' } });
+
+		// And the user's default note mode is Markdown
+		await gotoWithStablePrefs(page, '/settings/preferences');
+		const putResponse = page.waitForResponse((res) => res.url().includes('/api/preferences') && res.request().method() === 'PUT');
+		await page.getByTestId('pref-mode-markdown').click();
+		await putResponse;
+
+		// When the user opens the note
+		await gotoWithStablePrefs(page, '/');
+		await noteCard(page, title).click();
+
+		// Then the note editor opens in markdown mode showing the raw source
+		await expect(page.getByTestId('note-content-input')).toBeVisible();
+		await expect(page.getByTestId('note-content-input')).toHaveValue('Some **bold** text');
 	});
 
 	test('Scenario: Footer toggle hides and shows footer', async ({
