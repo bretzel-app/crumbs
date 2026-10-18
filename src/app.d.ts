@@ -18,7 +18,10 @@ declare global {
 		interface PageState {
 			noteEditorOpen?: boolean;
 		}
-		// interface Platform {}
+		interface Platform {
+			// Set by adapter-node in production; absent under `vite dev` / `vite preview`
+			req?: import('node:http').IncomingMessage;
+		}
 	}
 }
 
