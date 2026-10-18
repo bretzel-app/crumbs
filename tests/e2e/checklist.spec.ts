@@ -7,6 +7,21 @@ async function toggleChecklistMode(page: Page) {
 	await page.getByTestId('checklist-toggle').click();
 }
 
+/**
+ * Make zero-delay timers fire a second late, like a busy main thread, where the browser runs
+ * pending input before timers. Focus moves must not depend on a setTimeout winning that race:
+ * on slow CI runners it sometimes didn't.
+ */
+const BUSY_TIMER_DELAY_MS = 1000;
+
+async function simulateBusyMainThread(page: Page) {
+	await page.evaluate((delay) => {
+		const original = window.setTimeout;
+		window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]) =>
+			original(handler, ms || delay, ...args)) as typeof window.setTimeout;
+	}, BUSY_TIMER_DELAY_MS);
+}
+
 /** Create a checklist note via UI. Leaves the editor closed. */
 async function createChecklistNote(page: Page, title: string, items: string[]) {
 	await page.getByTestId('new-note-btn').click();
@@ -146,6 +161,52 @@ test.describe('Checklist', () => {
 
 		// Then only the first item remains
 		await expect(page.getByTestId('checklist-input')).toHaveCount(1);
+	});
+
+	test('Scenario: Focus stays on the item reached with the arrow keys on a busy device', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist with three items, on a device too busy to run timers promptly
+		await simulateBusyMainThread(page);
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('First');
+		await page.getByTestId('checklist-input').first().press('Enter');
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.type('Second');
+		await page.getByTestId('checklist-input').nth(1).press('Enter');
+		await page.getByTestId('checklist-input').nth(2).focus();
+		await page.keyboard.type('Third');
+
+		// When the user moves up from the third item straight away
+		await page.getByTestId('checklist-input').nth(2).press('ArrowUp');
+
+		// Then focus is on the second item, and still there once deferred work has run
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused();
+		await page.waitForTimeout(BUSY_TIMER_DELAY_MS + 200);
+		await expect(page.getByTestId('checklist-input').nth(1)).toBeFocused({ timeout: 100 });
+	});
+
+	test('Scenario: Deleting an empty item focuses the previous item straight away on a busy device', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist with an item followed by an empty one, on a device too busy to run timers promptly
+		await simulateBusyMainThread(page);
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('First item');
+		await page.getByTestId('checklist-input').first().press('Enter');
+		await expect(page.getByTestId('checklist-input')).toHaveCount(2);
+
+		// When the user deletes the empty item
+		await page.getByTestId('checklist-input').nth(1).press('Backspace');
+
+		// Then the previous item has focus before any deferred work runs, ready for the next key
+		await expect(page.getByTestId('checklist-input').first()).toBeFocused({
+			timeout: BUSY_TIMER_DELAY_MS / 2
+		});
 	});
 
 	test('Scenario: Completed items are separated into a done section', async ({ authenticatedPage: page }) => {
