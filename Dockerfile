@@ -48,6 +48,9 @@ ENV DATA_DIR=/data
 ENV DATABASE_URL=/data/crumbs.db
 ENV PORT=3000
 ENV ORIGIN=http://localhost:3000
+# adapter-node rejects request bodies over 512K by default, which would 413 any attachment
+# above that; leave headroom over the app's 10 MB file limit for the thumbnail and multipart framing
+ENV BODY_SIZE_LIMIT=12M
 
 EXPOSE 3000
 
