@@ -3,7 +3,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import GripVertical from 'lucide-svelte/icons/grip-vertical';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
@@ -107,9 +107,12 @@
 		items = [...items];
 		emitChange();
 		const newId = newItem.id;
-		setTimeout(() => {
+		// Focus as soon as the row is rendered, before the browser handles the next key. A
+		// setTimeout can run after it (browsers run input before timers on a busy thread) and
+		// pull focus back to this row after the user has already moved on.
+		tick().then(() => {
 			document.querySelector<HTMLElement>(`[data-item-id="${newId}"]`)?.focus();
-		}, 0);
+		});
 	}
 
 	function removeItem(id: string) {
@@ -134,10 +137,11 @@
 		} else if (e.key === 'Backspace' && items[index].text === '' && items.length > 1) {
 			e.preventDefault();
 			removeItem(id);
-			setTimeout(() => {
+			// Same as addItem: refocus before the next key is handled, not after it
+			tick().then(() => {
 				const inputs = document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]');
 				inputs[Math.max(0, index - 1)]?.focus();
-			}, 0);
+			});
 		} else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
 			const inputs = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]'));
 			const current = inputs.findIndex((el) => el.dataset.itemId === id);
