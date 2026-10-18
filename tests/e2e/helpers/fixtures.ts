@@ -103,6 +103,17 @@ export async function setupAndLogin(page: Page) {
 	await page.waitForLoadState('networkidle');
 }
 
+/**
+ * Navigate, then wait for the app to hydrate before interacting. `page.goto` resolves on `load`,
+ * but SvelteKit hydrates after that: a click in between lands on server-rendered markup with no
+ * handlers and is silently dropped. On slow CI runners that gap reached ~800ms. networkidle
+ * covers the hydration chunks and the app's startup fetches, as in setupAndLogin.
+ */
+export async function gotoHydrated(page: Page, url: string) {
+	await page.goto(url);
+	await page.waitForLoadState('networkidle');
+}
+
 /** Create a note via the UI and close the editor. Use in Given steps for state setup. */
 export async function createNote(page: Page, title: string, content?: string) {
 	await page.getByTestId('new-note-btn').click();

@@ -1,4 +1,4 @@
-import { test, expect, noteCard } from './helpers/fixtures.js';
+import { test, expect, noteCard, gotoHydrated } from './helpers/fixtures.js';
 import type { Page } from '@playwright/test';
 
 const DEFAULT_PREFS = {
@@ -40,7 +40,8 @@ async function resetPreferences(page: Page) {
  *
  * This helper blocks the one GET /api/preferences sync request so
  * initPreferences() falls back to localStorage (which is always correct
- * from either resetPreferences or updatePreference on the settings page).
+ * from either resetPreferences or updatePreference on the settings page),
+ * then waits for hydration so the next click isn't dropped (see gotoHydrated).
  */
 async function gotoWithStablePrefs(page: Page, url: string) {
 	await page.route(
@@ -48,7 +49,7 @@ async function gotoWithStablePrefs(page: Page, url: string) {
 		(route) => route.abort(),
 		{ times: 1 }
 	);
-	await page.goto(url);
+	await gotoHydrated(page, url);
 }
 
 test.describe('Settings — Preferences', () => {
@@ -160,7 +161,7 @@ test.describe('Settings — API Key Management', () => {
 		const keyName = `Test Key ${Date.now()}`;
 
 		// When the user navigates to the MCP settings and creates an API key
-		await page.goto('/settings/mcp');
+		await gotoHydrated(page, '/settings/mcp');
 		await page.getByTestId('api-key-name-input').fill(keyName);
 		await page.getByTestId('create-api-key-btn').click();
 
@@ -180,7 +181,7 @@ test.describe('Settings — API Key Management', () => {
 		const keyName = `Revoke Key ${Date.now()}`;
 
 		// Given an API key exists
-		await page.goto('/settings/mcp');
+		await gotoHydrated(page, '/settings/mcp');
 		await page.getByTestId('api-key-name-input').fill(keyName);
 		await page.getByTestId('create-api-key-btn').click();
 		await expect(page.getByTestId('created-key-display')).toBeVisible();
@@ -211,7 +212,7 @@ test.describe('Settings — API Key Management', () => {
 		authenticatedPage: page
 	}) => {
 		// Given the user is on the settings page
-		await page.goto('/settings');
+		await gotoHydrated(page, '/settings');
 
 		// When the user selects the API tab
 		await page.getByRole('link', { name: 'API' }).click();
