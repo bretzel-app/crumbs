@@ -137,6 +137,7 @@
 - Password auth (Argon2) + optional OAuth/SSO (Google, GitHub, any OIDC provider)
 - Session-based auth with active session management
 - Invite-only OAuth model, with PKCE for Google and OIDC
+- Optional single sign-on through an authenticating reverse proxy (Authelia, Authentik proxy outpost, oauth2-proxy, Zoraxy): Crumbs trusts the forwarded email header from the proxy's address only, and signing out also signs out at the proxy
 - See [AUTH.md](AUTH.md) for full details and provider setup guides
 
 ### User Management (admin)

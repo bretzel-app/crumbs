@@ -20,6 +20,14 @@ services:
       - AUTH_OIDC_CLIENT_ID=${AUTH_OIDC_CLIENT_ID:-}
       - AUTH_OIDC_CLIENT_SECRET=${AUTH_OIDC_CLIENT_SECRET:-}
       - AUTH_OIDC_DISPLAY_NAME=${AUTH_OIDC_DISPLAY_NAME:-}
+      # Reverse proxy auth (optional, off by default). Requires removing "ports:" above
+      # so only the proxy can reach Crumbs. See docs/AUTH.md before enabling.
+      - AUTH_PROXY_ENABLED=${AUTH_PROXY_ENABLED:-}
+      - AUTH_PROXY_TRUSTED_IPS=${AUTH_PROXY_TRUSTED_IPS:-}
+      - AUTH_PROXY_LOGOUT_URL=${AUTH_PROXY_LOGOUT_URL:-}
+      - AUTH_PROXY_EMAIL_HEADER=${AUTH_PROXY_EMAIL_HEADER:-}
+      - AUTH_PROXY_SECRET_HEADER=${AUTH_PROXY_SECRET_HEADER:-}
+      - AUTH_PROXY_SECRET=${AUTH_PROXY_SECRET:-}
       # Email notifications (optional — auto-enabled when SMTP_HOST is set)
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
