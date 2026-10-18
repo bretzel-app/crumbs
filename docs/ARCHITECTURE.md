@@ -43,7 +43,7 @@ Crumbs follows a **local-first** architecture where the client (browser) is the 
 5. Server applies changes with LWW resolution
 
 ### Conflict Resolution (LWW)
-For a single-user app with multiple devices:
+Across a user's devices, and between collaborators on a shared note:
 - Each note has an `updatedAt` timestamp and `version` number
 - When merging: newer timestamp wins
 - If timestamps match: higher version wins
@@ -69,7 +69,7 @@ For a single-user app with multiple devices:
 - Zero-config database (single file)
 - WAL mode for concurrent reads
 - Drizzle provides type-safe queries without ORM overhead
-- Perfect for single-user self-hosted apps
+- Fits small self-hosted instances: one file to back up, no database server to run
 
 ### IndexedDB (idb)
 - Browser-native storage (no size limits like localStorage)
@@ -97,6 +97,8 @@ Key tables:
 - `users` - User accounts (password hash, `password_login_enabled`, OAuth provider link, role)
 - `sessions` - Auth sessions (30-day TTL)
 - `notes` - Core note data with version tracking
+- `note_versions` - Snapshots for version history (browse and restore)
+- `note_links` - Links between notes (source → target)
 - `tags` - Unique tag names
 - `note_tags` - Many-to-many note ↔ tag
 - `attachments` - Image file metadata (path + thumbnailPath)
@@ -105,6 +107,8 @@ Key tables:
 - `note_user_state` - Per-user pin/archive/sortOrder for shared notes
 - `shared_notes` - Public share links (noteId → token, 1:1 with cascade delete)
 - `sync_log` - Sync operation history
+- `user_preferences` - Per-user settings (key/value)
+- `login_attempts` - Failed/successful logins, used for lockout (by IP)
 
 ### Nested Checklist Serialization
 
@@ -173,7 +177,7 @@ Theme switching uses CSS variable overrides on the `<html>` element:
 src/lib/server/    # Server-only code (DB, auth, attachments, notes-service)
 src/lib/server/mcp/ # MCP server + tool definitions
 src/lib/sync/      # Sync engine (shared types, server + client implementations)
-src/lib/stores/    # Svelte reactive stores (notes, theme, auth, search)
+src/lib/stores/    # Svelte reactive stores (notes, preferences, toast)
 src/lib/components/ # Svelte UI components
 src/lib/utils/     # Pure utility functions (markdown, tags, colors)
 src/lib/types/     # TypeScript type definitions

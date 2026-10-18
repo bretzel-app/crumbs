@@ -36,7 +36,7 @@ OAuth providers are **auto-enabled** when their environment variables are set â€
 ### How it works
 
 1. User clicks an OAuth button on the login page
-2. Crumbs redirects to the provider's authorization endpoint (with PKCE)
+2. Crumbs redirects to the provider's authorization endpoint (with PKCE for Google and OIDC)
 3. Provider authenticates the user and redirects back to Crumbs
 4. Crumbs validates the response, extracts the user's email and name
 5. If a matching user exists (by provider ID or email), a session is created
@@ -210,7 +210,7 @@ All configured providers will appear as buttons on the login page.
 
 ## Security notes
 
-- All OAuth flows use **PKCE** (Proof Key for Code Exchange) with S256 challenge method
+- Google and OIDC flows use **PKCE** (Proof Key for Code Exchange) with the S256 challenge method. GitHub OAuth apps are protected by the `state` parameter only
 - OAuth state and code verifier are stored as httpOnly cookies (10-minute expiry)
 - Passwords are hashed with **Argon2** (never stored in plain text)
 - Sessions expire after **30 days**

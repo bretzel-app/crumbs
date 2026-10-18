@@ -9,14 +9,14 @@ Thanks for your interest in contributing! This guide will help you get started.
 git clone https://github.com/bretzel-app/crumbs.git
 cd crumbs
 
-# Install dependencies
+# Install dependencies (use Node.js 22, see .nvmrc)
 pnpm install
 
 # Start the dev server
 pnpm dev
 ```
 
-Open http://localhost:5173 and set your password on first visit.
+Open http://localhost:5173 and create the admin account on first visit.
 
 Run `make help` to see all available commands.
 
@@ -28,7 +28,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design. Key
 - `src/lib/components/` — Svelte 5 components (runes, not stores)
 - `src/lib/server/db/` — Drizzle ORM schema and database connection
 - `src/lib/sync/` — Offline sync and CRDT logic
-- `tests/unit/` — Vitest unit tests
+- `src/**/*.test.ts` — Vitest unit tests, next to the code they cover
 - `tests/e2e/` — Playwright end-to-end tests
 
 ## Making Changes
