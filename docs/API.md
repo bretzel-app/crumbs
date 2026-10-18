@@ -73,7 +73,8 @@ Log out
 
 ```json
 {
-  "success": true
+  "success": true,
+  "redirectTo": "redirectTo"
 }
 ```
 

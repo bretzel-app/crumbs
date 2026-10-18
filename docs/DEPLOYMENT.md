@@ -66,7 +66,8 @@ data folder to uid 1000, so a host folder created by any user works as-is. If yo
 compose, that step is skipped and the folder must already be writable by that user.
 
 Optional features are configured with more environment variables. See
-[Environment variables](#environment-variables), and [AUTH.md](AUTH.md) for OAuth/SSO.
+[Environment variables](#environment-variables), and [AUTH.md](AUTH.md) for OAuth/SSO and
+reverse proxy authentication.
 
 ### Updating
 
@@ -169,6 +170,10 @@ notes.example.com {
 
 With either proxy, set `ORIGIN=https://notes.example.com`, `ADDRESS_HEADER=X-Forwarded-For` and
 `XFF_DEPTH=1` on Crumbs.
+
+If your proxy also authenticates users (Authelia, Authentik proxy outpost, oauth2-proxy, …), Crumbs
+can sign them in from the proxy's identity header. See
+[AUTH.md: Reverse proxy authentication](AUTH.md#reverse-proxy-trusted-header-authentication).
 
 ## Backups
 
@@ -309,6 +314,19 @@ SvelteKit's Node adapter. See its
 Google, GitHub and generic OIDC (Authentik, Keycloak, Okta, …) are supported, and each is enabled
 when its variables are set. See **[AUTH.md](AUTH.md)** for variables, callback URLs, provider guides
 and troubleshooting.
+
+### Reverse proxy authentication (optional)
+
+If an authenticating proxy (Authelia, Authentik proxy outpost, oauth2-proxy, Zoraxy, forward auth)
+already signs users in, Crumbs can trust the email it forwards instead of showing its own login.
+Set `AUTH_PROXY_ENABLED=true`, `AUTH_PROXY_TRUSTED_IPS` and `AUTH_PROXY_LOGOUT_URL` (optionally
+`AUTH_PROXY_EMAIL_HEADER`, `AUTH_PROXY_SECRET_HEADER` and `AUTH_PROXY_SECRET`). It is off unless
+`AUTH_PROXY_ENABLED=true`.
+
+This is only safe when Crumbs cannot be reached except through that proxy: remove `ports:` from the
+Crumbs service and trust the proxy's single address, never a whole Docker subnet. Read
+**[AUTH.md: Reverse proxy authentication](AUTH.md#reverse-proxy-trusted-header-authentication)**
+before enabling it.
 
 ### Email notifications (optional)
 

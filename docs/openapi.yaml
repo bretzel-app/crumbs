@@ -73,11 +73,20 @@ paths:
       tags: [Auth]
       responses:
         '200':
-          description: Session cleared
+          description: Session cleared. The client should navigate to `redirectTo`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Success'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  redirectTo:
+                    type: string
+                    example: /login
+                    description: >-
+                      Where to send the browser next: `/login`, or the proxy's logout URL
+                      (`AUTH_PROXY_LOGOUT_URL`) when reverse proxy authentication is enabled
 
   /api/notes:
     get:

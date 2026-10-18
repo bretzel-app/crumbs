@@ -1,6 +1,6 @@
 # Authentication
 
-Crumbs supports password-based authentication and optional OAuth/SSO via Google, GitHub, or any OpenID Connect (OIDC) provider (e.g. Authentik, Keycloak, Okta, Auth0).
+Crumbs supports password-based authentication, optional OAuth/SSO via Google, GitHub, or any OpenID Connect (OIDC) provider (e.g. Authentik, Keycloak, Okta, Auth0), and optional single sign-on through an authenticating reverse proxy ([trusted header authentication](#reverse-proxy-trusted-header-authentication)).
 
 ## First-run setup
 
@@ -208,6 +208,149 @@ volumes:
 
 All configured providers will appear as buttons on the login page.
 
+## Reverse proxy (trusted header) authentication
+
+If an authenticating reverse proxy already signs your users in, Crumbs can trust the identity that
+proxy forwards and skip its own login. This covers Authelia, Authentik's proxy outpost, oauth2-proxy,
+Zoraxy's SSO, and Caddy or Traefik forward auth. It is meant for proxies that are not OIDC providers,
+or setups where you don't want users to sign in twice.
+
+If your identity provider speaks OIDC, prefer [Generic OIDC](#generic-oidc). It doesn't depend on
+your network layout being right. This mode trusts whatever the proxy says, so it is only as safe as
+the rules in [Securing the setup](#securing-the-setup).
+
+### How it works
+
+1. The proxy authenticates the user and forwards the request with their email in a header
+   (`Remote-Email` by default).
+2. Crumbs only believes that header when the TCP connection comes from an address in
+   `AUTH_PROXY_TRUSTED_IPS`, and, if configured, when the shared secret header matches. Forwarded
+   addresses (`X-Forwarded-For`, `ADDRESS_HEADER`) never count for this check, because the client
+   controls them.
+3. The email is matched to an **existing** user, ignoring case. As with OAuth this is
+   [invite-only](#invite-only-model): an email with no Crumbs account gets the login page's
+   "No account found" message, and no account is created.
+4. Crumbs starts an ordinary 30-day session. A request that carries the session cookie but no
+   identity header keeps working, so routes your proxy leaves unauthenticated still work, and so
+   does offline sync.
+5. **The proxy's identity always wins.** If the proxy names a different user from the one who owns
+   the current session, Crumbs ends that session and signs the new user in. This also applies to a
+   session started with a password or OAuth.
+6. Signing out in Crumbs ends the Crumbs session and sends the browser to `AUTH_PROXY_LOGOUT_URL`,
+   so the proxy's session ends too. Otherwise the next request would sign the user straight back in.
+
+Password and OAuth login keep working alongside this, for example when Crumbs is reached without
+the proxy during maintenance.
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AUTH_PROXY_ENABLED` | yes | `true` turns it on. Any other value, or unset, leaves it off. |
+| `AUTH_PROXY_TRUSTED_IPS` | yes | Comma-separated addresses or CIDR ranges the proxy connects **from**, as Crumbs sees the connection. Example: `172.30.0.10` or `172.30.0.10, fd00::10`. A bare address means that one host. `0.0.0.0/0` and `::/0` are refused. |
+| `AUTH_PROXY_LOGOUT_URL` | yes | Your proxy's sign-out URL. |
+| `AUTH_PROXY_EMAIL_HEADER` | no | Header holding the user's email. Default: `Remote-Email`. |
+| `AUTH_PROXY_SECRET_HEADER` | no | Header carrying a shared secret the proxy adds to every request. Set this and `AUTH_PROXY_SECRET` together, or neither. |
+| `AUTH_PROXY_SECRET` | no | The shared secret's value. Compared in constant time. |
+
+If `AUTH_PROXY_ENABLED=true` and a required variable is missing or invalid, Crumbs **refuses to
+start**, and the error names the variable. A misconfiguration never quietly falls back to trusting
+the header from anyone.
+
+Proxy auth needs the production server (`node build`, which the Docker image uses), because only
+that exposes the real connection address. Under `pnpm dev` or `pnpm preview` the header is always
+ignored.
+
+### Securing the setup
+
+The identity header is just a claim ("I am alice@example.com"). Anyone who can make a request
+appear to come from a trusted address can claim to be anyone. Three rules make that impossible:
+
+1. **Crumbs is reachable only through the proxy.** In Docker, remove `ports:` from the Crumbs service
+   and put Crumbs and the proxy on a shared network (see the example below). If the port stays
+   published, anyone who reaches it bypasses the proxy entirely.
+2. **Trust exactly the proxy, nothing wider.** Give the proxy container a fixed address and trust
+   that single address. **Do not trust a whole Docker subnet such as `172.18.0.0/16`.** That range
+   contains the network's gateway (`172.18.0.1`). Connections through published ports can arrive
+   from the gateway: always when they come from the host itself, and usually for every outside
+   connection on Docker Desktop and rootless Docker. Trusting the subnet lets each of them claim any
+   identity.
+3. **The proxy must strip client-sent identity headers on every route**, including routes it doesn't
+   authenticate (health checks, public paths, bypass rules). Crumbs refuses a header that holds
+   several comma-joined values, which is what a proxy that *appends* to a client's header produces.
+   A proxy that passes a client's header through untouched on an unauthenticated route can't be
+   detected, so check your bypass rules.
+
+The optional shared secret protects against other containers on the same network that can reach
+Crumbs directly. It does **not** replace rule 3: a proxy that adds the secret to every request
+also adds it to requests where a client forged the identity header.
+
+### Example: Docker Compose
+
+```yaml
+services:
+  crumbs:
+    image: ghcr.io/bretzel-app/crumbs:<version>
+    # No "ports:". Only the proxy can reach Crumbs.
+    volumes:
+      - crumbs-data:/data
+    environment:
+      - ORIGIN=https://notes.example.com
+      - AUTH_PROXY_ENABLED=true
+      - AUTH_PROXY_TRUSTED_IPS=172.30.0.10
+      - AUTH_PROXY_EMAIL_HEADER=Remote-Email
+      - AUTH_PROXY_LOGOUT_URL=https://auth.example.com/logout
+    networks:
+      - edge
+    restart: unless-stopped
+
+  proxy:
+    image: <your authenticating proxy>
+    ports:
+      - "443:443"
+    networks:
+      edge:
+        ipv4_address: 172.30.0.10   # the address Crumbs trusts
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  crumbs-data:
+```
+
+If the proxy runs on the host rather than in Docker, bind Crumbs to loopback only
+(`ports: ["127.0.0.1:3000:3000"]`). Its connections then usually arrive from the Docker network's
+gateway address. The `[proxy-auth]` log line (see [Troubleshooting](#troubleshooting)) shows the address Crumbs actually sees, so trust
+that single address. Any process on the host can then also claim identities, so keep this to hosts
+you control.
+
+### Proxy settings
+
+The header name and logout URL depend on the proxy. Common defaults are below. Check your proxy's
+documentation for the exact values in your setup.
+
+| Proxy | `AUTH_PROXY_EMAIL_HEADER` | `AUTH_PROXY_LOGOUT_URL` |
+|-------|---------------------------|-------------------------|
+| Authelia (with Traefik, Caddy or nginx forward auth) | `Remote-Email` | `https://<authelia-domain>/logout` |
+| Authentik proxy outpost | `X-authentik-email` | `https://<crumbs-domain>/outpost.goauthentik.io/sign_out` |
+| oauth2-proxy (reverse proxy mode) | `X-Forwarded-Email` | `https://<crumbs-domain>/oauth2/sign_out` |
+| oauth2-proxy (nginx `auth_request`, `--set-xauthrequest`) | `X-Auth-Request-Email` | `https://<crumbs-domain>/oauth2/sign_out` |
+| Zoraxy SSO | `Remote-Email` | Your Zoraxy SSO portal's logout URL |
+
+With forward auth, the proxy only passes on the identity headers it is told to copy from the auth
+server's response, so include the email header there. Examples: Traefik's
+`authResponseHeaders=Remote-Email`, Caddy's `copy_headers Remote-Email`, nginx's
+`auth_request_set` + `proxy_set_header`.
+
+### Users
+
+Create users in **Settings > Users** with the same email the proxy sends. Tick **OAuth-only (no
+password)** if they should only ever sign in through the proxy.
+
 ## Security notes
 
 - Google and OIDC flows use **PKCE** (Proof Key for Code Exchange) with the S256 challenge method. GitHub OAuth apps are protected by the `state` parameter only
@@ -216,6 +359,7 @@ All configured providers will appear as buttons on the login page.
 - Sessions expire after **30 days**
 - The `ORIGIN` environment variable must match your actual domain for CSRF protection
 - Always use **HTTPS** in production (via reverse proxy)
+- Reverse proxy authentication trusts the proxy's identity header, so it is only safe when Crumbs is reachable exclusively through that proxy. See [Securing the setup](#securing-the-setup)
 
 ## Troubleshooting
 
@@ -226,3 +370,8 @@ All configured providers will appear as buttons on the login page.
 | OIDC discovery fails | Issuer URL is wrong or unreachable | Verify `AUTH_OIDC_ISSUER` serves `/.well-known/openid-configuration` |
 | Redirect URI mismatch | Callback URL in provider doesn't match `ORIGIN` | Ensure `ORIGIN` matches your domain and the callback URL uses the same origin |
 | PKCE error | Provider doesn't support S256 PKCE | Most modern providers support it; check provider docs |
+| Crumbs won't start after enabling proxy auth | A required `AUTH_PROXY_*` variable is missing or invalid | The startup error names the variable; see [Environment variables](#environment-variables-1) |
+| Login page still appears after signing in at the proxy | Crumbs ignored the identity header | Check the server log for `[proxy-auth] Ignoring identity header: …`. It names the address Crumbs saw, or says the secret didn't match. Trust that exact address, not the subnet |
+| No log line, and the login page still appears | The header never reaches Crumbs | Make the proxy forward the email header (e.g. Traefik `authResponseHeaders`, Caddy `copy_headers`) and match its name in `AUTH_PROXY_EMAIL_HEADER` |
+| "No account found" through the proxy | No Crumbs user has the email the proxy sends | Create the user in **Settings > Users** with that email (case doesn't matter) |
+| Signing out lands back in Crumbs, still signed in | `AUTH_PROXY_LOGOUT_URL` doesn't end the proxy's session | Use the proxy's real sign-out URL (see [Proxy settings](#proxy-settings)) |

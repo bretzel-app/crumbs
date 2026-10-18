@@ -10,7 +10,7 @@ Crumbs by Bretzel — self-hostable note-taking app. Multi-user with password au
 - **Adapter**: `@sveltejs/adapter-node` (builds to `build/`, runs via `node build`)
 - **Styling**: Tailwind CSS v4 (via `@tailwindcss/vite`)
 - **Database**: SQLite via better-sqlite3 + Drizzle ORM (WAL mode, schema at `src/lib/server/db/schema.ts`)
-- **Auth**: Multi-user with password auth (Argon2) + OAuth (Google, GitHub, OIDC), role-based (admin/user), session cookies (30-day expiry)
+- **Auth**: Multi-user with password auth (Argon2) + OAuth (Google, GitHub, OIDC) + optional trusted reverse-proxy header (`src/lib/server/proxy-auth.ts`), role-based (admin/user), session cookies (30-day expiry)
 - **PWA**: `@vite-pwa/sveltekit` for service worker and offline caching
 - **Package manager**: pnpm
 
