@@ -20,10 +20,14 @@ A self-hostable, offline-first note-taking app that respects your privacy. Part 
 ### Docker (Recommended)
 
 ```bash
+mkdir crumbs && cd crumbs
+curl -fsSLO https://raw.githubusercontent.com/bretzel-app/crumbs/main/docker-compose.yml
 docker compose up -d
 ```
 
-Open http://localhost:3000 and create your admin account on first visit.
+Open http://localhost:3000 and create your admin account. The first visitor becomes the admin, so do this before exposing the port.
+
+To use it from other devices you need HTTPS and a matching `ORIGIN`. Plain `http://<server-ip>:3000` won't keep you signed in. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) covers reverse proxies, backups, updates and a production checklist.
 
 #### With SSO (optional)
 
@@ -65,14 +69,16 @@ environment:
 
 Auto-enabled when `SMTP_HOST` is set. Users can opt out in Settings > Preferences. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#email-notifications-optional) for details.
 
-### Manual (Node.js)
+### Manual (Node.js 22)
 
 ```bash
-git clone <repo-url> crumbs && cd crumbs
-pnpm install
+git clone https://github.com/bretzel-app/crumbs.git && cd crumbs
+pnpm install --frozen-lockfile
 pnpm build
-DATABASE_URL=./data/crumbs.db ORIGIN=http://localhost:3000 node build
+DATABASE_URL=./data/crumbs.db ORIGIN=http://localhost:3000 BODY_SIZE_LIMIT=12M node build
 ```
+
+Use Node.js 22 (see `.nvmrc`). See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#manual-deployment-nodejs) for a production setup with systemd.
 
 ### Development
 
@@ -135,9 +141,7 @@ See [docs/FEATURES.md](docs/FEATURES.md) for detailed feature documentation.
 ## CI/CD
 
 - **CI** — lint, type check, unit tests, E2E tests, Docker build on every push/PR
-- **Release** — builds and pushes Docker image on `v*` tags
-
-Configure registry via GitHub Secrets: `REGISTRY_URL`, `REGISTRY_USER`, `REGISTRY_TOKEN`.
+- **Release** — builds and pushes a multi-arch (`amd64`, `arm64`) image to `ghcr.io/bretzel-app/crumbs` on `v*` tags, authenticated with the workflow's `GITHUB_TOKEN` (no extra secrets needed)
 
 ## License
 

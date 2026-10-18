@@ -136,7 +136,7 @@
 - Multi-user with role-based access (admin / user)
 - Password auth (Argon2) + optional OAuth/SSO (Google, GitHub, any OIDC provider)
 - Session-based auth with active session management
-- Invite-only OAuth model with PKCE-secured flows
+- Invite-only OAuth model, with PKCE for Google and OIDC
 - See [AUTH.md](AUTH.md) for full details and provider setup guides
 
 ### User Management (admin)

@@ -121,7 +121,7 @@ src/
     api/tags/          # Tag management
   lib/
     components/        # Svelte components (NoteCard, NoteEditor, TagChip, etc.)
-    stores/            # Svelte stores (notes.ts, theme.ts)
+    stores/            # Svelte stores (notes.ts, preferences.svelte.ts, toast.ts)
     server/db/         # Drizzle schema + connection (schema.ts, index.ts)
     server/            # Auth logic, attachment handling
     sync/              # Client sync (idb.ts), CRDT merge (crdt.ts), server sync
@@ -129,8 +129,7 @@ src/
     utils/             # Colors, markdown, tags, debounce
   hooks.server.ts      # Auth middleware (redirects unauthenticated users)
 tests/
-  unit/                # Vitest unit tests
-  e2e/                 # Playwright e2e tests (Gherkin-style)
+  e2e/                 # Playwright e2e tests (Gherkin-style); unit tests sit next to their code
     helpers/fixtures.ts  # Shared authenticatedPage fixture
 website/               # Static landing page (crumbs.bretzel.app)
   index.html           # Landing page with feature cards, screenshots, deploy section
@@ -211,7 +210,7 @@ Write tests first or alongside features. Tests serve as living documentation of 
 
 ### Unit tests (Vitest)
 
-- Location: `tests/unit/*.test.ts`
+- Location: `src/**/*.test.ts`, next to the code they cover
 - Config: `vitest.config.ts` (node environment)
 - Cover pure logic: markdown parsing, tag extraction, auth, search, sync
 
