@@ -1,6 +1,7 @@
 import { test, expect, request, type APIRequestContext } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
+import { gotoHydrated } from './helpers/fixtures.js';
 
 /**
  * Trusted header (reverse proxy) authentication.
@@ -154,7 +155,7 @@ test.describe.serial('Reverse proxy authentication', () => {
 		});
 		const page = await context.newPage();
 		await page.route(`${LOGOUT_URL}**`, (route) => route.fulfill({ body: 'signed out at the proxy' }));
-		await page.goto('/settings/profile');
+		await gotoHydrated(page, '/settings/profile');
 		const { cookies } = await context.storageState();
 
 		// When Bob signs out
