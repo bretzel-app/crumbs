@@ -102,20 +102,28 @@ describe('resolveProxyLogin', () => {
 		).toBe('none');
 	});
 
-	it('ignores the header when the connection does not come from a trusted proxy', () => {
+	it('ignores the header when the connection does not come from a trusted proxy, naming the address', () => {
 		addUser('alice@example.com');
 		const headers = { 'Remote-Email': 'alice@example.com' };
-		expect(resolveProxyLogin(config, req(headers, '172.18.0.1'), null, db)).toEqual({ kind: 'none' });
-		expect(resolveProxyLogin(config, req(headers, '192.168.1.20'), null, db)).toEqual({
-			kind: 'none'
+		expect(resolveProxyLogin(config, req(headers, '172.18.0.1'), null, db)).toEqual({
+			kind: 'ignored',
+			reason: expect.stringContaining('172.18.0.1')
 		});
+		expect(resolveProxyLogin(config, req(headers, '192.168.1.20'), null, db)).toEqual({
+			kind: 'ignored',
+			reason: expect.stringContaining('192.168.1.20')
+		});
+	});
+
+	it('treats an untrusted connection without the header as ordinary traffic', () => {
+		expect(resolveProxyLogin(config, req({}, '192.168.1.20'), null, db)).toEqual({ kind: 'none' });
 	});
 
 	it('ignores the header when the peer address is unknown (dev server, no socket)', () => {
 		addUser('alice@example.com');
 		const headers = new Headers({ 'Remote-Email': 'alice@example.com' });
-		expect(resolveProxyLogin(config, { headers, remoteAddress: undefined }, null, db)).toEqual({
-			kind: 'none'
+		expect(resolveProxyLogin(config, { headers, remoteAddress: undefined }, null, db)).toMatchObject({
+			kind: 'ignored'
 		});
 	});
 
@@ -134,7 +142,7 @@ describe('resolveProxyLogin', () => {
 		addUser('alice@example.com');
 		const headers = { 'Remote-Email': 'alice@example.com' };
 		expect(resolveProxyLogin(config, req(headers, 'fd00:1::42'), null, db).kind).toBe('login');
-		expect(resolveProxyLogin(config, req(headers, 'fd00:2::42'), null, db).kind).toBe('none');
+		expect(resolveProxyLogin(config, req(headers, 'fd00:2::42'), null, db).kind).toBe('ignored');
 	});
 
 	it('accepts a bare address in the trusted list as a single host', () => {
@@ -142,7 +150,7 @@ describe('resolveProxyLogin', () => {
 		const single = loadProxyAuthConfig({ ...ENV, AUTH_PROXY_TRUSTED_IPS: '10.0.0.7' })!;
 		const headers = { 'Remote-Email': 'alice@example.com' };
 		expect(resolveProxyLogin(single, req(headers, '10.0.0.7'), null, db).kind).toBe('login');
-		expect(resolveProxyLogin(single, req(headers, '10.0.0.8'), null, db).kind).toBe('none');
+		expect(resolveProxyLogin(single, req(headers, '10.0.0.8'), null, db).kind).toBe('ignored');
 	});
 
 	it('does nothing when a trusted request carries no identity header', () => {
@@ -160,7 +168,8 @@ describe('resolveProxyLogin', () => {
 		headers.append('Remote-Email', 'alice@example.com');
 		headers.append('Remote-Email', 'mallory@example.com');
 		expect(resolveProxyLogin(config, { headers, remoteAddress: PROXY_IP }, null, db)).toEqual({
-			kind: 'none'
+			kind: 'ignored',
+			reason: expect.stringContaining('Remote-Email')
 		});
 	});
 
@@ -221,7 +230,10 @@ describe('resolveProxyLogin', () => {
 			for (const secret of ['wrong', '', 'correct horse']) {
 				const headers: Record<string, string> = { 'Remote-Email': 'alice@example.com' };
 				if (secret) headers['X-Proxy-Secret'] = secret;
-				expect(resolveProxyLogin(withSecret, req(headers), null, db)).toEqual({ kind: 'none' });
+				expect(resolveProxyLogin(withSecret, req(headers), null, db)).toEqual({
+					kind: 'ignored',
+					reason: expect.stringContaining('X-Proxy-Secret')
+				});
 			}
 		});
 	});

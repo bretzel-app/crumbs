@@ -25,14 +25,24 @@ export type ProxyAuthConfig = {
 export type ProxyUser = { id: number; email: string; displayName: string; role: 'admin' | 'user' };
 
 export type ProxyLoginResult =
-	/** No trusted identity on this request: leave any existing session alone */
+	/** No identity header on this request: leave any existing session alone */
 	| { kind: 'none' }
+	/** An identity header arrived but is not believed; `reason` is for the server log */
+	| { kind: 'ignored'; reason: string }
 	/** The proxy names the user who already owns the session */
 	| { kind: 'keep' }
 	/** Start a session for this user, replacing any session owned by someone else */
 	| { kind: 'login'; user: ProxyUser }
 	/** The proxy vouches for an email with no Crumbs account (invite-only, nothing is created) */
 	| { kind: 'unknown'; email: string };
+
+let config: ProxyAuthConfig | null | undefined;
+
+/** The process-wide config, read from the environment once */
+export function getProxyAuthConfig(): ProxyAuthConfig | null {
+	if (config === undefined) config = loadProxyAuthConfig();
+	return config;
+}
 
 /** Returns null when proxy auth is off. Throws on any misconfiguration so it fails closed and loud. */
 export function loadProxyAuthConfig(env: Env = process.env): ProxyAuthConfig | null {
@@ -117,19 +127,35 @@ export function resolveProxyLogin(
 	currentUserEmail: string | null,
 	dbInstance: Db = db
 ): ProxyLoginResult {
-	if (!fromTrustedProxy(config, request.remoteAddress)) return { kind: 'none' };
+	const email = request.headers.get(config.emailHeader)?.trim().toLowerCase();
+	if (!email) return { kind: 'none' };
+
+	if (!fromTrustedProxy(config, request.remoteAddress)) {
+		const from = request.remoteAddress ?? 'an unknown address (proxy auth needs `node build`)';
+		return {
+			kind: 'ignored',
+			reason: `${config.emailHeader} came from ${from}, which is not in AUTH_PROXY_TRUSTED_IPS`
+		};
+	}
 
 	if (config.secret) {
 		const sent = request.headers.get(config.secret.header);
 		// Compare digests: equal length, so timingSafeEqual never throws or leaks the secret's length
 		if (sent === null || !timingSafeEqual(sha256(sent), config.secret.digest)) {
-			return { kind: 'none' };
+			return {
+				kind: 'ignored',
+				reason: `${config.emailHeader} came without the right ${config.secret.header} value`
+			};
 		}
 	}
 
-	const email = request.headers.get(config.emailHeader)?.trim().toLowerCase();
 	// Several values arrive comma-joined: the proxy appended to a client-sent header instead of replacing it
-	if (!email || /[,\s]/.test(email)) return { kind: 'none' };
+	if (/[,\s]/.test(email)) {
+		return {
+			kind: 'ignored',
+			reason: `${config.emailHeader} holds several values: the proxy must replace a client-sent header, not append to it`
+		};
+	}
 
 	if (currentUserEmail?.toLowerCase() === email) return { kind: 'keep' };
 

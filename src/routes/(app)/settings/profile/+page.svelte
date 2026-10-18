@@ -110,8 +110,9 @@
 	}
 
 	async function handleLogout() {
-		await fetch('/api/auth/logout', { method: 'POST' });
-		window.location.href = '/login';
+		const res = await fetch('/api/auth/logout', { method: 'POST' });
+		const { redirectTo } = await res.json().catch(() => ({}));
+		window.location.href = redirectTo ?? '/login';
 	}
 
 	async function saveProfile() {
