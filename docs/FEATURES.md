@@ -36,7 +36,10 @@
 - Add, remove, reorder checklist items
 - Check/uncheck items with checkboxes
 - Checked items get strikethrough styling
-- Enter key adds new item, Backspace removes empty items
+- Enter splits an item at the cursor (at the end of an item it adds a new empty one); Backspace at the start of an item joins it onto the one above
+- **Copy and paste across items**: drag a selection across several items and copy it as plain text, one item per line
+  - Pasting several lines into a checklist creates one unticked item per line, at the indent of the item pasted into; bullets, numbers, checkboxes and blank lines are stripped, so markdown lists paste cleanly
+  - Selecting across items works with a mouse; on touch devices a selection stays within one item
 - **Nested checklists**: single-level nesting for sub-tasks
   - Tab / Shift+Tab to indent or outdent an item (keyboard)
   - Drag handle horizontal swipe for mobile indentation
