@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getSelectionOffsets, setCaretOffset } from '$lib/utils/caret.js';
+import { getSelectionOffsets, setCaretOffset, selectedLines } from '$lib/utils/caret.js';
 
 function row(html: string): HTMLElement {
 	const el = document.createElement('div');
@@ -76,5 +76,42 @@ describe('setCaretOffset', () => {
 		const el = row('');
 		setCaretOffset(el, 0);
 		expect(getSelectionOffsets(el)).toEqual({ start: 0, end: 0 });
+	});
+});
+
+describe('selectedLines', () => {
+	function rows(...htmls: string[]): HTMLElement[] {
+		return htmls.map(row);
+	}
+
+	function rangeOf(startNode: Node, startOffset: number, endNode: Node, endOffset: number): Range {
+		const range = document.createRange();
+		range.setStart(startNode, startOffset);
+		range.setEnd(endNode, endOffset);
+		return range;
+	}
+
+	it('returns the selected part of each row, one per line', () => {
+		const [a, b, c] = rows('Buy milk', 'Bread', 'Rye bread');
+		const range = rangeOf(a.firstChild!, 4, c.firstChild!, 3);
+		expect(selectedLines([a, b, c], range)).toEqual(['milk', 'Bread', 'Rye']);
+	});
+
+	it('leaves out rows outside the selection', () => {
+		const [a, b, c, d] = rows('Milk', 'Eggs', 'Bread', 'Rye');
+		const range = rangeOf(b.firstChild!, 0, c.firstChild!, 5);
+		expect(selectedLines([a, b, c, d], range)).toEqual(['Eggs', 'Bread']);
+	});
+
+	it('skips rows where nothing is selected', () => {
+		const [a, b, c] = rows('Milk', '', 'Eggs');
+		const range = rangeOf(a.firstChild!, 0, c.firstChild!, 0);
+		expect(selectedLines([a, b, c], range)).toEqual(['Milk']);
+	});
+
+	it('copies the text of links and turns non-breaking spaces into spaces', () => {
+		const [a, b] = rows('see <a href="https://example.com">example.com</a>', 'two&nbsp;words');
+		const range = rangeOf(a.firstChild!, 0, b.firstChild!, 9);
+		expect(selectedLines([a, b], range)).toEqual(['see example.com', 'two words']);
 	});
 });

@@ -1,5 +1,5 @@
-// Caret positions inside a contenteditable row, as plain-text character offsets. A row's
-// text can be split across nodes (linkified URLs render as <a> elements), so offsets are
+// Caret and selection helpers for checklist rows. Positions are plain-text character offsets: a
+// row's text can be split across nodes (linkified URLs render as <a> elements), so offsets are
 // measured over the row's whole text rather than within a single node.
 
 /** The current selection as offsets into `el`'s text, or null if it isn't entirely inside `el`. */
@@ -35,4 +35,29 @@ export function setCaretOffset(el: HTMLElement, offset: number) {
 	const sel = window.getSelection();
 	sel?.removeAllRanges();
 	sel?.addRange(range);
+}
+
+/** The selected part of each row's text, in order, leaving out rows where nothing is selected. */
+export function selectedLines(rows: HTMLElement[], range: Range): string[] {
+	return rows
+		.filter((row) => range.intersectsNode(row))
+		.map((row) => {
+			const part = document.createRange();
+			part.selectNodeContents(row);
+			if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) part.setStart(range.startContainer, range.startOffset);
+			if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) part.setEnd(range.endContainer, range.endOffset);
+			return part.toString().replace(/\u00a0/g, ' ');
+		})
+		.filter((line) => line !== '');
+}
+
+/** The caret position under a point on screen, or null over nothing. */
+export function caretAtPoint(x: number, y: number): { node: Node; offset: number } | null {
+	// caretPositionFromPoint is the standard; older Safari only has caretRangeFromPoint
+	if (document.caretPositionFromPoint) {
+		const position = document.caretPositionFromPoint(x, y);
+		return position ? { node: position.offsetNode, offset: position.offset } : null;
+	}
+	const range = document.caretRangeFromPoint?.(x, y);
+	return range ? { node: range.startContainer, offset: range.startOffset } : null;
 }
