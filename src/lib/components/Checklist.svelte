@@ -6,7 +6,7 @@
 	import { onDestroy, tick } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
-	import { type ChecklistItem, type CaretTarget, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
+	import { type ChecklistItem, type CaretTarget, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, parsePastedLines, pasteLines, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
 	import { getSelectionOffsets, setCaretOffset } from '$lib/utils/caret.js';
 	import LinkPopover from './LinkPopover.svelte';
 
@@ -215,9 +215,18 @@
 		}
 	}
 
-	function handlePaste(e: ClipboardEvent) {
+	function handlePaste(e: ClipboardEvent, id: string) {
 		e.preventDefault();
-		const text = (e.clipboardData?.getData('text/plain') ?? '').replace(/[\r\n]+/g, ' ');
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		if (/[\r\n]/.test(text)) {
+			// Several lines: one item per line
+			const lines = parsePastedLines(text);
+			if (lines.length === 0) return;
+			const offsets = getSelectionOffsets(e.currentTarget as HTMLElement);
+			const length = items.find((i) => i.id === id)!.text.length;
+			applyEdit(pasteLines(items, id, offsets?.start ?? length, offsets?.end ?? length, lines));
+			return;
+		}
 		const selection = window.getSelection();
 		if (!selection?.rangeCount) return;
 		const range = selection.getRangeAt(0);
@@ -357,7 +366,7 @@
 					oninput={(e) => updateText(item.id, (e.target as HTMLElement).innerHTML)}
 					onkeydown={(e) => handleKeydown(e, item.id)}
 					onclick={handleLinkClick}
-					onpaste={handlePaste}
+					onpaste={(e) => handlePaste(e, item.id)}
 					onblur={(e) => {
 						const el = e.currentTarget as HTMLElement;
 						requestAnimationFrame(() => {
