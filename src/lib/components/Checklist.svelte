@@ -3,11 +3,11 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import GripVertical from 'lucide-svelte/icons/grip-vertical';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import { onDestroy, tick } from 'svelte';
+	import { flushSync, onDestroy, tick } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import { type ChecklistItem, type CaretTarget, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, parsePastedLines, pasteLines, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
-	import { getSelectionOffsets, setCaretOffset } from '$lib/utils/caret.js';
+	import { caretAtPoint, getSelectionOffsets, selectedLines, setCaretOffset } from '$lib/utils/caret.js';
 	import LinkPopover from './LinkPopover.svelte';
 
 	interface Props {
@@ -22,6 +22,7 @@
 	let doneExpanded = $state(true);
 	const flipDurationMs = 150;
 	let linkPopover = $state<{ url: string; anchor: DOMRect } | null>(null);
+	let container: HTMLElement;
 
 	// Track the last content we emitted so we can distinguish self-originated
 	// changes from external ones (sync, history restore, etc.)
@@ -149,7 +150,7 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent, id: string) {
-		if (e.isComposing) return;
+		if (e.isComposing || selectingAcrossItems) return;
 		const index = items.findIndex((i) => i.id === id);
 		const el = e.currentTarget as HTMLElement;
 		if (e.key === 'Enter') {
@@ -217,6 +218,7 @@
 
 	function handlePaste(e: ClipboardEvent, id: string) {
 		e.preventDefault();
+		if (selectingAcrossItems) return;
 		const text = e.clipboardData?.getData('text/plain') ?? '';
 		if (/[\r\n]/.test(text)) {
 			// Several lines: one item per line
@@ -236,6 +238,73 @@
 		selection.removeAllRanges();
 		selection.addRange(range);
 		(e.target as HTMLElement).dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	// --- Selecting text across items ---
+	// Each item is its own editing host, and browsers won't extend a selection beyond one. Once
+	// a mouse drag leaves the item it started in, every item turns read-only so the selection
+	// can flow across them, until the next click or Escape. Touch selection isn't covered.
+	let selectingAcrossItems = $state(false);
+	let textDrag: { row: HTMLElement; anchor: { node: Node; offset: number } | null } | null = null;
+
+	function startTextDrag(e: PointerEvent) {
+		if (e.pointerType !== 'mouse' || e.button !== 0) return;
+		textDrag = { row: e.currentTarget as HTMLElement, anchor: null };
+		window.addEventListener('pointermove', extendTextDrag);
+		window.addEventListener('pointerup', endTextDrag);
+	}
+
+	function extendTextDrag(e: PointerEvent) {
+		if (!textDrag) return;
+		const selection = window.getSelection();
+		if (!textDrag.anchor) {
+			const { top, bottom } = textDrag.row.getBoundingClientRect();
+			if (e.clientY >= top && e.clientY <= bottom) return;
+			if (!selection?.anchorNode || !textDrag.row.contains(selection.anchorNode)) return;
+			textDrag.anchor = { node: selection.anchorNode, offset: selection.anchorOffset };
+			selectingAcrossItems = true;
+			flushSync();
+		}
+		const focus = caretAtPoint(e.clientX, e.clientY);
+		if (focus) selection?.setBaseAndExtent(textDrag.anchor.node, textDrag.anchor.offset, focus.node, focus.offset);
+	}
+
+	function endTextDrag() {
+		textDrag = null;
+		window.removeEventListener('pointermove', extendTextDrag);
+		window.removeEventListener('pointerup', endTextDrag);
+	}
+
+	function stopSelectingAcrossItems() {
+		if (!selectingAcrossItems) return;
+		selectingAcrossItems = false;
+		// Editable again before the browser places the caret for this click
+		flushSync();
+	}
+
+	$effect(() => {
+		const onKeydown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') stopSelectingAcrossItems();
+		};
+		window.addEventListener('pointerdown', stopSelectingAcrossItems, { capture: true });
+		window.addEventListener('keydown', onKeydown, { capture: true });
+		return () => {
+			window.removeEventListener('pointerdown', stopSelectingAcrossItems, { capture: true });
+			window.removeEventListener('keydown', onKeydown, { capture: true });
+			endTextDrag();
+		};
+	});
+
+	// A selection covering text in several items copies as one item per line, so it pastes
+	// into another checklist as separate items or into a text note as plain lines
+	function handleCopy(e: ClipboardEvent) {
+		const selection = window.getSelection();
+		if (!selection?.rangeCount || selection.isCollapsed) return;
+		const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-checklist-text]'));
+		const lines = selectedLines(rows, selection.getRangeAt(0));
+		if (lines.length < 2) return;
+		e.preventDefault();
+		e.clipboardData?.setData('text/plain', lines.join('\n'));
 	}
 
 	// --- Directional lock drag handle ---
@@ -333,7 +402,7 @@
 	}
 </script>
 
-<div class="space-y-0.5" data-testid="checklist">
+<div class="space-y-0.5" data-testid="checklist" bind:this={container} oncopy={handleCopy}>
 	<section
 		use:dragHandleZone={{ items: activeItems, flipDurationMs, dropTargetStyle: { outline: 'none' } }}
 		onconsider={handleDndConsider}
@@ -361,15 +430,18 @@
 				/>
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					contenteditable="true"
+					contenteditable={selectingAcrossItems ? 'false' : 'true'}
 					use:editableContent={item.text}
 					oninput={(e) => updateText(item.id, (e.target as HTMLElement).innerHTML)}
 					onkeydown={(e) => handleKeydown(e, item.id)}
 					onclick={handleLinkClick}
 					onpaste={(e) => handlePaste(e, item.id)}
+					onpointerdown={startTextDrag}
 					onblur={(e) => {
 						const el = e.currentTarget as HTMLElement;
 						requestAnimationFrame(() => {
+							// Re-rendering mid-selection would drop the selection's anchor
+							if (selectingAcrossItems) return;
 							if (el.isConnected && !el.contains(document.activeElement)) {
 								el.innerHTML = linkifyText(item.text);
 							}
@@ -379,6 +451,7 @@
 					data-placeholder="List item"
 					aria-placeholder="List item"
 					data-testid="checklist-input"
+					data-checklist-text
 					data-item-id={item.id}
 					role="textbox"
 					tabindex="0"
@@ -433,7 +506,7 @@
 									class="h-4 w-4 rounded border-[var(--border-subtle)] text-[var(--primary)] focus:ring-[var(--primary)]"
 									data-testid="checklist-done-checkbox"
 								/>
-								<span class="flex-1 text-sm text-[var(--text-muted)] line-through break-words min-w-0">{@html linkifyText(item.text)}</span>
+								<span class="flex-1 text-sm text-[var(--text-muted)] line-through break-words min-w-0" data-checklist-text>{@html linkifyText(item.text)}</span>
 								<button
 									onclick={() => removeItem(item.id)}
 									class="max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"

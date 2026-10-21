@@ -28,6 +28,40 @@ async function writeClipboard(page: Page, text: string) {
 	await page.evaluate((t) => navigator.clipboard.writeText(t), text);
 }
 
+async function readClipboard(page: Page) {
+	await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+	return page.evaluate(() => navigator.clipboard.readText());
+}
+
+/** Screen position of the caret before character `offset` of a checklist item (or after its last). */
+async function caretPoint(page: Page, item: number, offset: number) {
+	return page.getByTestId('checklist-input').nth(item).evaluate((el, offset) => {
+		const text = document.createTreeWalker(el, NodeFilter.SHOW_TEXT).nextNode() as Text;
+		const range = document.createRange();
+		const atEnd = offset >= text.length;
+		range.setStart(text, atEnd ? text.length - 1 : offset);
+		range.setEnd(text, atEnd ? text.length : offset + 1);
+		const box = range.getBoundingClientRect();
+		return { x: atEnd ? box.right + 2 : box.left + 1, y: box.top + box.height / 2 };
+	}, offset);
+}
+
+/** Drag a text selection with the mouse from one checklist item to another. */
+async function selectAcrossItems(
+	page: Page,
+	from: { item: number; offset: number },
+	to: { item: number; offset: number }
+) {
+	// The editor pops in with an animation; measure only once the item has stopped moving
+	await page.getByTestId('checklist-input').nth(from.item).hover();
+	const start = await caretPoint(page, from.item, from.offset);
+	const end = await caretPoint(page, to.item, to.offset);
+	await page.mouse.move(start.x, start.y);
+	await page.mouse.down();
+	await page.mouse.move(end.x, end.y, { steps: 10 });
+	await page.mouse.up();
+}
+
 /** Create a checklist note via UI. Leaves the editor closed. */
 async function createChecklistNote(page: Page, title: string, items: string[]) {
 	await page.getByTestId('new-note-btn').click();
@@ -221,6 +255,65 @@ test.describe('Checklist', () => {
 		// Then each line becomes its own unticked item
 		await expect(page.getByTestId('checklist-input')).toHaveText(['Milk', 'Eggs', 'Bread']);
 		await expect(page.getByTestId('checklist-toggle-done')).not.toBeVisible();
+	});
+
+	test('Scenario: Text selected across several items is copied with one item per line', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist with the items "Buy milk", "Bread", "Rye" and "Cheese"
+		await createChecklistNote(page, 'Copy Source', ['Buy milk', 'Bread', 'Rye', 'Cheese']);
+		await noteCard(page, 'Copy Source').click();
+
+		// When the user selects from "milk" to the end of "Rye" and copies
+		await selectAcrossItems(page, { item: 0, offset: 4 }, { item: 2, offset: 3 });
+		await page.keyboard.press('ControlOrMeta+c');
+
+		// Then the clipboard holds the selected text, one item per line
+		await expect.poll(() => readClipboard(page)).toBe('milk\nBread\nRye');
+	});
+
+	test('Scenario: Items copied from one checklist paste into another as separate items', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist with the items "Milk", "Eggs" and "Bread"
+		await createChecklistNote(page, 'Pantry', ['Milk', 'Eggs', 'Bread']);
+
+		// When the user copies "Eggs" and "Bread" into a new checklist
+		await noteCard(page, 'Pantry').click();
+		await selectAcrossItems(page, { item: 1, offset: 0 }, { item: 2, offset: 5 });
+		await page.keyboard.press('ControlOrMeta+c');
+		await page.getByTestId('close-editor-btn').click();
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.press('ControlOrMeta+v');
+
+		// Then the new checklist holds them as two items
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Eggs', 'Bread']);
+	});
+
+	test('Scenario: A selection across items is read-only until the user clicks back into an item', async ({
+		authenticatedPage: page
+	}) => {
+		// Given text is selected across the items "Milk" and "Eggs"
+		await createChecklistNote(page, 'Read Only Selection', ['Milk', 'Eggs']);
+		await noteCard(page, 'Read Only Selection').click();
+		await selectAcrossItems(page, { item: 0, offset: 2 }, { item: 1, offset: 2 });
+
+		// When the user types over the selection
+		await page.keyboard.type('x');
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Enter');
+
+		// Then the items are unchanged
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Milk', 'Eggs']);
+
+		// When the user clicks back into "Eggs" and types
+		await page.getByTestId('checklist-input').nth(1).click();
+		await page.keyboard.type('!');
+
+		// Then the item is edited
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Milk', 'Eggs!']);
 	});
 
 	test('Scenario: Focus stays on the item reached with the arrow keys on a busy device', async ({
