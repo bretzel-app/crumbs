@@ -138,8 +138,10 @@ test.describe('Checklist', () => {
 		await noteCard(page, 'Groceries').click();
 		await expect(page.getByTestId('checklist-input')).toHaveCount(2); // Bread, Butter active
 
-		// When the user presses Enter on the first active item (Bread)
-		await page.getByTestId('checklist-input').first().press('Enter');
+		// When the user presses Enter at the end of the first active item (Bread)
+		// (clicking the middle of the row lands past the end of its short text)
+		await page.getByTestId('checklist-input').first().click();
+		await page.keyboard.press('Enter');
 
 		// Then focus moves to the newly created empty item
 		await expect(page.getByTestId('checklist-input')).toHaveCount(3);
@@ -161,6 +163,41 @@ test.describe('Checklist', () => {
 
 		// Then only the first item remains
 		await expect(page.getByTestId('checklist-input')).toHaveCount(1);
+	});
+
+	test('Scenario: Enter in the middle of an item moves the rest of its text to a new item', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist item "Buy milk and eggs" with the cursor just before "and eggs"
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.type('Buy milk and eggs');
+		for (let i = 0; i < 'and eggs'.length; i++) await page.keyboard.press('ArrowLeft');
+
+		// When the user presses Enter
+		await page.keyboard.press('Enter');
+
+		// Then the item is split in two, with the cursor at the start of the second half
+		await page.keyboard.type('fresh ');
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Buy milk', 'fresh and eggs']);
+	});
+
+	test('Scenario: Backspace at the start of an item joins it onto the item above', async ({
+		authenticatedPage: page
+	}) => {
+		// Given a checklist with the items "Buy milk" and "and eggs"
+		await createChecklistNote(page, 'Join Items', ['Buy milk', 'and eggs']);
+		await noteCard(page, 'Join Items').click();
+
+		// When the user presses Backspace at the start of "and eggs"
+		await page.getByTestId('checklist-input').nth(1).focus();
+		await page.keyboard.press('Home');
+		await page.keyboard.press('Backspace');
+
+		// Then the two items become one, with the cursor where they were joined
+		await page.keyboard.type(' ');
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Buy milk and eggs']);
 	});
 
 	test('Scenario: Focus stays on the item reached with the arrow keys on a busy device', async ({

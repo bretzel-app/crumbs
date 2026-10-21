@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml, type ChecklistItem } from '$lib/utils/checklist.js';
+import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, linkifyText, unlinkifyHtml, type ChecklistItem } from '$lib/utils/checklist.js';
 
 describe('parseChecklist', () => {
 	it('parses flat checklist items', () => {
@@ -218,6 +218,111 @@ describe('outdentItem', () => {
 		expect(result.find((i) => i.id === '2')!.parentId).toBeNull();
 		expect(result.find((i) => i.id === '5')!.parentId).toBeNull();
 		expect(result.find((i) => i.id === '3')!.parentId).toBe('1');
+	});
+});
+
+describe('splitItem', () => {
+	const texts = (items: ChecklistItem[]) => items.map((i) => i.text);
+
+	it('moves the text after the caret to a new item below', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Buy milk and eggs', checked: false, parentId: null },
+			{ id: '2', text: 'Bread', checked: false, parentId: null }
+		];
+		const { items: result, caret } = splitItem(items, '1', 9, 9);
+		expect(texts(result)).toEqual(['Buy milk ', 'and eggs', 'Bread']);
+		expect(caret).toEqual({ id: result[1].id, offset: 0 });
+	});
+
+	it('keeps sub-items attached to the second half', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Bread', checked: false, parentId: null },
+			{ id: '2', text: 'Rye', checked: false, parentId: '1' }
+		];
+		const { items: result } = splitItem(items, '1', 2, 2);
+		expect(texts(result)).toEqual(['Br', 'ead', 'Rye']);
+		expect(result[0].parentId).toBeNull();
+		expect(result[2].parentId).toBe(result[1].id);
+	});
+
+	it('drops the selected text', () => {
+		const items: ChecklistItem[] = [{ id: '1', text: 'Milk, eggs', checked: false, parentId: null }];
+		const { items: result } = splitItem(items, '1', 4, 6);
+		expect(texts(result)).toEqual(['Milk', 'eggs']);
+	});
+
+	it('adds an empty item below when the caret is at the end', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Milk', checked: false, parentId: null },
+			{ id: '2', text: 'Rye', checked: false, parentId: '1' }
+		];
+		const { items: result, caret } = splitItem(items, '1', 4, 4);
+		expect(texts(result)).toEqual(['Milk', '', 'Rye']);
+		expect(result[2].parentId).toBe('1');
+		expect(caret).toEqual({ id: result[1].id, offset: 0 });
+	});
+
+	it('pushes the whole text down when the caret is at the start', () => {
+		const items: ChecklistItem[] = [{ id: '1', text: 'Milk', checked: false, parentId: null }];
+		const { items: result, caret } = splitItem(items, '1', 0, 0);
+		expect(texts(result)).toEqual(['', 'Milk']);
+		expect(caret).toEqual({ id: result[1].id, offset: 0 });
+	});
+
+	it('keeps both halves of a sub-item under the same parent', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Groceries', checked: false, parentId: null },
+			{ id: '2', text: 'Milk eggs', checked: false, parentId: '1' }
+		];
+		const { items: result } = splitItem(items, '2', 5, 5);
+		expect(result.map((i) => i.parentId)).toEqual([null, '1', '1']);
+	});
+
+	it('does not modify the input items', () => {
+		const items: ChecklistItem[] = [{ id: '1', text: 'Milk eggs', checked: false, parentId: null }];
+		splitItem(items, '1', 5, 5);
+		expect(items).toEqual([{ id: '1', text: 'Milk eggs', checked: false, parentId: null }]);
+	});
+});
+
+describe('joinWithPrevious', () => {
+	it('appends the item to the previous one with the caret at the seam', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Buy milk ', checked: false, parentId: null },
+			{ id: '2', text: 'and eggs', checked: false, parentId: null },
+			{ id: '3', text: 'Bread', checked: false, parentId: null }
+		];
+		const { items: result, caret } = joinWithPrevious(items, '1', '2');
+		expect(result).toEqual([
+			{ id: '1', text: 'Buy milk and eggs', checked: false, parentId: null },
+			{ id: '3', text: 'Bread', checked: false, parentId: null }
+		]);
+		expect(caret).toEqual({ id: '1', offset: 9 });
+	});
+
+	it('hands the sub-items of the joined item to the previous item', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'A', checked: false, parentId: null },
+			{ id: '2', text: 'B', checked: false, parentId: null },
+			{ id: '3', text: 'B1', checked: true, parentId: '2' }
+		];
+		const { items: result } = joinWithPrevious(items, '1', '2');
+		expect(result.find((i) => i.id === '3')!.parentId).toBe('1');
+	});
+
+	it('hands the sub-items to the parent when the previous item is itself a sub-item', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'A', checked: false, parentId: null },
+			{ id: '2', text: 'A1', checked: false, parentId: '1' },
+			{ id: '3', text: 'B', checked: false, parentId: null },
+			{ id: '4', text: 'B1', checked: false, parentId: '3' }
+		];
+		const { items: result } = joinWithPrevious(items, '2', '3');
+		expect(result.map((i) => [i.text, i.parentId])).toEqual([
+			['A', null],
+			['A1B', '1'],
+			['B1', '1']
+		]);
 	});
 });
 
