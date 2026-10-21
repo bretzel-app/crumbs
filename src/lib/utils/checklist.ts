@@ -104,6 +104,61 @@ export function outdentItem(id: string, items: ChecklistItem[]): ChecklistItem[]
 	});
 }
 
+/** Where the caret should land after an edit that restructures the list. */
+export interface CaretTarget {
+	id: string;
+	offset: number;
+}
+
+/**
+ * Enter inside an item, with the selection spanning [start, end). Text before the selection
+ * becomes a new item above and the item keeps the text after it, so sub-items stay attached to
+ * the second half and the caret stays in the same row. At the end of the text this is a plain
+ * "new empty item below".
+ */
+export function splitItem(
+	items: ChecklistItem[],
+	id: string,
+	start: number,
+	end: number
+): { items: ChecklistItem[]; caret: CaretTarget } {
+	const index = items.findIndex((i) => i.id === id);
+	const item = items[index];
+	const before = item.text.slice(0, start);
+	const after = item.text.slice(end);
+	const result = [...items];
+	if (after === '') {
+		const added: ChecklistItem = { id: generateId(), text: '', checked: false, parentId: item.parentId };
+		result.splice(index, 1, { ...item, text: before }, added);
+		return { items: result, caret: { id: added.id, offset: 0 } };
+	}
+	const above: ChecklistItem = { id: generateId(), text: before, checked: false, parentId: item.parentId };
+	result.splice(index, 1, above, { ...item, text: after });
+	return { items: result, caret: { id, offset: 0 } };
+}
+
+/**
+ * Backspace at the start of an item: its text is appended to the previous item and its
+ * sub-items move to wherever that previous item's sub-items live.
+ */
+export function joinWithPrevious(
+	items: ChecklistItem[],
+	prevId: string,
+	id: string
+): { items: ChecklistItem[]; caret: CaretTarget } {
+	const prev = items.find((i) => i.id === prevId)!;
+	const item = items.find((i) => i.id === id)!;
+	const newParentId = prev.parentId ?? prev.id;
+	const result = items
+		.filter((i) => i.id !== id)
+		.map((i) => {
+			if (i.id === prevId) return { ...i, text: prev.text + item.text };
+			if (i.parentId === id) return { ...i, parentId: newParentId };
+			return i;
+		});
+	return { items: result, caret: { id: prevId, offset: prev.text.length } };
+}
+
 export function parseChecklist(text: string): ChecklistItem[] {
 	if (!text.trim()) return [{ id: generateId(), text: '', checked: false, parentId: null }];
 

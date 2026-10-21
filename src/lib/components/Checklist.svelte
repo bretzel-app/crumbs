@@ -6,7 +6,8 @@
 	import { onDestroy, tick } from 'svelte';
 	import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
-	import { type ChecklistItem, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
+	import { type ChecklistItem, type CaretTarget, generateId, parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, linkifyText, unlinkifyHtml } from '$lib/utils/checklist.js';
+	import { getSelectionOffsets, setCaretOffset } from '$lib/utils/caret.js';
 	import LinkPopover from './LinkPopover.svelte';
 
 	interface Props {
@@ -129,19 +130,48 @@
 		emitChange();
 	}
 
+	// Apply an edit that restructures the list, then put the caret where it says. That row may
+	// be the focused one, which editableContent leaves alone while focused, so its text is
+	// rendered here too.
+	function applyEdit(edit: { items: ChecklistItem[]; caret: CaretTarget }) {
+		items = edit.items;
+		emitChange();
+		const { id, offset } = edit.caret;
+		const text = items.find((i) => i.id === id)?.text ?? '';
+		// Same as addItem: refocus before the next key is handled, not after it
+		tick().then(() => {
+			const el = document.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
+			if (!el) return;
+			el.textContent = text;
+			el.focus();
+			setCaretOffset(el, offset);
+		});
+	}
+
 	function handleKeydown(e: KeyboardEvent, id: string) {
+		if (e.isComposing) return;
 		const index = items.findIndex((i) => i.id === id);
+		const el = e.currentTarget as HTMLElement;
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			addItem(index);
-		} else if (e.key === 'Backspace' && items[index].text === '' && items.length > 1) {
-			e.preventDefault();
-			removeItem(id);
-			// Same as addItem: refocus before the next key is handled, not after it
-			tick().then(() => {
-				const inputs = document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]');
-				inputs[Math.max(0, index - 1)]?.focus();
-			});
+			const selection = getSelectionOffsets(el);
+			const length = items[index].text.length;
+			applyEdit(splitItem(items, id, selection?.start ?? length, selection?.end ?? length));
+		} else if (e.key === 'Backspace') {
+			const selection = getSelectionOffsets(el);
+			if (selection?.start !== 0 || selection.end !== 0) return;
+			const inputs = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]'));
+			const current = inputs.indexOf(el);
+			if (current > 0) {
+				e.preventDefault();
+				applyEdit(joinWithPrevious(items, inputs[current - 1].dataset.itemId!, id));
+			} else if (items[index].text === '' && items.length > 1) {
+				e.preventDefault();
+				removeItem(id);
+				tick().then(() => {
+					document.querySelector<HTMLElement>('[data-testid="checklist-input"]')?.focus();
+				});
+			}
 		} else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
 			const inputs = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="checklist-input"]'));
 			const current = inputs.findIndex((el) => el.dataset.itemId === id);
