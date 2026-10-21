@@ -22,6 +22,12 @@ async function simulateBusyMainThread(page: Page) {
 	}, BUSY_TIMER_DELAY_MS);
 }
 
+/** Put text on the clipboard, as if it was copied from another app. */
+async function writeClipboard(page: Page, text: string) {
+	await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.evaluate((t) => navigator.clipboard.writeText(t), text);
+}
+
 /** Create a checklist note via UI. Leaves the editor closed. */
 async function createChecklistNote(page: Page, title: string, items: string[]) {
 	await page.getByTestId('new-note-btn').click();
@@ -198,6 +204,23 @@ test.describe('Checklist', () => {
 		// Then the two items become one, with the cursor where they were joined
 		await page.keyboard.type(' ');
 		await expect(page.getByTestId('checklist-input')).toHaveText(['Buy milk and eggs']);
+	});
+
+	test('Scenario: Pasting several lines into a checklist creates one unticked item per line', async ({
+		authenticatedPage: page
+	}) => {
+		// Given an empty checklist, and a markdown list with a ticked item and a blank line on the clipboard
+		await page.getByTestId('new-note-btn').click();
+		await toggleChecklistMode(page);
+		await writeClipboard(page, '- [ ] Milk\n- [x] Eggs\n\nBread');
+
+		// When the user pastes into the checklist
+		await page.getByTestId('checklist-input').first().focus();
+		await page.keyboard.press('ControlOrMeta+v');
+
+		// Then each line becomes its own unticked item
+		await expect(page.getByTestId('checklist-input')).toHaveText(['Milk', 'Eggs', 'Bread']);
+		await expect(page.getByTestId('checklist-toggle-done')).not.toBeVisible();
 	});
 
 	test('Scenario: Focus stays on the item reached with the arrow keys on a busy device', async ({

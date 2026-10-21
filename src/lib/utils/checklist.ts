@@ -159,6 +159,47 @@ export function joinWithPrevious(
 	return { items: result, caret: { id: prevId, offset: prev.text.length } };
 }
 
+// A leading bullet, number or checkbox — but only when followed by a space, so "-5 degrees" or
+// "1.5 kg" are left alone
+const LIST_MARKER = /^(?:[-*+•]\s+|\d+[.)]\s+)?(?:\[[ xX]?\](?:\s+|$))?/;
+
+/** Pasted text as one item text per line, with list markers stripped and blank lines skipped. */
+export function parsePastedLines(text: string): string[] {
+	return text
+		.split(/\r\n|\r|\n/)
+		.map((line) => line.trim().replace(LIST_MARKER, '').trim())
+		.filter((line) => line !== '');
+}
+
+/**
+ * Paste lines into an item, replacing the selection [start, end). Like a text editor: the first
+ * line continues the text before the selection, each further line is its own item, and the text
+ * after the selection ends up after the last line. The item keeps the last line, so its
+ * sub-items stay attached and the caret stays in the same row.
+ */
+export function pasteLines(
+	items: ChecklistItem[],
+	id: string,
+	start: number,
+	end: number,
+	lines: string[]
+): { items: ChecklistItem[]; caret: CaretTarget } {
+	const index = items.findIndex((i) => i.id === id);
+	const item = items[index];
+	const before = item.text.slice(0, start);
+	const after = item.text.slice(end);
+	const head: ChecklistItem[] = lines.slice(0, -1).map((line, i) => ({
+		id: generateId(),
+		text: i === 0 ? before + line : line,
+		checked: false,
+		parentId: item.parentId
+	}));
+	const last = (head.length === 0 ? before : '') + lines[lines.length - 1];
+	const result = [...items];
+	result.splice(index, 1, ...head, { ...item, text: last + after });
+	return { items: result, caret: { id, offset: last.length } };
+}
+
 export function parseChecklist(text: string): ChecklistItem[] {
 	if (!text.trim()) return [{ id: generateId(), text: '', checked: false, parentId: null }];
 

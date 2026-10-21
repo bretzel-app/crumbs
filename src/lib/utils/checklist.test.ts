@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, linkifyText, unlinkifyHtml, type ChecklistItem } from '$lib/utils/checklist.js';
+import { parseChecklist, serializeChecklist, toggleItemWithCascade, indentItem, outdentItem, splitItem, joinWithPrevious, parsePastedLines, pasteLines, linkifyText, unlinkifyHtml, type ChecklistItem } from '$lib/utils/checklist.js';
 
 describe('parseChecklist', () => {
 	it('parses flat checklist items', () => {
@@ -323,6 +323,79 @@ describe('joinWithPrevious', () => {
 			['A1B', '1'],
 			['B1', '1']
 		]);
+	});
+});
+
+describe('parsePastedLines', () => {
+	it('splits on any kind of line break', () => {
+		expect(parsePastedLines('Milk\r\nEggs\rBread\nButter')).toEqual(['Milk', 'Eggs', 'Bread', 'Butter']);
+	});
+
+	it('strips list and checkbox markers', () => {
+		const text = '- [ ] One\n- [x] Two\n* Three\n+ Four\n1. Five\n2) Six\n• Seven\n[X] Eight';
+		expect(parsePastedLines(text)).toEqual(['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight']);
+	});
+
+	it('skips blank lines and lines that held only a marker', () => {
+		expect(parsePastedLines('One\n\n   \n- [ ]\nTwo\n')).toEqual(['One', 'Two']);
+	});
+
+	it('keeps leading dashes and numbers that are not list markers', () => {
+		expect(parsePastedLines('-5 degrees\n1.5 kg flour')).toEqual(['-5 degrees', '1.5 kg flour']);
+	});
+
+	it('drops indentation and trailing whitespace', () => {
+		expect(parsePastedLines('  Milk  \n\t- Eggs')).toEqual(['Milk', 'Eggs']);
+	});
+});
+
+describe('pasteLines', () => {
+	const texts = (items: ChecklistItem[]) => items.map((i) => i.text);
+
+	it('puts the first line at the cursor and the text after the cursor at the end of the last line', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Cheese', checked: false, parentId: null },
+			{ id: '2', text: 'Apples', checked: false, parentId: null }
+		];
+		const { items: result, caret } = pasteLines(items, '1', 3, 3, ['One', 'Two', 'Three']);
+		expect(texts(result)).toEqual(['CheOne', 'Two', 'Threeese', 'Apples']);
+		expect(caret).toEqual({ id: result[2].id, offset: 5 });
+	});
+
+	it('replaces the selected text', () => {
+		const items: ChecklistItem[] = [{ id: '1', text: 'Buy X now', checked: false, parentId: null }];
+		const { items: result } = pasteLines(items, '1', 4, 5, ['milk', 'eggs']);
+		expect(texts(result)).toEqual(['Buy milk', 'eggs now']);
+	});
+
+	it('creates unchecked items at the indent of the item pasted into', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Groceries', checked: false, parentId: null },
+			{ id: '2', text: '', checked: false, parentId: '1' }
+		];
+		const { items: result } = pasteLines(items, '2', 0, 0, ['Milk', 'Eggs', 'Bread']);
+		expect(result.slice(1).map((i) => [i.text, i.checked, i.parentId])).toEqual([
+			['Milk', false, '1'],
+			['Eggs', false, '1'],
+			['Bread', false, '1']
+		]);
+	});
+
+	it('keeps sub-items attached to the item holding the last line', () => {
+		const items: ChecklistItem[] = [
+			{ id: '1', text: 'Bread', checked: false, parentId: null },
+			{ id: '2', text: 'Rye', checked: false, parentId: '1' }
+		];
+		const { items: result } = pasteLines(items, '1', 5, 5, ['A', 'B']);
+		expect(texts(result)).toEqual(['BreadA', 'B', 'Rye']);
+		expect(result[2].parentId).toBe(result[1].id);
+	});
+
+	it('inserts a single line at the cursor', () => {
+		const items: ChecklistItem[] = [{ id: '1', text: 'Milk', checked: false, parentId: null }];
+		const { items: result, caret } = pasteLines(items, '1', 2, 2, ['XY']);
+		expect(texts(result)).toEqual(['MiXYlk']);
+		expect(caret).toEqual({ id: '1', offset: 4 });
 	});
 });
 
