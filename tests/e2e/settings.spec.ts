@@ -31,28 +31,33 @@ async function resetPreferences(page: Page) {
 }
 
 /**
- * Navigate to a URL with reliable preference state.
+ * Keep the app from syncing preferences from the server for the rest of the test.
  *
- * page.goto() triggers a full page reload which re-runs initPreferences():
+ * Every page load re-runs initPreferences():
  *   1. loadFromLocalStorage() — synchronous, returns correct value
  *   2. syncPreferencesFromServer() — async, can return stale data from
  *      parallel test workers that share the same user's server-side prefs
  *
- * This helper blocks the one GET /api/preferences sync request so
- * initPreferences() falls back to localStorage (which is always correct
- * from either resetPreferences or updatePreference on the settings page),
- * then waits for hydration so the next click isn't dropped (see gotoHydrated).
+ * Aborting its GET /api/preferences makes initPreferences() fall back to
+ * localStorage, which is always correct (set by resetPreferences or by
+ * updatePreference on the settings page). Saving still goes through.
+ *
+ * The route is registered once and never removed. A `{ times: 1 }` route
+ * per navigation removed itself while the page's other requests were in
+ * flight, and one of them (/api/notes or /api/sync) then never completed,
+ * so waiting for networkidle timed out on CI.
  */
-async function gotoWithStablePrefs(page: Page, url: string) {
-	await page.route(
-		'**/api/preferences',
-		(route) => route.abort(),
-		{ times: 1 }
+async function blockPreferenceSync(page: Page) {
+	await page.route('**/api/preferences', (route) =>
+		route.request().method() === 'GET' ? route.abort() : route.continue()
 	);
-	await gotoHydrated(page, url);
 }
 
 test.describe('Settings — Preferences', () => {
+	test.beforeEach(async ({ authenticatedPage: page }) => {
+		await blockPreferenceSync(page);
+	});
+
 	test('Scenario: Preferences tab is visible in settings nav', async ({
 		authenticatedPage: page
 	}) => {
@@ -69,13 +74,13 @@ test.describe('Settings — Preferences', () => {
 		await resetPreferences(page);
 
 		// Given the user sets default note mode to Markdown
-		await gotoWithStablePrefs(page, '/settings/preferences');
+		await gotoHydrated(page, '/settings/preferences');
 		const putResponse = page.waitForResponse((res) => res.url().includes('/api/preferences') && res.request().method() === 'PUT');
 		await page.getByTestId('pref-mode-markdown').click();
 		await putResponse;
 
 		// When the user creates a new note
-		await gotoWithStablePrefs(page, '/');
+		await gotoHydrated(page, '/');
 		await page.getByTestId('new-note-btn').click();
 
 		// Then the note editor opens in markdown mode (textarea visible)
@@ -92,13 +97,13 @@ test.describe('Settings — Preferences', () => {
 		await page.request.post('/api/notes', { data: { title, content: 'Some **bold** text' } });
 
 		// And the user's default note mode is Markdown
-		await gotoWithStablePrefs(page, '/settings/preferences');
+		await gotoHydrated(page, '/settings/preferences');
 		const putResponse = page.waitForResponse((res) => res.url().includes('/api/preferences') && res.request().method() === 'PUT');
 		await page.getByTestId('pref-mode-markdown').click();
 		await putResponse;
 
 		// When the user opens the note
-		await gotoWithStablePrefs(page, '/');
+		await gotoHydrated(page, '/');
 		await noteCard(page, title).click();
 
 		// Then the note editor opens in markdown mode showing the raw source
@@ -112,23 +117,23 @@ test.describe('Settings — Preferences', () => {
 		await resetPreferences(page);
 
 		// Given the footer is visible
-		await gotoWithStablePrefs(page, '/');
+		await gotoHydrated(page, '/');
 		await expect(page.getByTestId('app-footer')).toBeVisible();
 
 		// When the user enables the hide footer preference
-		await gotoWithStablePrefs(page, '/settings/preferences');
+		await gotoHydrated(page, '/settings/preferences');
 		await page.getByTestId('pref-hide-footer').check();
 
 		// Then the footer is hidden
-		await gotoWithStablePrefs(page, '/');
+		await gotoHydrated(page, '/');
 		await expect(page.getByTestId('app-footer')).not.toBeVisible();
 
 		// When the user disables the hide footer preference
-		await gotoWithStablePrefs(page, '/settings/preferences');
+		await gotoHydrated(page, '/settings/preferences');
 		await page.getByTestId('pref-hide-footer').uncheck();
 
 		// Then the footer is visible again
-		await gotoWithStablePrefs(page, '/');
+		await gotoHydrated(page, '/');
 		await expect(page.getByTestId('app-footer')).toBeVisible();
 	});
 
@@ -138,13 +143,12 @@ test.describe('Settings — Preferences', () => {
 		await resetPreferences(page);
 
 		// Given the user changes default note mode to Markdown
-		await gotoWithStablePrefs(page, '/settings/preferences');
+		await gotoHydrated(page, '/settings/preferences');
 		const putResponse = page.waitForResponse((res) => res.url().includes('/api/preferences') && res.request().method() === 'PUT');
 		await page.getByTestId('pref-mode-markdown').click();
 		await putResponse;
 
-		// When the page is reloaded (block sync to prevent parallel-test interference)
-		await page.route('**/api/preferences', (route) => route.abort(), { times: 1 });
+		// When the page is reloaded
 		await page.reload();
 
 		// Then the Markdown button is still selected (has primary styling)
