@@ -485,6 +485,46 @@ paths:
                 items:
                   $ref: '#/components/schemas/Tag'
 
+  /api/tags/{name}:
+    put:
+      summary: Set or clear a tag colour
+      description: >-
+        Notes left on the default colour take the colour of the first coloured tag they
+        mention. Creates the tag if no note uses it yet. Send `null` (or `default`) to clear.
+      tags: [Tags]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9_-]+$'
+          description: Tag name without the leading `#`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [color]
+              properties:
+                color:
+                  $ref: '#/components/schemas/TagColor'
+      responses:
+        '200':
+          description: The tag's colour after the update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  color:
+                    $ref: '#/components/schemas/TagColor'
+        '400':
+          description: Invalid tag name or colour
+
   /api/sync:
     get:
       summary: Pull changes since timestamp
@@ -750,6 +790,13 @@ components:
           type: integer
         name:
           type: string
+        color:
+          $ref: '#/components/schemas/TagColor'
+
+    TagColor:
+      type: ['string', 'null']
+      enum: [null, default, coral, peach, sand, mint, sage, fog, storm, dusk, blossom, clay, chalk]
+      description: Note colour given to notes with this tag; null when the tag has none
 
     Attachment:
       type: object

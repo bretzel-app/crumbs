@@ -99,7 +99,7 @@ Key tables:
 - `notes` - Core note data with version tracking
 - `note_versions` - Snapshots for version history (browse and restore)
 - `note_links` - Links between notes (source → target)
-- `tags` - Unique tag names
+- `tags` - Unique tag names per user, with an optional `color` (tag colour, see below)
 - `note_tags` - Many-to-many note ↔ tag
 - `attachments` - Image file metadata (path + thumbnailPath)
 - `api_keys` - MCP API keys (SHA-256 hashed, prefix for display)
@@ -170,6 +170,13 @@ Theme switching uses CSS variable overrides on the `<html>` element:
   returns the appropriate surface variant per theme. Picker swatches use `getNoteChip()` instead —
   in dark mode the card surfaces are too dark to be identifiable as small circles, so the picker
   draws from a separate vivid `NOTE_CHIPS_DARK` map.
+- **Tag colours**: `resolveNoteColor()` in `src/lib/utils/colors.ts` picks the colour a note is
+  shown in — the note's own colour unless it is `default`, else the first tag in `note.tags` with
+  a colour in `tags.color`. Tag colours are resolved at render time and never written to
+  `notes.color`, so they cost no note versions or sync traffic. The client keeps the viewer's
+  map in `src/lib/stores/tag-colors.svelte.ts` (cached in localStorage for offline); on a note
+  shared with them, a collaborator sees their own tag colours. The public share page resolves
+  with the owner's.
 
 ## File Organization
 

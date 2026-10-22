@@ -696,10 +696,44 @@ List all tags
 [
   {
     "id": 1,
-    "name": "name"
+    "name": "name",
+    "color": null
   }
 ]
 ```
+
+---
+
+### `PUT /api/tags/{name}`
+
+Set or clear a tag colour
+
+Notes left on the default colour take the colour of the first coloured tag they mention. Creates the tag if no note uses it yet. Send `null` (or `default`) to clear.
+
+**Parameters:**
+
+| Name | In | Type | Required | Description |
+|------|----|------|----------|-------------|
+| `name` | path | string | yes | Tag name without the leading `#` |
+
+**Request:**
+
+```json
+{
+  "color": null
+}
+```
+
+**Response:** `200`
+
+```json
+{
+  "name": "name",
+  "color": null
+}
+```
+
+**Errors:** `400` Invalid tag name or colour
 
 ---
 

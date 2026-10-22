@@ -15,7 +15,9 @@
 	import NoteHistory from './NoteHistory.svelte';
 	import { updateNote, createNote, trashNote, archiveNote } from '$lib/stores/notes.js';
 	import { notes } from '$lib/stores/notes.js';
-	import { getNoteColor } from '$lib/utils/colors.js';
+	import { getNoteColor, resolveNoteColor } from '$lib/utils/colors.js';
+	import { extractTags } from '$lib/utils/tags.js';
+	import { getTagColors } from '$lib/stores/tag-colors.svelte.js';
 	import { getIsDarkMode } from '$lib/utils/theme.svelte.js';
 	import { getPreferences } from '$lib/stores/preferences.svelte.js';
 	import type { Editor } from '@tiptap/core';
@@ -433,7 +435,9 @@
 
 	let bgStyle = $state('');
 	$effect(() => {
-		bgStyle = `background-color: ${getNoteColor(color, getIsDarkMode())}`;
+		// Tags come from the live text so the background follows a hashtag as it is typed
+		const shown = resolveNoteColor(color, extractTags(`${title} ${content}`), getTagColors());
+		bgStyle = `background-color: ${getNoteColor(shown, getIsDarkMode())}`;
 	});
 
 	// Close on backdrop tap/click. On close, a transparent shield stays in the DOM
