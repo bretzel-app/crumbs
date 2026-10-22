@@ -3,7 +3,9 @@ import { sharedNotes, notes, attachments } from './db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { requireNoteOwnership } from './api-utils.js';
-import type { SharedNoteData } from '$lib/types/index.js';
+import type { NoteColor, SharedNoteData } from '$lib/types/index.js';
+import { fetchTagsForNotes, getTagColors } from './tags.js';
+import { resolveNoteColor } from '$lib/utils/colors.js';
 
 /**
  * Batch fetch share tokens for multiple notes.
@@ -109,7 +111,12 @@ export function getSharedNote(db: Db, token: string): (SharedNoteData & { noteId
 		title: note.title,
 		content: note.content,
 		checklistMode: note.checklistMode,
-		color: note.color as SharedNoteData['color'],
+		// Anonymous visitors see the note the way its owner does, tag colour included
+		color: resolveNoteColor(
+			note.color as NoteColor,
+			fetchTagsForNotes(db, [note.id]).get(note.id),
+			getTagColors(db, note.userId)
+		),
 		attachments: publicAttachments,
 		createdAt: note.createdAt,
 		updatedAt: note.updatedAt

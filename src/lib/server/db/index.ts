@@ -64,7 +64,8 @@ sqlite.exec(`
 	CREATE TABLE IF NOT EXISTS tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL DEFAULT 0,
-		name TEXT NOT NULL
+		name TEXT NOT NULL,
+		color TEXT
 	);
 
 	CREATE TABLE IF NOT EXISTS note_tags (
@@ -254,6 +255,11 @@ try {
 }
 try {
 	sqlite.exec(`ALTER TABLE attachments ADD COLUMN featured INTEGER NOT NULL DEFAULT 0;`);
+} catch {
+	// Column already exists
+}
+try {
+	sqlite.exec(`ALTER TABLE tags ADD COLUMN color TEXT;`);
 } catch {
 	// Column already exists
 }

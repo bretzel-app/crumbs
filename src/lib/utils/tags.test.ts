@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractTags } from './tags.js';
+import { extractTags, isTagName } from './tags.js';
 
 describe('extractTags', () => {
 	it('should extract simple hashtags', () => {
@@ -53,5 +53,19 @@ describe('extractTags', () => {
 	it('should handle mixed content with code and tags', () => {
 		const content = 'My #project uses `#define` and has a #deadline';
 		expect(extractTags(content)).toEqual(['project', 'deadline']);
+	});
+});
+
+describe('isTagName', () => {
+	it('accepts a name extractTags could have produced', () => {
+		expect(isTagName('network')).toBe(true);
+		expect(isTagName('to-do_2')).toBe(true);
+	});
+
+	it('rejects names no hashtag can produce', () => {
+		expect(isTagName('')).toBe(false);
+		expect(isTagName('Network')).toBe(false);
+		expect(isTagName('two words')).toBe(false);
+		expect(isTagName('#network')).toBe(false);
 	});
 });

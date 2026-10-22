@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
 	getNoteColor,
 	getNoteChip,
+	resolveNoteColor,
+	isNoteColor,
 	NOTE_COLORS,
 	NOTE_COLORS_DARK,
 	NOTE_CHIPS_DARK
@@ -140,5 +142,42 @@ describe('getNoteChip', () => {
 		for (const [name, chip] of Object.entries(NOTE_CHIPS_DARK)) {
 			expect(relativeLuminance(chip), name).toBeGreaterThan(0.1);
 		}
+	});
+});
+
+describe('resolveNoteColor', () => {
+	it('keeps a colour picked on the note over any tag colour', () => {
+		expect(resolveNoteColor('dusk', ['network'], { network: 'sand' })).toBe('dusk');
+	});
+
+	it('takes the tag colour when the note has none of its own', () => {
+		expect(resolveNoteColor('default', ['network'], { network: 'sand' })).toBe('sand');
+	});
+
+	it('takes the first coloured tag in the order the note mentions them', () => {
+		expect(
+			resolveNoteColor('default', ['plain', 'info', 'network'], { network: 'sand', info: 'mint' })
+		).toBe('mint');
+	});
+
+	it('stays default when none of the tags has a colour', () => {
+		expect(resolveNoteColor('default', ['plain'], { network: 'sand' })).toBe('default');
+	});
+
+	it('stays default for a note without tags', () => {
+		expect(resolveNoteColor('default', undefined, { network: 'sand' })).toBe('default');
+	});
+});
+
+describe('isNoteColor', () => {
+	it('accepts every palette colour', () => {
+		for (const color of Object.keys(NOTE_COLORS)) expect(isNoteColor(color)).toBe(true);
+	});
+
+	it('rejects anything outside the palette', () => {
+		expect(isNoteColor('red')).toBe(false);
+		expect(isNoteColor('toString')).toBe(false);
+		expect(isNoteColor(null)).toBe(false);
+		expect(isNoteColor(3)).toBe(false);
 	});
 });

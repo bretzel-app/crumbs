@@ -3,7 +3,7 @@ import { createTestDb } from './db/test-helpers.js';
 import { notes, tags, noteTags, users } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { Db } from './db/index.js';
-import { fetchTagsForNotes, syncNoteTags } from './tags.js';
+import { fetchTagsForNotes, syncNoteTags, getTagColors, setTagColor } from './tags.js';
 
 let db: Db;
 const USER_ID = 1;
@@ -85,5 +85,79 @@ describe('fetchTagsForNotes', () => {
 	it('should return empty map for empty noteIds', () => {
 		const map = fetchTagsForNotes(db, []);
 		expect(map.size).toBe(0);
+	});
+
+	it('lists tags in the order the note mentions them, not the order they were created', () => {
+		seedNote('n1');
+		seedNote('n2');
+		syncNoteTags(db, 'n1', ['older'], USER_ID);
+		syncNoteTags(db, 'n2', ['newer', 'older'], USER_ID);
+
+		expect(fetchTagsForNotes(db, ['n2']).get('n2')).toEqual(['newer', 'older']);
+	});
+});
+
+describe('tag colours', () => {
+	const OTHER_USER_ID = 2;
+
+	function seedOtherUser() {
+		db.insert(users)
+			.values({ email: 'other@test.com', displayName: 'Other', role: 'user', authProvider: 'password', createdAt: new Date() })
+			.run();
+	}
+
+	it('has no colours until the user picks one', () => {
+		seedNote('n1');
+		syncNoteTags(db, 'n1', ['network'], USER_ID);
+
+		expect(getTagColors(db, USER_ID)).toEqual({});
+	});
+
+	it('remembers the colour picked for a tag', () => {
+		seedNote('n1');
+		syncNoteTags(db, 'n1', ['network'], USER_ID);
+
+		setTagColor(db, USER_ID, 'network', 'sand');
+
+		expect(getTagColors(db, USER_ID)).toEqual({ network: 'sand' });
+	});
+
+	it('forgets the colour when it is cleared', () => {
+		seedNote('n1');
+		syncNoteTags(db, 'n1', ['network'], USER_ID);
+		setTagColor(db, USER_ID, 'network', 'sand');
+
+		setTagColor(db, USER_ID, 'network', null);
+
+		expect(getTagColors(db, USER_ID)).toEqual({});
+	});
+
+	it('treats picking the default colour as clearing it', () => {
+		seedNote('n1');
+		syncNoteTags(db, 'n1', ['network'], USER_ID);
+		setTagColor(db, USER_ID, 'network', 'sand');
+
+		setTagColor(db, USER_ID, 'network', 'default');
+
+		expect(getTagColors(db, USER_ID)).toEqual({});
+	});
+
+	it('keeps the colour when the tag is later used by a note', () => {
+		setTagColor(db, USER_ID, 'network', 'sand');
+		seedNote('n1');
+
+		syncNoteTags(db, 'n1', ['network'], USER_ID);
+
+		expect(db.select().from(tags).all()).toHaveLength(1);
+		expect(getTagColors(db, USER_ID)).toEqual({ network: 'sand' });
+	});
+
+	it('keeps each user\'s colours to themselves', () => {
+		seedOtherUser();
+		setTagColor(db, USER_ID, 'network', 'sand');
+		setTagColor(db, OTHER_USER_ID, 'network', 'mint');
+
+		expect(getTagColors(db, USER_ID)).toEqual({ network: 'sand' });
+		expect(getTagColors(db, OTHER_USER_ID)).toEqual({ network: 'mint' });
 	});
 });

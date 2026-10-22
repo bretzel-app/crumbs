@@ -19,3 +19,8 @@ export function extractTags(content: string): string[] {
 	const tags = matches.map((m) => m.trim().slice(1).toLowerCase());
 	return [...new Set(tags)];
 }
+
+/** Whether `name` is a tag extractTags could produce: a lowercased run of word characters or dashes. */
+export function isTagName(name: string): boolean {
+	return /^[a-z0-9_-]+$/.test(name);
+}
