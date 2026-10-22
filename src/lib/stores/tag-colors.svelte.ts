@@ -20,7 +20,8 @@ function loadFromLocalStorage(): Record<string, NoteColor> {
 	if (!browser) return {};
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		if (raw) return JSON.parse(raw);
+		const parsed = raw ? JSON.parse(raw) : null;
+		if (parsed && typeof parsed === 'object') return parsed;
 	} catch {
 		// Corrupted localStorage — start empty
 	}
