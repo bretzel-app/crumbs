@@ -65,6 +65,9 @@
 - Filter notes by tag (sidebar + tag chips)
 - Tags are case-insensitive and deduplicated
 - Tags inside code blocks and URLs are ignored
+- Tag colours (Settings > Tags): a note without a colour of its own takes the colour of the
+  first coloured tag it mentions; a colour picked on the note always wins. Clearing the tag
+  colour or removing the tag reverts the note. Only tags used by a note are listed
 
 ### Color-Coded Notes
 12 note colors:

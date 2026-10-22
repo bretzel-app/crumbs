@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { User, Cpu, ShieldCheck, SlidersHorizontal, Info } from 'lucide-svelte';
+	import { User, Cpu, ShieldCheck, SlidersHorizontal, Info, Tag } from 'lucide-svelte';
 
 	let { data, children } = $props();
 	let pathname = $derived(page.url.pathname);
@@ -25,6 +25,16 @@
 					>
 						<SlidersHorizontal size={16} />
 						Preferences
+					</a>
+				</li>
+				<li>
+					<a
+						href="/settings/tags"
+						class="flex items-center gap-2 rounded-sm px-3 py-2 text-sm whitespace-nowrap transition-colors {pathname === '/settings/tags' ? 'bg-[var(--primary)]/15 text-[var(--primary)] font-medium' : 'text-[var(--text)] hover:bg-[var(--bg-base)]'}"
+						data-testid="settings-nav-tags"
+					>
+						<Tag size={16} />
+						Tags
 					</a>
 				</li>
 				<li>

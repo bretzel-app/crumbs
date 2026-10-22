@@ -6,6 +6,7 @@
 	import { startSync, stopSync } from '$lib/sync/client.js';
 	import { initDb } from '$lib/sync/idb.js';
 	import { initPreferences, getPreferences } from '$lib/stores/preferences.svelte.js';
+	import { initTagColors } from '$lib/stores/tag-colors.svelte.js';
 	import { onMount, onDestroy } from 'svelte';
 
 	let { data, children } = $props();
@@ -14,6 +15,7 @@
 
 	onMount(() => {
 		initPreferences();
+		initTagColors();
 		const prefState = getPreferences();
 		if (prefState.sidebarDefaultState === 'collapsed') {
 			sidebarOpen = false;
