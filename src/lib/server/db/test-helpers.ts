@@ -58,7 +58,8 @@ export function createTestDb(options?: { seedUser?: boolean }) {
 		CREATE TABLE tags (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL DEFAULT 0 REFERENCES users(id),
-			name TEXT NOT NULL
+			name TEXT NOT NULL,
+			color TEXT
 		);
 		CREATE UNIQUE INDEX tags_name_user_unique ON tags(name, user_id);
 

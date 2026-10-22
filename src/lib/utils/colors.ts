@@ -30,12 +30,34 @@ export const NOTE_COLORS_DARK: Record<NoteColor, { bg: string; label: string }> 
 	chalk: { bg: '#303036', label: 'Chalk' }
 };
 
+export function isNoteColor(value: unknown): value is NoteColor {
+	return typeof value === 'string' && Object.hasOwn(NOTE_COLORS, value);
+}
+
 export function getNoteColor(color: NoteColor, isDark: boolean): string {
 	const map = isDark ? NOTE_COLORS_DARK : NOTE_COLORS;
 	return (map[color] ?? map.default).bg;
 }
 
-export const COLOR_OPTIONS = Object.entries(NOTE_COLORS).map(([value, { label }]) => ({
+/**
+ * The colour a note is shown in. A colour picked on the note always wins; a note
+ * left on default borrows the colour of the first tag it mentions that has one.
+ * Tag colours are never written to the note, so removing the tag reverts it.
+ */
+export function resolveNoteColor(
+	color: NoteColor,
+	tags: readonly string[] | undefined,
+	tagColors: Readonly<Record<string, NoteColor>>
+): NoteColor {
+	if (color !== 'default') return color;
+	for (const tag of tags ?? []) {
+		const tagColor = tagColors[tag];
+		if (tagColor) return tagColor;
+	}
+	return 'default';
+}
+
+export const COLOR_OPTIONS =Object.entries(NOTE_COLORS).map(([value, { label }]) => ({
 	value: value as NoteColor,
 	label
 }));

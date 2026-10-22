@@ -9,6 +9,7 @@ import {
 	getShareByNoteId,
 	getSharedNote
 } from './shares-service.js';
+import { setTagColor, syncNoteTags } from './tags.js';
 
 let db: Db;
 
@@ -118,6 +119,24 @@ describe('getSharedNote', () => {
 
 	it('returns null for invalid token', () => {
 		expect(getSharedNote(db, 'invalid-token')).toBeNull();
+	});
+
+	it("shows a note left on default in its owner's tag colour", () => {
+		seedNote('note-1', { content: 'router notes #network' });
+		syncNoteTags(db, 'note-1', ['network'], OWNER_ID);
+		setTagColor(db, OWNER_ID, 'network', 'sand');
+		const { token } = createShare(db, 'note-1', OWNER_ID);
+
+		expect(getSharedNote(db, token)!.color).toBe('sand');
+	});
+
+	it('keeps the colour picked on the note over its tag colour', () => {
+		seedNote('note-1', { content: 'router notes #network', color: 'dusk' });
+		syncNoteTags(db, 'note-1', ['network'], OWNER_ID);
+		setTagColor(db, OWNER_ID, 'network', 'sand');
+		const { token } = createShare(db, 'note-1', OWNER_ID);
+
+		expect(getSharedNote(db, token)!.color).toBe('dusk');
 	});
 
 	it('includes attachments', () => {

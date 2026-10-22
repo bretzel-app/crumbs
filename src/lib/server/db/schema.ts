@@ -62,7 +62,9 @@ export const tags = sqliteTable(
 			.references(() => users.id)
 			.notNull()
 			.default(0),
-		name: text('name').notNull()
+		name: text('name').notNull(),
+		// A NoteColor; null means the tag doesn't colour its notes
+		color: text('color')
 	},
 	(table) => [uniqueIndex('tags_name_user_unique').on(table.name, table.userId)]
 );

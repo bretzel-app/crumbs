@@ -1,6 +1,7 @@
 import type { Db } from './db/index.js';
 import { noteTags, tags } from './db/schema.js';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, isNotNull } from 'drizzle-orm';
+import type { NoteColor } from '$lib/types/index.js';
 
 /**
  * Batch fetch tags for multiple notes in a single query.
@@ -47,4 +48,28 @@ export function syncNoteTags(db: Db, noteId: string, tagNames: string[], userId:
 		}
 		db.insert(noteTags).values({ noteId, tagId: tagRow.id }).run();
 	}
+}
+
+/**
+ * The user's tag colours as a map of tag name → colour. Tags without a colour are left out.
+ */
+export function getTagColors(db: Db, userId: number): Record<string, NoteColor> {
+	const rows = db
+		.select({ name: tags.name, color: tags.color })
+		.from(tags)
+		.where(and(eq(tags.userId, userId), isNotNull(tags.color)))
+		.all();
+	return Object.fromEntries(rows.map((row) => [row.name, row.color as NoteColor]));
+}
+
+/**
+ * Set or clear (null or 'default') the colour of one of the user's tags. Creates the tag
+ * row if no note uses it yet, so the colour applies as soon as a note mentions the tag.
+ */
+export function setTagColor(db: Db, userId: number, name: string, color: NoteColor | null) {
+	const stored = color === 'default' ? null : color;
+	db.insert(tags)
+		.values({ name, userId, color: stored })
+		.onConflictDoUpdate({ target: [tags.name, tags.userId], set: { color: stored } })
+		.run();
 }
